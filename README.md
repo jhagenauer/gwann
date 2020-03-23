@@ -1,5 +1,4 @@
-# GWANN
-Geographically Weighted Artificial Neural Network
+# Geographically Weighted Artificial Neural Network
 
 ### Install
 
