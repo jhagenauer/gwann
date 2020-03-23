@@ -1,4 +1,4 @@
-# gwann
+# GWANN
 Geographically Weighted Artificial Neural Network
 
 # Install
