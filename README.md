@@ -4,7 +4,7 @@ Geographically Weighted Artificial Neural Network
 ### Install
 
     library(devtools)
-    install_github("jhagenauer/gwann",build_opts=c("--no-resave-data","--no-multiarch"))
+    install_github("jhagenauer/gwann",INSTALL_opts=c("--no-multiarch"))
     
 ### Example
 
