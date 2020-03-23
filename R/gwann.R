@@ -1,0 +1,58 @@
+#' Build a Geographically Weighted Artificial Neural Network.
+#'
+#' @param x Matrix. Rows are observations, columns are independent variables.
+#' @param y Vector. Values represent target values for the observations in \code{x}.
+#' @param dmX Matrix of distances between the observations of \code{x}.
+#' @param dmP Matrix of distances between the observations of \code{x} (Rows) and some prediction locations (Columns).
+#' @param nrHidden Number of hidden neurons.
+#' @param batchSize Batch size.
+#' @param lr Learning rate.
+#' @param kernel Kernel.
+#' @param bandwidth Bandwidth size.
+#' @param adaptive Adaptive instead of fixed bandwidth?
+#' @param maxIts Maximum number of iterations.
+#' @param noImp After how many iterations with no improvement should training prematurly stop?
+#' @param batchPerIt How many batch presentations per iteration?
+#' @param threads Number of threads to use.
+#' @return A list with two elements.
+#' The first element is the vector \code{predictions} which contains the predictions for the locations defined by \code{dmP}.
+#' The second elemnt is the matrix \code{weights} which contains the connection weights of the hidden neurons to the output neurons. The output neurons refer to the positions defined by \code{dmP}.
+#' @examples
+#' data(toy4)
+#'
+#' dm<-as.matrix( dist(toy4[,c("lon","lat")])  )
+#' x<-as.matrix(toy4[,c("x1","x2")])
+#' y<-as.numeric( toy4[,c("y")] )
+#'
+#' \dontrun{
+#' r<-gwann(x=x,y=y,dmX=dm,dmP=dm,nrHidden=8,batchSize=50,bandwidth=1.49)
+#'
+#' if( all ( sapply( c("ggplot2","reshape2","viridis"), require, character.only=T ) ) ) {
+#'   a<-cbind( t(r$weights), toy4[,c("lon","lat")] )
+#'   m<-melt(a,id.vars=c("lon","lat"))
+#'   x11()
+#'   ggplot(m,aes(lon,lat,fill=value)) + geom_raster() + facet_wrap(~variable) + scale_fill_viridis()
+#' }
+#' }
+#' @references
+#' Not yet published
+#' @export
+gwann<-function(x,y,dmX,dmP,nrHidden=4,batchSize=10,lr=0.1,kernel="gaussian",bandwidth=NA,adaptive=F,maxIts=5000,noImp=100,batchPerIt=10,threads=4) {
+  if( is.na(bandwidth) )
+    bandwidth<-(-1)
+
+  dm<-
+  x<-.jarray(as.matrix(toy4[,c("x1","x2")]),dispatch=T)
+  y<-as.matrix( toy4[,c("y")] )
+
+  r<-.jcall(obj="supervised.nnet.gwann.GWANN_RInterface",method="run",returnSig = "[[[D",
+            .jarray(x,dispatch=T),
+            y,
+            .jarray(dmX,dispatch=T),
+            .jarray(dmP,dispatch=T),
+            nrHidden,batchSize,lr,kernel,bandwidth,adaptive,maxIts,noImp,batchPerIt,threads)
+
+  preds<-diag(.jevalArray(r[[1]],simplify = T))
+  weights<-.jevalArray(r[[2]],simplify = T)
+  return(list(predictions=preds,weights=weights))
+}
