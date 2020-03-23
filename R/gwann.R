@@ -41,9 +41,8 @@ gwann<-function(x,y,dmX,dmP,nrHidden=4,batchSize=10,lr=0.1,kernel="gaussian",ban
   if( is.na(bandwidth) )
     bandwidth<-(-1)
 
-  dm<-
-  x<-.jarray(as.matrix(toy4[,c("x1","x2")]),dispatch=T)
-  y<-as.matrix( toy4[,c("y")] )
+  if( nrows(dmX) != ncols(dmX) ) stop("dmX must be quadratic!")
+  if( nrows(dmX) != nrows(dmP) ) stop("dmX and dmP must have the same number of rows!")
 
   r<-.jcall(obj="supervised.nnet.gwann.GWANN_RInterface",method="run",returnSig = "[[[D",
             .jarray(x,dispatch=T),
