@@ -37,19 +37,19 @@
 #' @references
 #' Not yet published
 #' @export
-gwann<-function(x,y,dmX,dmP,nrHidden=4,batchSize=10,lr=0.1,kernel="gaussian",bandwidth=NA,adaptive=F,maxIts=5000,noImp=100,batchPerIt=10,threads=4) {
+gwann<-function(x,y,dmX,dmP,nrHidden=4,batchSize=10,lr=0.1,linOut=T,kernel="gaussian",bandwidth=NA,adaptive=F,maxIts=5000,noImp=100,batchPerIt=10,threads=4) {
   if( is.na(bandwidth) )
     bandwidth<-(-1)
 
-  if( nrows(dmX) != ncols(dmX) ) stop("dmX must be quadratic!")
-  if( nrows(dmX) != nrows(dmP) ) stop("dmX and dmP must have the same number of rows!")
+  if( nrow(dmX) != ncol(dmX) ) stop("dmX must be quadratic!")
+  if( nrow(dmX) != nrow(dmP) ) stop("dmX and dmP must have the same number of rows!")
 
   r<-.jcall(obj="supervised.nnet.gwann.GWANN_RInterface",method="run",returnSig = "[[[D",
             .jarray(x,dispatch=T),
             y,
             .jarray(dmX,dispatch=T),
             .jarray(dmP,dispatch=T),
-            nrHidden,batchSize,lr,kernel,bandwidth,adaptive,maxIts,noImp,batchPerIt,threads)
+            nrHidden,batchSize,lr,linOut,kernel,bandwidth,adaptive,maxIts,noImp,batchPerIt,threads)
 
   preds<-diag(.jevalArray(r[[1]],simplify = T))
   weights<-.jevalArray(r[[2]],simplify = T)
