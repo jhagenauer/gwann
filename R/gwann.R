@@ -44,14 +44,20 @@ gwann<-function(x,y,dmX,dmP,nrHidden=4,batchSize=10,lr=0.1,linOut=T,kernel="gaus
   if( nrow(dmX) != ncol(dmX) ) stop("dmX must be quadratic!")
   if( nrow(dmX) != nrow(dmP) ) stop("dmX and dmP must have the same number of rows!")
 
-  r<-.jcall(obj="supervised.nnet.gwann.GWANN_RInterface",method="run",returnSig = "[[[D",
+  r<-.jcall(obj="supervised.nnet.gwann.GWANN_RInterface",method="run",returnSig = "Lsupervised/nnet/gwann/ReturnObject;",
             .jarray(x,dispatch=T),
             y,
             .jarray(dmX,dispatch=T),
             .jarray(dmP,dispatch=T),
             nrHidden,batchSize,lr,linOut,kernel,bandwidth,adaptive,maxIts,noImp,batchPerIt,threads)
 
-  preds<-diag(.jevalArray(r[[1]],simplify = T))
-  weights<-.jevalArray(r[[2]],simplify = T)
-  return(list(predictions=preds,weights=weights))
+  return(
+    list(
+      predictions=r$predictions,
+      weights=r$weights,
+      rmse=r$rmse,
+      bw=r$bw,
+      its=r$its
+      )
+    )
 }

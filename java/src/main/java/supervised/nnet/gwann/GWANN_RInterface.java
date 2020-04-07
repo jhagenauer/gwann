@@ -30,8 +30,8 @@ import utils.GWRUtils.GWKernel;
 import utils.Normalizer.Transform;
 
 public class GWANN_RInterface {
-
-	public static double[][][] run(double[][] xArray, double[] yArray, double[][] dmX, double[][] dmP, double nrHidden, double batchSize, double eta, boolean linOut, String krnl, double bw_, boolean adaptive, double globalMaxIts, double maxNoImp, double trainPerIt, double threads) {
+	
+	public static ReturnObject run(double[][] xArray, double[] yArray, double[][] dmX, double[][] dmP, double nrHidden, double batchSize, double eta, boolean linOut, String krnl, double bw_, boolean adaptive, double globalMaxIts, double maxNoImp, double trainPerIt, double threads) {
 
 		assert xArray.length == dmX.length & dmX.length == dmX[0].length;
 		
@@ -240,7 +240,7 @@ public class GWANN_RInterface {
 
 				bwDone.add(bw);
 			}
-			if (prevMin - localMin < eps && noImpBw >= 4 )
+			if( prevMin-localMin < eps && ( noImpBw >= 4 || ll.isEmpty() ) ) 
 				break;
 			prevMin = localMin;
 		}
@@ -320,9 +320,14 @@ public class GWANN_RInterface {
 						preds[i] = out[layers.length - 1];												
 					}
 					
-					// weights
-					double[][] w = weights[weights.length-1];
-					return new double[][][] {preds,w};
+					ReturnObject ro = new ReturnObject();
+					ro.predictions = preds;
+					ro.weights = weights[weights.length-1];
+					ro.rmse = localMin;
+					ro.its = it;
+					ro.bw = bw;
+					
+					return ro;
 				}
 			}
 
