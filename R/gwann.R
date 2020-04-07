@@ -8,7 +8,7 @@
 #' @param batchSize Batch size.
 #' @param lr Learning rate.
 #' @param kernel Kernel.
-#' @param bandwidth Bandwidth size.
+#' @param bandwidth Bandwidth size. If na, a bandwidth is automatically determined.
 #' @param adaptive Adaptive instead of fixed bandwidth?
 #' @param maxIts Maximum number of iterations.
 #' @param noImp After how many iterations with no improvement should training prematurly stop?
