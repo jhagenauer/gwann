@@ -1,3 +1,5 @@
 .Rproj.user
 *.log
 .Rhistory
+java/target/**
+java/bin/**
