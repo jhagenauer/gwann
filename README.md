@@ -5,6 +5,10 @@
     library(devtools)
     install_github("jhagenauer/gwann",INSTALL_opts=c("--no-multiarch"))
     
+    if (!require("devtools"))
+       install.packages("devtools")
+    devtools::install_github("jhagenauer/gwann",INSTALL_opts=c("--no-multiarch"))
+    
 ### Example
 
     library(ggplot2)
