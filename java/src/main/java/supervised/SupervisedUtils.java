@@ -128,40 +128,6 @@ public class SupervisedUtils {
 		
 		return 1.0 - ssRes / ssTot;
 	}
-
-	public static double getPearson(List<double[]> response, List<double[]> desired) {
-		if (response.size() != desired.size())
-			throw new RuntimeException();
-
-		double meanDesired = 0;
-		for (double[] d : desired)
-			meanDesired += d[0];
-		meanDesired /= desired.size();
-
-		double meanResponse = 0;
-		for (double[] d : response)
-			meanResponse += d[0];
-		meanResponse /= response.size();
-
-		double a = 0;
-		for (int i = 0; i < response.size(); i++)
-			a += (response.get(i)[0] - meanResponse) * (desired.get(i)[0] - meanDesired);
-
-		double b = 0;
-		for (int i = 0; i < response.size(); i++)
-			b += Math.pow(response.get(i)[0] - meanResponse, 2);
-		b = Math.sqrt(b);
-
-		double c = 0;
-		for (int i = 0; i < desired.size(); i++)
-			c += Math.pow(desired.get(i)[0] - meanDesired, 2);
-		c = Math.sqrt(c);
-
-		if (b == 0 || c == 0) // not sure about if this is ok
-			return 0;
-
-		return a / (b * c);
-	}
 	
 	public static double getMultiLogLoss(List<Double> response, List<double[]> samples, int ta ) {
 		List<double[]> desired = new ArrayList<double[]>();
@@ -247,11 +213,6 @@ public class SupervisedUtils {
 		return auc;
 	}
 	
-	public static void main(String[] args) {
-		List<Entry<List<Integer>, List<Integer>>> cvList = getKFoldCVList(2,1,10,0);
-		System.out.println(cvList);;
-	}
-
 	public static double getRSS(List<Double> response, List<double[]> samples, int ta) {
 		if (response.size() != samples.size())
 			throw new RuntimeException("response.size() != samples.size() "+response.size()+","+samples.size());

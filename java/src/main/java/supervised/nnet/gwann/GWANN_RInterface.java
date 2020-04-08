@@ -235,14 +235,13 @@ public class GWANN_RInterface {
 					localBestBw = bw;
 					localBestIts = minMeanIdx;
 					noImpBw = 0;
-				} else
-					noImpBw++;
-
+				} 
 				bwDone.add(bw);
 			}
-			if( prevMin-localMin < eps && ( noImpBw >= 4 || ll.isEmpty() ) ) 
+			if( prevMin-localMin < eps && noImpBw >= 4 ) 
 				break;
 			prevMin = localMin;
+			noImpBw++;			
 		}
 		System.out.println("Cross-validation results:");
 		System.out.println("Bandwidth: "+localBestBw);
