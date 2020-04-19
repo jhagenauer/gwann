@@ -2,10 +2,10 @@ Package: gwann
 Title: Geographically Weighted Artificial Neural Network
 Version: 0.0.0.9000
 Authors@R: 
-    person(given = "",
-           family = "",
+    person(given = "Julian",
+           family = "Hagenauer",
            role = c("aut", "cre"),
-           email = "",
+           email = "julian.hagenauer@gmx.de",
            comment = c(ORCID = "YOUR-ORCID-ID"))
 Description: What the package does (one paragraph).
 License: What license it uses

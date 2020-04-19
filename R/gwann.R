@@ -55,6 +55,7 @@ gwann<-function(x,y,dmX,dmP,nrHidden=4,batchSize=10,lr=0.1,linOut=T,kernel="gaus
     list(
       predictions=r$predictions,
       weights=r$weights,
+      evaluations=r$evaluations,
       rmse=r$rmse,
       bw=r$bw,
       its=r$its

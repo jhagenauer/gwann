@@ -62,6 +62,7 @@ public class GWANN_RInterface {
 
 		double prevMin = Double.POSITIVE_INFINITY;
 		double localMin = Double.POSITIVE_INFINITY;
+		List<List<Double>> evals = null;
 		double localBestBw = adaptive ? (int) ((max - min) / 2) : (max - min) / 2;
 		
 		if( bw_ > 0 )
@@ -235,6 +236,7 @@ public class GWANN_RInterface {
 					localBestBw = bw;
 					localBestIts = minMeanIdx;
 					noImpBw = 0;
+					evals = result;
 				} 
 				bwDone.add(bw);
 			}
@@ -321,10 +323,19 @@ public class GWANN_RInterface {
 					
 					ReturnObject ro = new ReturnObject();
 					ro.predictions = preds;
-					ro.weights = weights[weights.length-1];
+					ro.weights = weights;
 					ro.rmse = localMin;
 					ro.its = it;
 					ro.bw = bw;
+					
+					ro.evaluations = new double[evals.size()][];
+					for( int i = 0; i < evals.size(); i++ ) {
+						List<Double> l = evals.get(i);
+						double[] d = new double[l.size()];
+						for( int j = 0; j < d.length; j++ )
+							d[j] = l.get(j);
+						ro.evaluations[i] = d;
+					}
 					
 					return ro;
 				}
