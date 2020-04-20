@@ -27,7 +27,7 @@ Java JDK 1.2 or higher (for JRI/REngine JDK 1.4 or higher). If it is not already
 
     # convergence
     m<-do.call(rbind,lapply(1:length(r$evaluations), function(i) cbind(melt(r$evaluations[[i]]),fold=i)))
-    ggplot(m) + geom_line(aes(x=Var1,y=value,colour=as.factor(fold))) + labs(x="Evaluations",y="RMSE")
+    ggplot(m) + geom_line(aes(x=Var1,y=value,colour=as.factor(fold))) + labs(x="Evaluations",y="RMSE",colour="Fold")
 
     # weights input to hidden layer
     w1<-cbind( data.frame(r$weights[[1]]),c("x1","x2","Bias") )
