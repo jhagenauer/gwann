@@ -4,9 +4,10 @@
 \alias{gwann}
 \title{Build a Geographically Weighted Artificial Neural Network.}
 \usage{
-gwann(x, y, dmX, dmP, nrHidden = 4, batchSize = 10, lr = 0.1,
-  kernel = "gaussian", bandwidth = NA, adaptive = F, maxIts = 5000,
-  noImp = 100, batchPerIt = 10, threads = 4)
+gwann(x, y, dmX, dmP, nrHidden = 4, batchSize = 10,
+  optimizer = "nesterov", lr = 0.1, linOut = T,
+  kernel = "gaussian", bandwidth = NA, adaptive = F,
+  iterations = NA, patience = 100, threads = 4)
 }
 \arguments{
 \item{x}{Matrix. Rows are observations, columns are independent variables.}
@@ -21,19 +22,19 @@ gwann(x, y, dmX, dmP, nrHidden = 4, batchSize = 10, lr = 0.1,
 
 \item{batchSize}{Batch size.}
 
+\item{optimizer}{Optimizer.}
+
 \item{lr}{Learning rate.}
 
 \item{kernel}{Kernel.}
 
-\item{bandwidth}{Bandwidth size.}
+\item{bandwidth}{Bandwidth size. If NA, it is determined using 10-fold CV.}
 
 \item{adaptive}{Adaptive instead of fixed bandwidth?}
 
-\item{maxIts}{Maximum number of iterations.}
+\item{iterations}{Number of training iterations. If NA, is determined using 10-fold CV.}
 
-\item{noImp}{After how many iterations with no improvement should training prematurly stop?}
-
-\item{batchPerIt}{How many batch presentations per iteration?}
+\item{patience}{After how many iterations with no improvement should training prematurly stop?}
 
 \item{threads}{Number of threads to use.}
 }
@@ -51,14 +52,13 @@ data(toy4)
 dm<-as.matrix( dist(toy4[,c("lon","lat")])  )
 x<-as.matrix(toy4[,c("x1","x2")])
 y<-as.numeric( toy4[,c("y")] )
+
 \dontrun{
 r<-gwann(x=x,y=y,dmX=dm,dmP=dm,nrHidden=8,batchSize=50,bandwidth=1.49)
 
 if( all ( sapply( c("ggplot2","reshape2","viridis"), require, character.only=T ) ) ) {
-  a<-cbind( t(r$weights), toy4[,c("lon","lat")] )
-  m<-melt(a,id.vars=c("lon","lat"))
-  x11()
-  ggplot(m,aes(lon,lat,fill=value)) + geom_raster() + facet_wrap(~variable) + scale_fill_viridis()
+   s<-cbind( Prediction=diag(r$predictions), toy4[,c("lon","lat")] )
+   ggplot(s,aes(lon,lat,fill=Prediction)) + geom_raster() + scale_fill_viridis() + coord_fixed()
 }
 }
 }
