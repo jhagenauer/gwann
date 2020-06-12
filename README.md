@@ -1,5 +1,9 @@
 # Geographically Weighted Artificial Neural Network
 
+### System Requirements
+
+Java JDK 1.2 or higher (for JRI/REngine JDK 1.4 or higher). If it is not already installed, you can get it [here](https://www.oracle.com/java/technologies/javase-downloads.html).
+
 ### Install
     if (!require("devtools"))
        install.packages("devtools")
