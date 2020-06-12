@@ -6,5 +6,4 @@ public class ReturnObject {
 	public double rmse;
 	public double bw;
 	public double its;
-	public double[][] evaluations;
 }

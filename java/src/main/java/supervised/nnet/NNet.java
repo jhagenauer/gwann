@@ -1,28 +1,46 @@
 package supervised.nnet;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
-import org.apache.log4j.Logger;
-
 import supervised.SupervisedNet;
 import supervised.nnet.activation.Constant;
 import supervised.nnet.activation.Function;
-import utils.DataUtils;
 
 public class NNet implements SupervisedNet {
-
-	private static Logger log = Logger.getLogger(NNet.class);
 
 	public Function[][] layer;
 	public double[][][] weights;
 	protected double eta = 0.05;
-	
+
+	double[][][] v = null, v_prev = null;
+	public static enum Optimizer { SGD, Momentum, Nesterov, RMSProp, Adam };
+	protected Optimizer m;
+		
 	public NNet(Function[][] layer, double[][][] weights, double eta) {
+		this(layer,weights,eta,Optimizer.Nesterov);
+	}
+	
+	public NNet(Function[][] layer, double[][][] weights, double eta, Optimizer m ) {
+		
 		this.layer = layer;
 		this.eta = eta;	
 		this.weights = weights;
+		this.m = m;
+		
+		this.v = new double[weights.length][][];
+		this.v_prev = new double[weights.length][][];
+		for( int i = 0; i < weights.length; i++ ) {
+			this.v[i] = new double[weights[i].length][];
+			this.v_prev[i] = new double[weights[i].length][];
+			
+			for( int j = 0; j < weights[i].length; j++ ) {
+				this.v[i][j] = new double[weights[i][j].length];
+				this.v_prev[i][j] = new double[weights[i][j].length];
+			}
+		}
 	}
 			
 	@Override
@@ -46,7 +64,7 @@ public class NNet implements SupervisedNet {
 			for (int i = 0; i < layer[l].length; i++ )
 				if( l == 0 && layer[l][i] instanceof Constant )
 					out[l][i] = layer[l][i].f(Double.NaN);
-				else
+				else 
 					out[l][i] = layer[l][i].f(in[inIdx++]);
 							
 			if (l == layer.length - 1)
@@ -62,56 +80,27 @@ public class NNet implements SupervisedNet {
 
 	@Override
 	public void train(double t, double[] x, double[] desired) {
-		double[][][] p = presentInt(x);
-		
-		double[][] out = p[0];
-		//double[][] net = p[1];
-		
-		// back propagation
-		double[][] delta = new double[layer.length][];
-		int ll = layer.length - 1; // index of last layer
-
-		for (int l = ll; l > 0; l--) {
-			
-			delta[l] = new double[layer[l].length];
-			for (int i = 0; i < layer[l].length; i++) { // for each neuron of layer l
-				
-				double s = 0;
-				if( l == ll ) {
-					s = (out[l][i] - desired[i]);
-				} else {
-					for (int j = 0; j < weights[l][i].length; j++)
-						if( !( layer[l+1][j] instanceof Constant ) )
-							s += delta[l + 1][j] * weights[l][i][j];
-				}		
-				delta[l][i] = layer[l][i].fDevFOut(out[l][i]) * s;
-			}	
-		}
-		
-		// https://stats.stackexchange.com/questions/29130/difference-between-neural-net-weight-decay-and-learning-rate
-		// change weights to layer i
-		for (int l = 0; l < ll; l++) 
-			for (int i = 0; i < weights[l].length; i++) // neurons of layer l
-				for (int j = 0; j < weights[l][i].length; j++) // weights to neurons j in layer l+1
-					weights[l][i][j] -= eta * delta[l+1][j] * out[l][i];
+		List<double[]> xl = new ArrayList<>();
+		List<double[]> yl = new ArrayList<>();
+		xl.add(x);
+		yl.add(desired);
+		train(xl,yl);
 	}
 	
-	public void train( List<double[]> batch, int[] fa, int[] ta ) {
-		
+	protected double[][][] getErrorGradient(List<double[]> x, List<double[]> y ) {
 		int ll = layer.length - 1; // index of last layer
-		double[][] delta = new double[layer.length][];
-		double[][][] update = new double[layer.length-1][][];		
-		
-		for( double[] x : batch ) {
-			double[] desired = DataUtils.strip(x, ta);
-			double[][] out = presentInt( DataUtils.strip(x, fa))[0];
-												
+		double[][][] errorGrad = new double[layer.length-1][][];				
+		double[][] delta = new double[layer.length][];		
+		for( int e = 0; e < x.size(); e++ ) {
+			double[] desired = y.get(e);
+			double[][] out = presentInt( x.get(e) )[0];
+											
 			for (int l = ll; l > 0; l--) {	
 				
 				delta[l] = new double[layer[l].length];
 				
-				if( update[l-1] == null )
-					update[l-1] = new double[layer[l-1].length][layer[l].length];
+				if( errorGrad[l-1] == null )
+					errorGrad[l-1] = new double[layer[l-1].length][layer[l].length];
 					
 				for (int i = 0; i < layer[l].length; i++) { // for each neuron of layer l
 					
@@ -120,24 +109,93 @@ public class NNet implements SupervisedNet {
 						s = (out[l][i] - desired[i]);		
 					} else {
 						for (int j = 0; j < weights[l][i].length; j++)
-							if( !( layer[l+1][j] instanceof Constant ) )
-								s += delta[l + 1][j] * weights[l][i][j]; // ?
+							if( !( layer[l+1][j] instanceof Constant ) ) 
+								s += delta[l + 1][j] * weights[l][i][j];
 					}
-																
-					delta[l][i] = layer[l][i].fDevFOut(out[l][i]) * s;				
-					// delta[l][i] = layer[l][i].fDev(net[l][i]) * s; 
+					delta[l][i] = layer[l][i].fDevFOut(out[l][i]) * s; 
 										
 					for( int h = 0; h < layer[l-1].length; h++ ) 
-						update[l-1][h][i] += out[l-1][h] * delta[l][i];
+						errorGrad[l-1][h][i] += out[l-1][h] * delta[l][i];
 				}
 			}
 		}
-						
-		// change weights to layer i
-		for (int l = 0; l < ll; l++) 
+		return errorGrad;
+	}
+	
+	protected void updateSGD( double[][][] errorGrad, double leta ) {
+		for (int l = 0; l < weights.length; l++) 
 			for (int i = 0; i < weights[l].length; i++) 												
 				for (int j = 0; j < weights[l][i].length; j++) 
-					weights[l][i][j] -= eta * update[l][i][j]/batch.size();
+					weights[l][i][j] -= leta * errorGrad[l][i][j];				
+	}
+	
+	protected void updateMomentum( double[][][] errorGrad, double leta ) {
+		double mu = 0.9;
+		for (int l = 0; l < weights.length; l++) 
+			for (int i = 0; i < weights[l].length; i++) 												
+				for (int j = 0; j < weights[l][i].length; j++) {
+					v[l][i][j] = mu * v[l][i][j] - leta * errorGrad[l][i][j]; // momentum
+					weights[l][i][j] += v[l][i][j];
+				}
+	}
+	
+	protected void updateNestrov( double[][][] errorGrad, double leta ) {
+		double mu = 0.9;
+		for (int l = 0; l < weights.length; l++) 
+			for (int i = 0; i < weights[l].length; i++) 												
+				for (int j = 0; j < weights[l][i].length; j++) {
+					v_prev[l][i][j] = v[l][i][j];
+					v[l][i][j] = mu * v[l][i][j] - leta * errorGrad[l][i][j];
+					weights[l][i][j] += -mu * v_prev[l][i][j] + v[l][i][j] + mu*v[l][i][j]; 
+				}
+	} 
+	
+	protected void updateRMSProp( double[][][] errorGrad, double leta ) {
+		double gamma = 0.9;
+		for (int l = 0; l < weights.length; l++) 
+			for (int i = 0; i < weights[l].length; i++) 												
+				for (int j = 0; j < weights[l][i].length; j++) {
+					v[l][i][j] = gamma*v[l][i][j]+(1-gamma)*errorGrad[l][i][j]*errorGrad[l][i][j];
+					weights[l][i][j] -= leta/Math.sqrt(v[l][i][j])*errorGrad[l][i][j];
+				}
+		v_prev = errorGrad;
+	}
+	
+	protected void updateAdam( double[][][] errorGrad, double leta) {
+		double b1 = 0.9, b2 = 0.999, eps = Math.pow(10, -8);
+		
+		for (int l = 0; l < weights.length; l++) 
+			for (int i = 0; i < weights[l].length; i++) 												
+				for (int j = 0; j < weights[l][i].length; j++) {
+					
+					v_prev[l][i][j] = b1*v_prev[l][i][j]+(1-b1)*errorGrad[l][i][j];
+					v[l][i][j] = b2*v[l][i][j]+(1-b2)*Math.pow(errorGrad[l][i][j], 2);
+					
+					double mt = v_prev[l][i][j]/(1-b1*b1);
+					double vt = v[l][i][j]/(1-b2*b2);
+					
+					weights[l][i][j] -= leta*mt/(Math.sqrt(vt)+eps);
+				}		
+	}
+
+	protected int t = 1;
+	public void train( List<double[]> x, List<double[]> y ) {
+		double[][][] errorGrad = getErrorGradient(x,y);
+		double leta = eta/x.size();
+				
+		//leta = eta * Math.pow( 0.5, Math.floor( (double)t/iv));
+				
+		if( m == Optimizer.SGD )
+			updateSGD(errorGrad, leta);
+		else if( m == Optimizer.Momentum )
+			updateMomentum(errorGrad, leta);
+		else if( m == Optimizer.Nesterov )
+			updateNestrov(errorGrad, leta);
+		else if( m == Optimizer.RMSProp )
+			updateRMSProp(errorGrad, leta);
+		else if( m == Optimizer.Adam )
+			updateAdam(errorGrad, leta);
+		t++;
 	}
 		
 	@Override
@@ -197,6 +255,10 @@ public class NNet implements SupervisedNet {
 	
 	public void setEta(double eta) {
 		this.eta = eta;
+	}
+	
+	public double getEta() {
+		return eta;
 	}
 	
 	public int getNumParameters() {

@@ -14,8 +14,17 @@ public class Normalizer {
 	Transform t;
 	SummaryStatistics[] ds;
 	
-	public Normalizer( Transform t, List<double[]> samples, int[] fa ) {
-		this.fa = fa;
+	public Normalizer( Transform t, List<double[]> samples ) {
+		this(t,samples,null);
+	}
+	
+	public Normalizer( Transform t, List<double[]> samples, int[] faa ) {
+		if( faa == null ) {
+			this.fa = new int[samples.get(0).length];
+			for( int i = 0; i < this.fa.length; i++ )
+				this.fa[i] = i;
+		} else
+			this.fa = faa;
 		this.t = t;
 		
 		ds = new SummaryStatistics[fa.length];

@@ -34,7 +34,7 @@ public class GWRUtils {
 	}
 
 	public enum GWKernel {
-		gaussian, bisquare, boxcar
+		gaussian, bisquare, boxcar, exponential, tricube
 	};
 
 	public static double getKernelValue(GWKernel k, double dist, double bw) {	
@@ -45,6 +45,10 @@ public class GWRUtils {
 			w = dist <= bw ? Math.pow(1.0 - Math.pow(dist / bw, 2), 2) : 0;
 		else if (k == GWKernel.boxcar)
 			w = dist <= bw ? 1 : 0;
+		else if( k == GWKernel.tricube )
+			w = dist <= bw ? Math.pow(1.0 - Math.pow(dist / bw, 3), 3) : 0;
+		else if( k == GWKernel.exponential )
+			w = Math.exp(-dist / bw);
 		else
 			throw new RuntimeException("No valid kernel given");
 		if (Double.isNaN(w))
@@ -80,6 +84,29 @@ public class GWRUtils {
 				a.put(j,i, Math.sqrt( a.get(j,i)/W_.getRow(j).sum() ) );
 		}
 		return a;
+	}
+	
+	public static DoubleMatrix getKernelWeights(DoubleMatrix W, DoubleMatrix Wk, GWKernel kernel, int nb ) {
+		DoubleMatrix kW = new DoubleMatrix(Wk.rows,Wk.columns);
+		for (int i = 0; i < W.rows; i++) {
+			double bw = W.getRow(i).sort().get(nb);
+			double[] w = new double[Wk.columns];
+			for (int j = 0; j < w.length; j++)
+				w[j] = GWRUtils.getKernelValue(kernel, Wk.get(i, j), bw);
+			kW.putRow(i,new DoubleMatrix(w));
+		}
+		return kW;
+	}
+	
+	public static DoubleMatrix getKernelWeights( DoubleMatrix W, GWKernel kernel, double bw ) {
+		DoubleMatrix kW = new DoubleMatrix(W.rows,W.columns);
+		for (int i = 0; i < W.rows; i++) {
+			double[] w = new double[W.columns];
+			for (int j = 0; j < w.length; j++)
+				w[j] = GWRUtils.getKernelValue(kernel, W.get(i,j), bw);
+			kW.putRow(i, new DoubleMatrix(w));
+		}
+		return kW;
 	}
 
 	// ----------------------------------------------
