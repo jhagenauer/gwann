@@ -14,9 +14,12 @@
 #' @param iterations Number of training iterations. If NA, is determined using 10-fold CV.
 #' @param patience After how many iterations with no improvement should training prematurly stop?
 #' @param threads Number of threads to use.
-#' @return A list with two elements.
-#' The first element is the vector \code{predictions} which contains the predictions for the locations defined by \code{dmP}.
-#' The second elemnt is the matrix \code{weights} which contains the connection weights of the hidden neurons to the output neurons. The output neurons refer to the positions defined by \code{dmP}.
+#' @return A list with five elements.
+#' The first element \code{predictions} contains the predictions.
+#' The second elemnt \code{weights} contains the connection weights of the hidden neurons to the output neurons.
+#' The third element \code{rmse} is the mean RMSE of the 10-fold CV procedure.
+#' The fourth element \code{bandwidth} is the bandwidth that is used to train the final model.
+#' The fifth element \code{iterations} is the numer of training iterations for the final model.
 #' @examples
 #' data(toy4)
 #'
