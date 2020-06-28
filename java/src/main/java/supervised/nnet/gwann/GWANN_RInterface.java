@@ -32,9 +32,17 @@ import utils.Normalizer;
 public class GWANN_RInterface {
 	volatile static Integer uLim = Integer.MAX_VALUE;
 	
-	public static ReturnObject run(double[][] xArray, double[] yArray, double[][] dmX, double[][] dmP, double nrHidden, double batchSize, String optim, double eta, boolean linOut, String krnl, double bw_, boolean adaptive, double iterations, double patience, double threads) {
+	public static ReturnObject run(double[][] xArray, double[] yArray, double[][] dm, int[] tIdx, int[] pIdx, double nrHidden, double batchSize, String optim, double eta, boolean linOut, String krnl, double bw_, boolean adaptive, double iterations, double patience, double threads) {
 
-		assert xArray.length == dmX.length & dmX.length == dmX[0].length;
+		int[] trainIdx = new int[tIdx.length];
+		for( int i = 0; i < tIdx.length; i++ )
+			trainIdx[i] = (int)tIdx[i]-1;
+		
+		int[] predIdx = new int[pIdx.length];
+		for( int i = 0; i < pIdx.length; i++ )
+			predIdx[i] = (int)pIdx[i]-1;
+		
+		assert xArray.length == dm.length & dm.length == dm[0].length;
 		
 		GWKernel kernel;
 		if (krnl.equalsIgnoreCase("gaussian"))
@@ -66,8 +74,7 @@ public class GWANN_RInterface {
 		int pow = 3;
 		final int steps = 10;
 
-		DoubleMatrix W = new DoubleMatrix(dmX);
-		DoubleMatrix predW = new DoubleMatrix(dmP);
+		DoubleMatrix W = new DoubleMatrix(dm);
 		
 		List<Double> v = new ArrayList<>();
 		for (double w : W.data)
@@ -116,8 +123,13 @@ public class GWANN_RInterface {
 				
 				ExecutorService innerEs = Executors.newFixedThreadPool((int) threads);
 				List<Future<List<Double>>> futures = new ArrayList<Future<List<Double>>>();
+				
+				List<Integer> ti = new ArrayList<>();
+				for( int i : trainIdx )
+					ti.add(i);
 
-				List<Entry<List<Integer>, List<Integer>>> innerCvList = SupervisedUtils.getKFoldCVList(10, 1, xArray.length, seed);
+				List<Entry<List<Integer>, List<Integer>>> innerCvList = SupervisedUtils.getKFoldCVList(10, 1, ti, seed);
+				//List<Entry<List<Integer>, List<Integer>>> innerCvList = SupervisedUtils.getKFoldCVList(10, 1, xArray.length, seed);
 				for (int innerK = 0; innerK < innerCvList.size(); innerK++) {
 					Entry<List<Integer>, List<Integer>> innerCvEntry = innerCvList.get(innerK);
 
@@ -218,8 +230,19 @@ public class GWANN_RInterface {
 					}));
 				}
 				innerEs.shutdown();
-				double[] mm = getMinMeanIdx(futures);
-
+				double[] mm;
+				if( iterations >= 0 ) {
+					double mean = 0;
+					for (Future<List<Double>> f : futures) {
+						try {
+							mean += f.get().get((int)iterations);
+						} catch (InterruptedException | ExecutionException ex) {
+							ex.printStackTrace();
+						}
+					}
+					mm = new double[] { mean/futures.size(), (int)iterations };
+				} else
+				 mm	= getMinMeanIdx(futures);
 				if (mm[0] < bestValError) {
 					bestValError = mm[0];
 					bestValBw = bw;
@@ -237,16 +260,16 @@ public class GWANN_RInterface {
 		System.out.println("Iterations: " + bestIts);
 		System.out.println("RMSE: " + bestValError);
 
-		System.out.println("Building final model...");
+		System.out.println("Building final model with bandwidth "+bestValBw+" and "+bestIts+" iterations...");
 		{			
 			Random r = new Random(seed);
 			
 			List<double[]> xTrain = new ArrayList<>();
 			List<double[]> yTrain = new ArrayList<>();
-			for (int i = 0; i < xArray.length; i++ ) {
+			for (int i : trainIdx ) {
 				xTrain.add(Arrays.copyOf(xArray[i], xArray[i].length));
 
-				double[] y = new double[dmP[0].length];
+				double[] y = new double[predIdx.length];
 				for (int j = 0; j < y.length; j++)
 					y[j] = yArray[i];
 				yTrain.add(y);
@@ -264,7 +287,7 @@ public class GWANN_RInterface {
 			hidden.add(new Constant(1.0));
 
 			List<Function> output = new ArrayList<>();
-			while (output.size() < dmP[0].length)
+			while (output.size() < predIdx.length)
 				output.add(new Linear());
 
 			Function[][] layers = new Function[][] { input.toArray(new Function[] {}), hidden.toArray(new Function[] {}), output.toArray(new Function[] {}) };
@@ -272,6 +295,7 @@ public class GWANN_RInterface {
 			double[][][] weights = NNet.getFullyConnectedWeights(layers, initMode.gorot_unif, 0);
 			GWANN gwann = new GWANN(layers, weights, eta, opt);
 
+			DoubleMatrix predW = W.get(trainIdx,predIdx);
 			DoubleMatrix kW = adaptive ? GWRUtils.getKernelWeights(W, predW, kernel, (int) bestValBw) : GWRUtils.getKernelWeights(predW, kernel, bestValBw);
 			List<Integer> batchReservoir = new ArrayList<>();
 			for (int it = 0; it <= bestIts; it++) {
@@ -291,8 +315,8 @@ public class GWANN_RInterface {
 				gwann.train(x, y, gwWeights);
 			}
 			// predictions
-			double[][] preds = new double[xTrain.size()][];
-			for (int i = 0; i < xTrain.size(); i++) {
+			double[][] preds = new double[predIdx.length][];
+			for (int i : predIdx ) {
 				double[][] out = gwann.presentInt(xTrain.get(i))[0];
 				preds[i] = out[layers.length - 1];
 			}

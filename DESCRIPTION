@@ -7,8 +7,9 @@ Authors@R:
            role = c("aut", "cre"),
            email = "julian.hagenauer@gmx.de",
            comment = c(ORCID = "YOUR-ORCID-ID"))
-Description: What the package does (one paragraph).
-License: What license it uses
+Description: Builds a geographically weighted neural network.
+URL: https://github.com/jhagenauer/gwann/
+License: GNU GPLv3
 Encoding: UTF-8
 LazyData: true
 Depends: R (>= 3.5.0),rJava (>= 0.9-1)
