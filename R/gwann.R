@@ -13,7 +13,7 @@
 #' @param bandwidth Bandwidth size. If NA, it is determined using 10-fold CV.
 #' @param adaptive Adaptive instead of fixed bandwidth?
 #' @param iterations Number of training iterations. If NA, is determined using 10-fold CV.
-#' @param patience After how many iterations with no improvement should training prematurly stop?
+#' @param patience After how many iterations with no improvement should training prematurely stop?
 #' @param threads Number of threads to use.
 #' @return A list of five elements.
 #' The first element \code{predictions} contains the predictions.

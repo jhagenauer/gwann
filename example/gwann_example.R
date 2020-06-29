@@ -48,12 +48,12 @@ y<-as.numeric( toy4[,c("y")] )
 x<-x
 y<-y
 nrHidden<-5
-bandwidth<-1.7
-batchSize<-50
+bandwidth<-1.8
+batchSize<-100
 opt="adam"
 threads<-8
 batchSize<-10
-lr<-0.1
+lr<-0.01
 linOut<-T
 kernel<-"gaussian"
 adaptive<-T

@@ -19,11 +19,21 @@ Java JDK 1.2 or higher (for JRI/REngine JDK 1.4 or higher). If it is not already
 
     data(toy4)
 
-    dm<-as.matrix( dist(toy4[,c("lon","lat")])  )
-    x<-as.matrix(toy4[,c("x1","x2")])
-    y<-as.numeric( toy4[,c("y")] )
+    library(ggplot2)
+    library(devtools)
+    library(viridis)
+    library(reshape2)
+    library(devtools)
 
-    r<-gwann(x=x,y=y,dmX=dm,dmP=dm,nrHidden=5,batchSize=50,bandwidth=1.8)
+    install(args="--no-multiarch")
+    library(gwann)
+
+    data(toy4)
+    dm<-as.matrix(dist(toy4[,c("lon","lat")])  )
+    x<-as.matrix(toy4[,c("x1","x2")])
+    y<-as.numeric(toy4[,c("y")] )
+
+    r<-gwann(x=x,y=y,dm=dm,trainIdx=1:nrow(x),predIdx=1:nrow(x),nrHidden=5,batchSize=100,bandwidth=1.8,lr=0.01)
 
     # predictions
     s<-cbind( Prediction=diag(r$predictions), toy4[,c("lon","lat")] )
