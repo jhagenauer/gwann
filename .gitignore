@@ -3,3 +3,4 @@
 .Rhistory
 java/target/**
 java/bin/**
+outfile.txt
