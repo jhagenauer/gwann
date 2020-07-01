@@ -13,4 +13,4 @@ License: GNU GPLv3
 Encoding: UTF-8
 LazyData: true
 Depends: R (>= 3.5.0), rJava (>= 0.9-1)
-RoxygenNote: 6.1.1
+RoxygenNote: 7.1.0

@@ -4,19 +4,35 @@
 \alias{gwann}
 \title{Build a Geographically Weighted Artificial Neural Network.}
 \usage{
-gwann(x, y, dmX, dmP, nrHidden = 4, batchSize = 10,
-  optimizer = "nesterov", lr = 0.1, linOut = T,
-  kernel = "gaussian", bandwidth = NA, adaptive = F,
-  iterations = NA, patience = 100, threads = 4)
+gwann(
+  x,
+  y,
+  dm,
+  trainIdx = 1:nrow(dm),
+  predIdx = 1:nrow(dm),
+  nrHidden = 4,
+  batchSize = 10,
+  optimizer = "nesterov",
+  lr = 0.1,
+  linOut = T,
+  kernel = "gaussian",
+  bandwidth = NA,
+  adaptive = F,
+  iterations = NA,
+  patience = 100,
+  threads = 4
+)
 }
 \arguments{
 \item{x}{Matrix. Rows are observations, columns are independent variables.}
 
 \item{y}{Vector. Values represent target values for the observations in \code{x}.}
 
-\item{dmX}{Matrix of distances between the observations of \code{x}.}
+\item{dm}{Matrix of distances between the observations of \code{x}.}
 
-\item{dmP}{Matrix of distances between the observations of \code{x} (Rows) and some prediction locations (Columns).}
+\item{trainIdx}{a vector containing the indices of observations of \code{x} used for training.}
+
+\item{predIdx}{a vector containing the indices of observations of \code{x} used for prediction.}
 
 \item{nrHidden}{Number of hidden neurons.}
 
@@ -34,12 +50,12 @@ gwann(x, y, dmX, dmP, nrHidden = 4, batchSize = 10,
 
 \item{iterations}{Number of training iterations. If NA, is determined using 10-fold CV.}
 
-\item{patience}{After how many iterations with no improvement should training prematurly stop?}
+\item{patience}{After how many iterations with no improvement should training prematurely stop?}
 
 \item{threads}{Number of threads to use.}
 }
 \value{
-A list with five elements.
+A list of five elements.
 The first element \code{predictions} contains the predictions.
 The second elemnt \code{weights} contains the connection weights of the hidden neurons to the output neurons.
 The third element \code{rmse} is the mean RMSE of the 10-fold CV procedure.
@@ -57,7 +73,7 @@ x<-as.matrix(toy4[,c("x1","x2")])
 y<-as.numeric( toy4[,c("y")] )
 
 \dontrun{
-r<-gwann(x=x,y=y,dmX=dm,dmP=dm,nrHidden=8,batchSize=50,bandwidth=1.49)
+r<-gwann(x=x,y=y,dm=dm,trainIdx=1:nrow(x),predIdx=1:nrow(x),nrHidden=5,batchSize=50,bandwidth=1.8,iterations=5610,lr=0.01)
 
 if( all ( sapply( c("ggplot2","reshape2","viridis"), require, character.only=T ) ) ) {
    s<-cbind( Prediction=diag(r$predictions), toy4[,c("lon","lat")] )
