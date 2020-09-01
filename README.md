@@ -12,20 +12,8 @@ Java JDK 1.2 or higher (for JRI/REngine JDK 1.4 or higher). If it is not already
 ### Example
 
     library(ggplot2)
-    library(devtools)
     library(viridis)
     library(reshape2)
-    library(gwann)
-
-    data(toy4)
-
-    library(ggplot2)
-    library(devtools)
-    library(viridis)
-    library(reshape2)
-    library(devtools)
-
-    install(args="--no-multiarch")
     library(gwann)
 
     data(toy4)
@@ -33,7 +21,10 @@ Java JDK 1.2 or higher (for JRI/REngine JDK 1.4 or higher). If it is not already
     x<-as.matrix(toy4[,c("x1","x2")])
     y<-as.numeric(toy4[,c("y")] )
 
-    r<-gwann(x=x,y=y,dm=dm,trainIdx=1:nrow(x),predIdx=1:nrow(x),nrHidden=5,batchSize=100,bandwidth=1.8,lr=0.01)
+    r<-gwann(x=x,y=y,dm=dm,trainIdx=1:nrow(x),predIdx=1:nrow(x),nrHidden=5,batchSize=100,threads=8,adaptive=F,bandwidth=1.801,lr=0.01,patience=1000)
+    print(paste("RMSE: ",r$rmse))
+    print(paste("Iterations: ",r$its))
+    print(paste("Bandwidth: ",r$bw))
 
     # predictions
     s<-cbind( Prediction=diag(r$predictions), toy4[,c("lon","lat")] )
