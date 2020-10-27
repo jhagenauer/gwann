@@ -32,7 +32,11 @@ import utils.Normalizer;
 public class GWANN_RInterface {
 	volatile static Integer uLim = Integer.MAX_VALUE;
 	
-	public static ReturnObject run(double[][] xArray, double[] yArray, double[][] dm, int[] tIdx, int[] pIdx, double nrHidden, double batchSize, String optim, double eta, boolean linOut, String krnl, double bw_, boolean adaptive, double iterations, double patience, double threads) {
+	public static ReturnObject run(double[][] xArray, double[] yArray, double[][] dm, int[] tIdx, int[] pIdx, double nrHidden, double batchSize, String optim, double eta, boolean linOut, 
+			String krnl, double bw_, boolean adaptive, 
+			boolean gridSearch, double minBw, double maxBw, int steps_,
+			double iterations, double patience, 
+			double threads) {
 
 		int[] trainIdx = new int[tIdx.length];
 		for( int i = 0; i < tIdx.length; i++ )
@@ -72,7 +76,7 @@ public class GWANN_RInterface {
 
 		double eps = 1e-03; // oder lieber 4?
 		int pow = 3;
-		final int steps = 10;
+		final int steps = steps_ < 0 ? 10 : steps_;
 
 		DoubleMatrix W = new DoubleMatrix(dm);
 		
@@ -82,11 +86,11 @@ public class GWANN_RInterface {
 		v = new ArrayList<>(new HashSet<>(v));
 		Collections.sort(v);
 
-		double min = adaptive ? 5 : v.get(1) / 4;
-		double max = adaptive ? W.rows / 4 : v.get(v.size() - 1) / 4;
+		double min = minBw < 0 ? ( adaptive ? 5 : v.get(1) / 4 ) : minBw;
+		double max = maxBw < 0 ? ( adaptive ? W.rows / 2 : v.get(v.size() - 1) / 2 ) : maxBw;
 
 		double bestValError = Double.POSITIVE_INFINITY;
-		double bestValBw = adaptive ? (int) ((max - min) / 4) : (max - min) / 4;
+		double bestValBw = adaptive ? (int) ((max - min) / 2) : (max - min) / 2;
 		double prevBestValError = Double.POSITIVE_INFINITY;
 		int bestIts = -1;
 		Set<Double> bwDone = new HashSet<>();
@@ -110,10 +114,13 @@ public class GWANN_RInterface {
 			List<Double> ll = new ArrayList<>(l);
 			Collections.sort(ll);
 			
+			// bandwidth given?
 			if( bw_ > 0 ) {
 				ll.clear();
 				ll.add(bw_);
-			}
+			} else if( gridSearch ) 
+				for( double a = min; a <=max; a+= (max-min)/steps )
+					ll.add(a);			
 			ll.removeAll(bwDone);
 
 			if (!ll.isEmpty())

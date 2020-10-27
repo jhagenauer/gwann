@@ -12,6 +12,10 @@
 #' @param kernel Kernel.
 #' @param bandwidth Bandwidth size. If NA, it is determined using 10-fold CV.
 #' @param adaptive Adaptive instead of fixed bandwidth?
+#' @param gridSearch If bandwidth is NA, use grid search or local optimization for finding appropriate bandwidth.
+#' @param minBw Lower limit for bandwidth search.
+#' @param maxBw Upper limit for bandwidth search.
+#' @param steps Number of bandwidths to test when doing a grid search.
 #' @param iterations Number of training iterations. If NA, is determined using 10-fold CV.
 #' @param patience After how many iterations with no improvement should training prematurely stop?
 #' @param threads Number of threads to use.
@@ -39,16 +43,23 @@
 #' @references
 #' Not yet published
 #' @export
-gwann<-function(x,y,dm,trainIdx=1:nrow(dm),predIdx=1:nrow(dm),nrHidden=4,batchSize=10,optimizer="nesterov",lr=0.1,linOut=T,kernel="gaussian",bandwidth=NA,adaptive=F,iterations=NA,patience=100,threads=4) {
+gwann<-function(x,y,dm,trainIdx=1:nrow(dm),predIdx=1:nrow(dm),nrHidden=4,batchSize=10,optimizer="nesterov",lr=0.1,linOut=T,kernel="gaussian",bandwidth=NA,adaptive=F,
+                gridSearch=False, minBw=NA, maxBw=NA, steps=20,
+                iterations=NA,patience=100,
+                threads=4) {
+
   if( is.na(bandwidth) )
     bandwidth<-(-1)
   if( is.na(iterations) )
     iterations<-(-1)
+  if( is.na(minBw) )
+    minBw<-(-1)
+  if( is.na(maxBw) )
+    maxBw<-(-1)
 
   if( nrow(dm) != ncol(dm) ) stop("dm must be quadratic!")
   if( length(y) != ncol(dm) ) stop("y must have the same length as dm rows!")
   if( any(is.na(y[trainIdx])) ) stop("trainIdx must not rever to any NAs in y!")
-
 
   r<-.jcall(obj="supervised.nnet.gwann.GWANN_RInterface",method="run",returnSig = "Lsupervised/nnet/gwann/ReturnObject;",
             .jarray(x,dispatch=T),
