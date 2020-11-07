@@ -7,7 +7,7 @@
 #' @param predIdx a vector containing the indices of observations of \code{x} used for prediction.
 #' @param nrHidden Number of hidden neurons.
 #' @param batchSize Batch size.
-#' @param optimizer Optimizer.
+#' @param optimizer Optimizer (sgd, momentum, nesterov).
 #' @param lr Learning rate.
 #' @param kernel Kernel.
 #' @param bandwidth Bandwidth size. If NA, it is determined using 10-fold CV.
@@ -48,6 +48,7 @@ gwann<-function(x,y,dm,trainIdx=1:nrow(dm),predIdx=1:nrow(dm),nrHidden=4,batchSi
                 iterations=NA,patience=100,
                 threads=4) {
 
+  # TODO Why not pass NA-values to java?
   if( is.na(bandwidth) )
     bandwidth<-(-1)
   if( is.na(iterations) )
