@@ -18,6 +18,8 @@
 #' @param steps Number of bandwidths to test when doing a grid search.
 #' @param iterations Number of training iterations. If NA, is determined using 10-fold CV.
 #' @param patience After how many iterations with no improvement should training prematurely stop?
+#' @param folds Number of cross-validation folds
+#' @param repeats Number of repeats of cross-validation procedure
 #' @param threads Number of threads to use.
 #' @return A list of five elements.
 #' The first element \code{predictions} contains the predictions.
@@ -43,9 +45,12 @@
 #' @references
 #' Not yet published
 #' @export
-gwann<-function(x,y,dm,trainIdx=1:nrow(dm),predIdx=1:nrow(dm),nrHidden=4,batchSize=10,optimizer="nesterov",lr=0.1,linOut=T,kernel="gaussian",bandwidth=NA,adaptive=F,
+gwann<-function(x,y,dm,trainIdx=1:nrow(dm),predIdx=1:nrow(dm),
+                nrHidden=4,batchSize=10,optimizer="nesterov",lr=0.1,linOut=T,
+                kernel="gaussian",bandwidth=NA,adaptive=F,
                 gridSearch=False, minBw=NA, maxBw=NA, steps=20,
                 iterations=NA,patience=100,
+                folds=10,repeats=1,
                 threads=4) {
 
   # TODO Why not pass NA-values to java?
@@ -68,7 +73,11 @@ gwann<-function(x,y,dm,trainIdx=1:nrow(dm),predIdx=1:nrow(dm),nrHidden=4,batchSi
             .jarray(dm,dispatch=T),
             trainIdx,
             predIdx,
-            nrHidden,batchSize,optimizer,lr,linOut,kernel,bandwidth,adaptive,iterations,patience,threads)
+            nrHidden,batchSize,optimizer,lr,linOut,
+            kernel,bandwidth,adaptive,
+            iterations,patience,
+            folds,repeats,
+            threads)
 
   return(
     list(

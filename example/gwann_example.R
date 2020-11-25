@@ -8,7 +8,7 @@ dm<-as.matrix(dist(toy4[,c("lon","lat")])  )
 x<-as.matrix(toy4[,c("x1","x2")])
 y<-as.numeric(toy4[,c("y")] )
 
-r<-gwann(x=x,y=y,dm=dm,trainIdx=1:nrow(x),predIdx=1:nrow(x),nrHidden=5,batchSize=100,threads=8,adaptive=F,bandwidth=1.801,lr=0.01,patience=1000)
+r<-gwann(x=x,y=y,dm=dm,trainIdx=1:nrow(x),predIdx=1:nrow(x),nrHidden=5,batchSize=100,threads=8,adaptive=F,bandwidth=1.801,lr=0.01,folds=10,repeats=1,patience=1000)
 print(paste("RMSE: ",r$rmse))
 print(paste("Iterations: ",r$its))
 print(paste("Bandwidth: ",r$bw))
@@ -49,7 +49,7 @@ y<-y
 nrHidden<-5
 bandwidth<-1.8
 batchSize<-100
-opt="adam"
+opt="sgd"
 threads<-8
 batchSize<-10
 lr<-0.01
@@ -57,14 +57,18 @@ linOut<-T
 kernel<-"gaussian"
 adaptive<-T
 iterations<-100
+folds<-10
+repeats<-1
 patience<-100
 
 .jmethods("supervised.nnet.gwann.GWANN_RInterface")
 
 r<-.jcall(obj="supervised.nnet.gwann.GWANN_RInterface",method="run",returnSig = "Lsupervised/nnet/gwann/ReturnObject;",
-          .jarray(x,dispatch=T),
-          y,
-          .jarray(dm,dispatch=T),
-          as.integer(1:nrow(dm)),
-          as.integer(1:nrow(dm)),
-          nrHidden,batchSize,opt,lr,linOut,kernel,bandwidth,adaptive,iterations,patience,threads)
+          .jarray(x,dispatch=T), y, .jarray(dm,dispatch=T),
+          as.integer(1:nrow(dm)), as.integer(1:nrow(dm)),
+          nrHidden,batchSize,opt,lr,linOut,
+          kernel,bandwidth,adaptive,
+          T,1,100,10,
+          iterations,patience,
+          folds,repeats,
+          threads)

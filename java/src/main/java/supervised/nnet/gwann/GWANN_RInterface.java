@@ -33,10 +33,15 @@ import utils.Normalizer;
 public class GWANN_RInterface {
 	volatile static Integer uLim = Integer.MAX_VALUE;
 	
-	public static ReturnObject run(double[][] xArray, double[] yArray, double[][] dm, int[] tIdx, int[] pIdx, double nrHidden, double batchSize, String optim, double eta, boolean linOut, 
+	//TODO inner k, outer k
+	public static ReturnObject run(
+			double[][] xArray, double[] yArray, double[][] dm, 
+			int[] tIdx, int[] pIdx, 
+			double nrHidden, double batchSize, String optim, double eta, boolean linOut, 
 			String krnl, double bw_, boolean adaptive, 
-			boolean gridSearch, double minBw, double maxBw, int steps_,
+			boolean gridSearch, double minBw, double maxBw, double steps_,
 			double iterations, double patience, 
+			double folds, double repeats,
 			double threads) {
 
 		int[] trainIdx = new int[tIdx.length];
@@ -77,7 +82,7 @@ public class GWANN_RInterface {
 
 		double eps = 1e-03; // oder lieber 4?
 		int pow = 3;
-		final int steps = steps_ < 0 ? 10 : steps_;
+		final int steps = (int)steps_ < 0 ? 10 : (int)steps_;
 
 		DoubleMatrix W = new DoubleMatrix(dm);
 		
@@ -136,8 +141,7 @@ public class GWANN_RInterface {
 				for( int i : trainIdx )
 					ti.add(i);
 
-				List<Entry<List<Integer>, List<Integer>>> innerCvList = SupervisedUtils.getKFoldCVList(10, 1, ti, seed);
-				//List<Entry<List<Integer>, List<Integer>>> innerCvList = SupervisedUtils.getKFoldCVList(10, 1, xArray.length, seed);
+				List<Entry<List<Integer>, List<Integer>>> innerCvList = SupervisedUtils.getKFoldCVList( (int)folds, (int)repeats, ti, seed);
 				for (int innerK = 0; innerK < innerCvList.size(); innerK++) {
 					Entry<List<Integer>, List<Integer>> innerCvEntry = innerCvList.get(innerK);
 
@@ -258,12 +262,12 @@ public class GWANN_RInterface {
 				}
 				bwDone.add(bw);
 			}
-			if (prevBestValError - bestValError < eps)
+			if (prevBestValError - bestValError < eps || ll.isEmpty() )
 				break;
 			prevBestValError = bestValError;
 		}
 
-		System.out.println("Cross-validation results:");
+		System.out.println("Cross-validation results (folds: "+folds+", repeats: "+repeats+"):");
 		System.out.println("Bandwidth: " + bestValBw);
 		System.out.println("Iterations: " + bestIts);
 		System.out.println("RMSE: " + bestValError);
