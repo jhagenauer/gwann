@@ -10,9 +10,9 @@
 #' @param optimizer Optimizer (sgd, momentum, nesterov).
 #' @param lr Learning rate.
 #' @param kernel Kernel.
-#' @param bandwidth Bandwidth size. If NA, it is determined using 10-fold CV.
+#' @param bandwidth Bandwidth size. If NA, it is determined using CV.
 #' @param adaptive Adaptive instead of fixed bandwidth?
-#' @param gridSearch If bandwidth is NA, use grid search or local optimization for finding appropriate bandwidth.
+#' @param gridSearch Use grid search or local optimization for finding appropriate bandwidth. Ignored if bandwidth is explicitly given.
 #' @param minBw Lower limit for bandwidth search.
 #' @param maxBw Upper limit for bandwidth search.
 #' @param steps Number of bandwidths to test when doing a grid search.
@@ -24,7 +24,7 @@
 #' @return A list of five elements.
 #' The first element \code{predictions} contains the predictions.
 #' The second elemnt \code{weights} contains the connection weights of the hidden neurons to the output neurons.
-#' The third element \code{rmse} is the mean RMSE of the 10-fold CV procedure.
+#' The third element \code{rmse} is the mean RMSE of the CV procedure.
 #' The fourth element \code{bandwidth} is the bandwidth that is used to train the final model.
 #' The fifth element \code{iterations} is the numer of training iterations for the final model.
 #' @examples
@@ -48,7 +48,7 @@
 gwann<-function(x,y,dm,trainIdx=1:nrow(dm),predIdx=1:nrow(dm),
                 nrHidden=4,batchSize=10,optimizer="nesterov",lr=0.1,linOut=T,
                 kernel="gaussian",bandwidth=NA,adaptive=F,
-                gridSearch=False, minBw=NA, maxBw=NA, steps=20,
+                gridSearch=F, minBw=NA, maxBw=NA, steps=20,
                 iterations=NA,patience=100,
                 folds=10,repeats=1,
                 threads=4) {
@@ -75,6 +75,7 @@ gwann<-function(x,y,dm,trainIdx=1:nrow(dm),predIdx=1:nrow(dm),
             predIdx,
             nrHidden,batchSize,optimizer,lr,linOut,
             kernel,bandwidth,adaptive,
+            gridSearch,minBw,maxBw,steps,
             iterations,patience,
             folds,repeats,
             threads)

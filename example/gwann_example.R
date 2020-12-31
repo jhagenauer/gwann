@@ -8,7 +8,12 @@ dm<-as.matrix(dist(toy4[,c("lon","lat")])  )
 x<-as.matrix(toy4[,c("x1","x2")])
 y<-as.numeric(toy4[,c("y")] )
 
-r<-gwann(x=x,y=y,dm=dm,trainIdx=1:nrow(x),predIdx=1:nrow(x),nrHidden=5,batchSize=100,threads=8,adaptive=F,bandwidth=1.801,lr=0.01,folds=10,repeats=1,patience=1000)
+r<-gwann(x=x,y=y,dm=dm,
+         trainIdx=1:nrow(x),predIdx=1:nrow(x),
+         nrHidden=5,batchSize=100,lr=0.01,
+         adaptive=F,
+         gridSearch=T, minBw=1, maxBw=2, steps=10,threads=8
+         )
 print(paste("RMSE: ",r$rmse))
 print(paste("Iterations: ",r$its))
 print(paste("Bandwidth: ",r$bw))

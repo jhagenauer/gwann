@@ -18,8 +18,14 @@ gwann(
   kernel = "gaussian",
   bandwidth = NA,
   adaptive = F,
+  gridSearch = F,
+  minBw = NA,
+  maxBw = NA,
+  steps = 20,
   iterations = NA,
   patience = 100,
+  folds = 10,
+  repeats = 1,
   threads = 4
 )
 }
@@ -38,7 +44,7 @@ gwann(
 
 \item{batchSize}{Batch size.}
 
-\item{optimizer}{Optimizer.}
+\item{optimizer}{Optimizer (sgd, momentum, nesterov).}
 
 \item{lr}{Learning rate.}
 
@@ -48,9 +54,21 @@ gwann(
 
 \item{adaptive}{Adaptive instead of fixed bandwidth?}
 
+\item{gridSearch}{If bandwidth is NA, use grid search or local optimization for finding appropriate bandwidth.}
+
+\item{minBw}{Lower limit for bandwidth search.}
+
+\item{maxBw}{Upper limit for bandwidth search.}
+
+\item{steps}{Number of bandwidths to test when doing a grid search.}
+
 \item{iterations}{Number of training iterations. If NA, is determined using 10-fold CV.}
 
 \item{patience}{After how many iterations with no improvement should training prematurely stop?}
+
+\item{folds}{Number of cross-validation folds}
+
+\item{repeats}{Number of repeats of cross-validation procedure}
 
 \item{threads}{Number of threads to use.}
 }
@@ -58,7 +76,7 @@ gwann(
 A list of five elements.
 The first element \code{predictions} contains the predictions.
 The second elemnt \code{weights} contains the connection weights of the hidden neurons to the output neurons.
-The third element \code{rmse} is the mean RMSE of the 10-fold CV procedure.
+The third element \code{rmse} is the mean RMSE of the CV procedure.
 The fourth element \code{bandwidth} is the bandwidth that is used to train the final model.
 The fifth element \code{iterations} is the numer of training iterations for the final model.
 }
