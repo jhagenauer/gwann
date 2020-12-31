@@ -94,9 +94,9 @@ public class GWANN_RInterface {
 
 		double min = minBw < 0 ? ( adaptive ? 5 : v.get(1) / 4 ) : minBw;
 		double max = maxBw < 0 ? ( adaptive ? W.rows / 2 : v.get(v.size() - 1) / 2 ) : maxBw;
-
+		
 		double bestValError = Double.POSITIVE_INFINITY;
-		double bestValBw = adaptive ? (int) ((max - min) / 2) : (max - min) / 2;
+		double bestValBw = adaptive ? (int) (min + (max - min) / 2) : min + (max - min) / 2;
 		double prevBestValError = Double.POSITIVE_INFINITY;
 		int bestIts = -1;
 		Set<Double> bwDone = new HashSet<>();
@@ -124,13 +124,15 @@ public class GWANN_RInterface {
 			if( bw_ > 0 ) {
 				ll.clear();
 				ll.add(bw_);
-			} else if( gridSearch ) 
+			} else if( gridSearch ) {
+				ll.clear();
 				for( double a = min; a <=max; a+= (max-min)/steps )
-					ll.add(a);			
+					ll.add(a);		
+			}
 			ll.removeAll(bwDone);
 
 			if (!ll.isEmpty())
-				System.out.println("sf: " + bwShrinkFactor + ", current best bandwidth: " + bestValBw + ", RMSE:" + bestValError + ", bandwidths to test: " + ll);
+				System.out.println(bwShrinkFactor + ", current best bandwidth: " + bestValBw + ", RMSE:" + bestValError + ", bandwidths to test: " + ll);
 			for (double bw : ll) {
 				uLim = Integer.MAX_VALUE;
 				
@@ -261,6 +263,7 @@ public class GWANN_RInterface {
 					bestIts = (int)mm[1];
 				}
 				bwDone.add(bw);
+				System.out.println(bw+" "+Arrays.toString(mm));
 			}
 			if (prevBestValError - bestValError < eps || ll.isEmpty() )
 				break;
@@ -337,22 +340,19 @@ public class GWANN_RInterface {
 			
 			List<Integer> batchReservoir = new ArrayList<>();
 			for (int it = 0; it <= bestIts; it++) {
-				for (int i = 0; i < bestIts; i++) {
-
-					List<double[]> x = new ArrayList<>();
-					List<double[]> y = new ArrayList<>();
-					List<double[]> gwWeights = new ArrayList<>();
-					while (x.size() < batchSize) {
-						if (batchReservoir.isEmpty())
-							for (int j = 0; j < xTrain.size(); j++)
-								batchReservoir.add(j);
-						int idx = batchReservoir.remove(r.nextInt(batchReservoir.size()));
-						x.add(xTrain.get(idx));
-						y.add(yTrain.get(idx));
-						gwWeights.add(kW.getRow(idx).data);
-					}
-					gwann.train(x, y, gwWeights);
+				List<double[]> x = new ArrayList<>();
+				List<double[]> y = new ArrayList<>();
+				List<double[]> gwWeights = new ArrayList<>();
+				while (x.size() < batchSize) {
+					if (batchReservoir.isEmpty())
+						for (int j = 0; j < xTrain.size(); j++)
+							batchReservoir.add(j);
+					int idx = batchReservoir.remove(r.nextInt(batchReservoir.size()));
+					x.add(xTrain.get(idx));
+					y.add(yTrain.get(idx));
+					gwWeights.add(kW.getRow(idx).data);
 				}
+				gwann.train(x, y, gwWeights);
 			}		
 			// predictions
 			double[][] preds = new double[predIdx.length][];
