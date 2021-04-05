@@ -139,7 +139,7 @@ public class NNet implements SupervisedNet {
 				}
 	}
 	
-	protected void updateNestrov( double[][][] errorGrad, double leta ) {
+	protected void updateNestrov( double[][][] errorGrad, double leta ) {		
 		double mu = 0.9;
 		for (int l = 0; l < weights.length; l++) 
 			for (int i = 0; i < weights[l].length; i++) 												

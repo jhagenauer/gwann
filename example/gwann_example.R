@@ -12,7 +12,7 @@ r<-gwann(x=x,y=y,dm=dm,
          trainIdx=1:nrow(x),predIdx=1:nrow(x),
          nrHidden=5,batchSize=100,lr=0.01,
          adaptive=F,
-         gridSearch=T, minBw=1, maxBw=2, steps=10,threads=8
+         gridSearch=F, minBw=1, maxBw=3, steps=10,threads=8
          )
 print(paste("RMSE: ",r$rmse))
 print(paste("Iterations: ",r$its))
@@ -52,7 +52,7 @@ y<-as.numeric( toy4[,c("y")] )
 x<-x
 y<-y
 nrHidden<-5
-bandwidth<-1.8
+bandwidth<-1.9735
 batchSize<-100
 opt="sgd"
 threads<-8
@@ -61,7 +61,7 @@ lr<-0.01
 linOut<-T
 kernel<-"gaussian"
 adaptive<-T
-iterations<-100
+iterations<-2352
 folds<-10
 repeats<-1
 patience<-100

@@ -1,11 +1,6 @@
 package utils;
 
-import java.util.List;
-
-import org.apache.commons.math3.linear.Array2DRowRealMatrix;
-import org.apache.commons.math3.linear.RealMatrix;
-import org.apache.commons.math3.linear.SingularValueDecomposition;
-import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
+import java.util.Collection;
 
 public class DataUtils {
 
@@ -14,5 +9,13 @@ public class DataUtils {
 		for (int j = 0; j < fa.length; j++)
 			nd[j] = d[fa[j]];
 		return nd;
+	}
+
+	public static int[] toIntArray(Collection<Integer> c) {
+		int[] j = new int[c.size()];
+		int i = 0;
+		for (int l : c)
+			j[i++] = l;
+		return j;
 	}
 }
