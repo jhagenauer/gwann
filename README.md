@@ -5,6 +5,7 @@
 Java JDK 1.2 or higher (for JRI/REngine JDK 1.4 or higher). If it is not already installed, you can get it [here](https://www.oracle.com/java/technologies/javase-downloads.html).
 
 ### Install
+    Sys.setenv("R_REMOTES_NO_ERRORS_FROM_WARNINGS" = "true")
     if (!require("devtools"))
        install.packages("devtools")
     devtools::install_github("jhagenauer/gwann",INSTALL_opts=c("--no-multiarch"))
@@ -21,7 +22,7 @@ Java JDK 1.2 or higher (for JRI/REngine JDK 1.4 or higher). If it is not already
     x<-as.matrix(toy4[,c("x1","x2")])
     y<-as.numeric(toy4[,c("y")] )
 
-    r<-gwann(x=x,y=y,dm=dm,trainIdx=1:nrow(x),predIdx=1:nrow(x),nrHidden=5,batchSize=100,threads=8,adaptive=F,bandwidth=1.801,lr=0.01,patience=1000)
+    r<-gwann(x=x,y=y,dm=dm,trainIdx=1:nrow(x),predIdx=1:nrow(x),nrHidden=5,batchSize=100,lr=0.01,adaptive=F,gridSearch=T,minBw=1,maxBw=2)
     print(paste("RMSE: ",r$rmse))
     print(paste("Iterations: ",r$its))
     print(paste("Bandwidth: ",r$bw))
@@ -37,3 +38,5 @@ Java JDK 1.2 or higher (for JRI/REngine JDK 1.4 or higher). If it is not already
     ggplot(m,aes(lon,lat,fill=value)) + geom_raster() + facet_wrap(~variable) + scale_fill_viridis() + coord_fixed()
 
 ### References
+
+Hagenauer, Julian, and Marco Helbich. "A geographically weighted artificial neural network." International Journal of Geographical Information Science (2021): 1-21.
