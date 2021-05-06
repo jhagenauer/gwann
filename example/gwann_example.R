@@ -13,8 +13,8 @@ r<-gwann(x=x,y=y,dm=dm,
          nrHidden=5,batchSize=100,lr=0.01,
          adaptive=F,
          #bandwidth=10,
-         goldenSectionSearch=T,
-         #gridSearch=F, minBw=1, maxBw=3, steps=10,
+         bwSearch="goldenSection",
+         minBw=1, maxBw=3, steps=10,
          threads=8
          )
 print(paste("RMSE: ",r$rmse))
@@ -55,7 +55,7 @@ y<-as.numeric( toy4[,c("y")] )
 x<-x
 y<-y
 nrHidden<-5
-bandwidth<-2
+bandwidth<-(-1)
 opt="sgd"
 threads<-8
 batchSize<-50
@@ -77,8 +77,7 @@ r<-.jcall(obj="supervised.nnet.gwann.GWANN_RInterface",method="run",returnSig = 
           kernel,
           bandwidth,
           adaptive,
-          F,
-          T,
+          "goldenSection",
           1,
           100,
           10,

@@ -12,10 +12,9 @@
 #' @param kernel Kernel.
 #' @param bandwidth Bandwidth size. If NA, it is determined using CV.
 #' @param adaptive Adaptive instead of fixed bandwidth?
-#' @param goldenSectionSearch Use golden section search for finding appropriate bandwidth. Ignored if bandwidth is explicitly given.
-#' @param gridSearch If true use grid search for finding appropriate bandwidth else use local search routine. Ignored if bandwidth is explicitly given or golden section search is true.
-#' @param minBw Lower limit for bandwidth search.
-#' @param maxBw Upper limit for bandwidth search.
+#' @param bwSearch Method for searching an appropriate bandwidth (goldenSection, grid, local). Ignored if bandwidth is explicitly given.
+#' @param bwMin Lower limit for bandwidth search.
+#' @param bwMax Upper limit for bandwidth search.
 #' @param steps Number of bandwidths to test when doing a grid search/local search. Ignored if bandwidth is explicitly given or golden section search is used.
 #' @param iterations Number of training iterations. If NA, it is determined using 10-fold CV.
 #' @param patience After how many iterations with no improvement should training prematurely stop?
@@ -49,7 +48,7 @@
 gwann<-function(x,y,dm,trainIdx=1:nrow(dm),predIdx=1:nrow(dm),
                 nrHidden=4,batchSize=10,optimizer="nesterov",lr=0.1,linOut=T,
                 kernel="gaussian",bandwidth=NA,adaptive=F,
-                goldenSectionSearch=T, gridSearch=F, minBw=NA, maxBw=NA, steps=20,
+                gwSearch="goldenSection", bwMin=NA, bwMax=NA, steps=20,
                 iterations=NA,patience=100,
                 folds=10,repeats=1,
                 threads=4) {
@@ -59,15 +58,15 @@ gwann<-function(x,y,dm,trainIdx=1:nrow(dm),predIdx=1:nrow(dm),
     bandwidth<-(-1)
   if( is.na(iterations) )
     iterations<-(-1)
-  if( is.na(minBw) )
-    minBw<-(-1)
-  if( is.na(maxBw) )
-    maxBw<-(-1)
+  if( is.na(bwMin) )
+    bwMin<-(-1)
+  if( is.na(bwMax) )
+    bwMax<-(-1)
 
   if( nrow(dm) != ncol(dm) ) stop("dm must be quadratic!")
   if( length(y) != ncol(dm) ) stop("y must have the same length as dm rows!")
   if( any(is.na(y[trainIdx])) ) stop("trainIdx must not rever to any NAs in y!")
-  if( goldenSectionSearch & gridSearch) stop("unclear: golden section search or grid search?")
+  if( !(bwSearch %in% c("goldenSection","grid","local") ) ) warning("Unknown method for searching bw. Using local search.")
 
   r<-.jcall(obj="supervised.nnet.gwann.GWANN_RInterface",method="run",returnSig = "Lsupervised/nnet/gwann/ReturnObject;",
             .jarray(x,dispatch=T),
@@ -77,7 +76,7 @@ gwann<-function(x,y,dm,trainIdx=1:nrow(dm),predIdx=1:nrow(dm),
             predIdx,
             nrHidden,batchSize,optimizer,lr,linOut,
             kernel,bandwidth,adaptive,
-            goldenSectionSearch,gridSearch,minBw,maxBw,steps,
+            bwSearch,bwMin,bwMax,steps,
             iterations,patience,
             folds,repeats,
             threads)

@@ -36,7 +36,7 @@ public class GWANN_RInterface {
 			int[] tIdx, int[] pIdx, 
 			double nrHidden, double batchSize, String optim, double eta, boolean linOut, 
 			String krnl, double bw_, boolean adaptive, 
-			boolean goldenSectionSearch, boolean gridSearch, double minBw, double maxBw, double steps_,
+			String bwSearch, double bwMin, double bwMax, double steps_,
 			double iterations, double patience, 
 			double folds, double repeats,
 			double threads) {
@@ -90,8 +90,8 @@ public class GWANN_RInterface {
 		v = new ArrayList<>(new HashSet<>(v));
 		Collections.sort(v);
 		
-		double min = minBw < 0 ? ( adaptive ? 5 : v.get(1) / 4 ) : minBw;
-		double max = maxBw < 0 ? ( adaptive ? W.rows / 2 : v.get(v.size() - 1) / 2 ) : maxBw;
+		double min = bwMin < 0 ? ( adaptive ? 5 : v.get(1) / 4 ) : bwMin;
+		double max = bwMax < 0 ? ( adaptive ? W.rows / 2 : v.get(v.size() - 1) / 2 ) : bwMax;
 				
 		double bestValBw = adaptive ? (int) (min + (max - min) / 2) : min + (max - min) / 2;
 		int bestIts = -1;	
@@ -105,7 +105,7 @@ public class GWANN_RInterface {
 			bestValError = m[0];
 			bestValBw = bw_;
 			bestIts = (int)m[1];
-		} else if( goldenSectionSearch ) { // determine best bw using golden section search 
+		} else if( bwSearch.equalsIgnoreCase("goldenSection") ) { // determine best bw using golden section search 
 			System.out.println("Golden section search...");
 			double[] m = getParamsWithGoldenSection(min, max, xArray, yArray, W, innerCvList, kernel, adaptive, eta, (int)batchSize, opt, (int)nrHidden, (int)iterations, (int)patience, (int)seed, (int)threads);
 			bestValError = m[0];
@@ -135,7 +135,7 @@ public class GWANN_RInterface {
 				Collections.sort(ll);
 				
 				// bandwidth given?
-				if( gridSearch ) {
+				if( bwSearch.equalsIgnoreCase("grid") ) {
 					ll.clear();
 					for( double a = min; a <=max; a+= (max-min)/steps )
 						ll.add(a);
@@ -380,6 +380,8 @@ public class GWANN_RInterface {
 			double mean = 0;
 			for (Future<List<Double>> f : futures) {
 				try {
+					if( iterations > f.get().size() )
+						System.err.println("Iterations set too large. Either decrease iterations or increase patience!!!");
 					mean += f.get().get((int)iterations);
 				} catch (InterruptedException | ExecutionException ex) {
 					ex.printStackTrace();
@@ -459,8 +461,7 @@ public class GWANN_RInterface {
 				"gaussian", 
 				-1.0, // bandwidth 
 				true, // adaptive 
-				false, // golden section 
-				true, // grid
+				"goldenSection", // bw search routine
 				1, // min 
 				3, // max
 				10, // steps
