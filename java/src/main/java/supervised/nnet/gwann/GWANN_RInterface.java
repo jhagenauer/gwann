@@ -1,6 +1,5 @@
 package supervised.nnet.gwann;
 
-import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -37,7 +36,7 @@ public class GWANN_RInterface {
 			int[] tIdx, int[] pIdx, 
 			double nrHidden, double batchSize, String optim, double eta, boolean linOut, 
 			String krnl, double bw_, boolean adaptive, 
-			boolean gridSearch, boolean goldenSectionSearch, double minBw, double maxBw, double steps_,
+			boolean goldenSectionSearch, boolean gridSearch, double minBw, double maxBw, double steps_,
 			double iterations, double patience, 
 			double folds, double repeats,
 			double threads) {
@@ -83,12 +82,8 @@ public class GWANN_RInterface {
 		final int steps = (int)steps_ < 0 ? 10 : (int)steps_;
 
 		DoubleMatrix W = new DoubleMatrix(dm);
-		
-		List<Integer> ti = new ArrayList<>();
-		for( int i : trainIdx )
-			ti.add(i);	
-		List<Entry<List<Integer>, List<Integer>>> innerCvList = SupervisedUtils.getKFoldCVList( (int)folds, (int)repeats, ti, seed);	
-		
+		List<Entry<List<Integer>, List<Integer>>> innerCvList = SupervisedUtils.getKFoldCVList( (int)folds, (int)repeats, trainIdx, seed);	
+				
 		List<Double> v = new ArrayList<>();
 		for (double w : W.data)
 			v.add(w);
@@ -97,20 +92,20 @@ public class GWANN_RInterface {
 		
 		double min = minBw < 0 ? ( adaptive ? 5 : v.get(1) / 4 ) : minBw;
 		double max = maxBw < 0 ? ( adaptive ? W.rows / 2 : v.get(v.size() - 1) / 2 ) : maxBw;
-		
+				
 		double bestValBw = adaptive ? (int) (min + (max - min) / 2) : min + (max - min) / 2;
 		int bestIts = -1;	
 		
 		double bestValError = Double.POSITIVE_INFINITY;
 		double prevBestValError = Double.POSITIVE_INFINITY;
-		
+				
 		if( bw_ > 0 ) {
 			double[] m = getParamsCV(xArray, yArray, W, innerCvList, kernel, bw_, adaptive, eta, (int)batchSize, opt, (int)nrHidden, (int)iterations, (int)patience, (int)seed, (int)threads);
 			bestValError = m[0];
 			bestValBw = bw_;
 			bestIts = (int)m[1];
 		} else if( goldenSectionSearch ) { // determine best bw using golden section search 
-			System.out.println("Golden section search... this may take a while");
+			System.out.println("Golden section search...");
 			double[] m = getParamsWithGoldenSection(min, max, xArray, yArray, W, innerCvList, kernel, adaptive, eta, (int)batchSize, opt, (int)nrHidden, (int)iterations, (int)patience, (int)seed, (int)threads);
 			bestValError = m[0];
 			bestValBw = m[1];
@@ -142,8 +137,10 @@ public class GWANN_RInterface {
 				if( gridSearch ) {
 					ll.clear();
 					for( double a = min; a <=max; a+= (max-min)/steps )
-						ll.add(a);		
-				}
+						ll.add(a);
+					System.out.println("Grid search...");
+				} else
+					System.out.println("Local search routine...");
 				ll.removeAll(bwDone);
 	
 				System.out.println(bwShrinkFactor + ", current best bandwidth: " + bestValBw + ", RMSE:" + bestValError + ", bandwidths to test: " + ll);
@@ -168,9 +165,8 @@ public class GWANN_RInterface {
 		System.out.println("Iterations: " + bestIts);
 		System.out.println("RMSE: " + bestValError);
 
-		System.out.println("Building final model with bandwidth "+bestValBw+" and "+bestIts+" iterations...");	
-		Entry<List<Integer>,List<Integer>> ee = new AbstractMap.SimpleEntry<List<Integer>, List<Integer>>( trainIdx, predIdx ); 					
-		BuiltGwann tg = buildGWANN(xArray, yArray, W, ee, (int)nrHidden, 0, eta, opt, (int)batchSize, bestIts, (int)patience, kernel, bestValBw, adaptive, seed);
+		System.out.println("Building final model with bandwidth "+bestValBw+" and "+bestIts+" iterations...");				
+		BuiltGwann tg = buildGWANN(xArray, yArray, W, trainIdx, predIdx, (int)nrHidden, 0, eta, opt, (int)batchSize, bestIts, (int)patience, kernel, bestValBw, adaptive, seed);
 	
 		ReturnObject ro = new ReturnObject();
 		ro.predictions = tg.predictions;
@@ -210,27 +206,27 @@ public class GWANN_RInterface {
 		return new double[] { minMean, minMeanIdx };
 	}
 	
-	static BuiltGwann buildGWANN(double[][] xArray, double[] yArray, DoubleMatrix W, Entry<List<Integer>,List<Integer>> innerCvEntry, int nrHidden0, int nrHidden1, double eta, Optimizer opt, 
+	static BuiltGwann buildGWANN(double[][] xArray, double[] yArray, DoubleMatrix W, List<Integer> trainIdx, List<Integer> testIdx, int nrHidden0, int nrHidden1, double eta, Optimizer opt, 
 			int batchSize, int iterations, int patience, GWKernel kernel, double bw, boolean adaptive, int seed ) {
 		Random r = new Random(seed);
 			
 		List<double[]> xTrain = new ArrayList<>();
 		List<double[]> yTrain = new ArrayList<>();
-		for (int i : innerCvEntry.getKey()) {
+		for (int i : trainIdx ) {
 			xTrain.add(Arrays.copyOf(xArray[i], xArray[i].length));
 
-			double[] y = new double[innerCvEntry.getValue().size()];
+			double[] y = new double[testIdx.size()];
 			for (int j = 0; j < y.length; j++)
 				y[j] = yArray[i];
 			yTrain.add(y);
 		}
-
+		
 		List<double[]> xVal = new ArrayList<>();
 		List<double[]> yVal = new ArrayList<>();
-		for (int i : innerCvEntry.getValue()) {
+		for (int i : testIdx) {
 			xVal.add(Arrays.copyOf(xArray[i], xArray[i].length));
 
-			double[] y = new double[innerCvEntry.getValue().size()];
+			double[] y = new double[testIdx.size()]; // nr of outputs
 			for (int j = 0; j < y.length; j++)
 				y[j] = yArray[i];
 			yVal.add(y);
@@ -239,8 +235,8 @@ public class GWANN_RInterface {
 		Normalizer n = new Normalizer(Normalizer.Transform.zScore, xTrain);
 		n.normalize(xVal);
 	
-		DoubleMatrix cvTrainW = W.getRows(DataUtils.toIntArray(innerCvEntry.getKey())); // train to samples
-		DoubleMatrix cvValW = W.get(DataUtils.toIntArray(innerCvEntry.getKey()), DataUtils.toIntArray(innerCvEntry.getValue())); // train to test
+		DoubleMatrix cvTrainW = W.getRows(DataUtils.toIntArray(trainIdx)); // train to samples		
+		DoubleMatrix cvValW = W.get(DataUtils.toIntArray(trainIdx), DataUtils.toIntArray(testIdx)); // train to test
 		DoubleMatrix kW = adaptive ? GWRUtils.getKernelWeights(cvTrainW, cvValW, kernel, (int) bw) : GWRUtils.getKernelWeights(cvValW, kernel, bw);
 		
 		List<Function[]> layerList = new ArrayList<>();
@@ -271,11 +267,11 @@ public class GWANN_RInterface {
 		while (output.size() < yVal.size())
 			output.add(new Linear());
 		layerList.add(output.toArray(new Function[] {} ) );	
-		
+				
 		Function[][] layers = layerList.toArray( new Function[][] {} );
 		double[][][] weights = NNet.getFullyConnectedWeights(layers, initMode.gorot_unif, 0);
 		GWANN gwann = new GWANN(layers, weights, eta, opt);
-		
+				
 		List<Integer> batchReservoir = new ArrayList<>();
 		List<Double> errors = new ArrayList<>();
 		int noImp = 0;
@@ -314,7 +310,7 @@ public class GWANN_RInterface {
 			} else
 				noImp++;
 	
-			if (it >= iterations || noImp >= patience  ) {
+			if ( ( iterations >= 0 && it >= iterations ) || noImp >= patience  ) {
 				BuiltGwann tg = new BuiltGwann();
 				tg.gwann = gwann;
 				tg.errors= errors; // error for each iteration
@@ -367,17 +363,18 @@ public class GWANN_RInterface {
 	public static double[] getParamsCV(double[][] xArray, double[] yArray, DoubleMatrix W, List<Entry<List<Integer>, List<Integer>>> innerCvList, GWKernel kernel, double bw, boolean adaptive, double eta, int batchSize, Optimizer opt, int nrHidden, int iterations, int patience, int seed, int threads ) {
 		ExecutorService innerEs = Executors.newFixedThreadPool((int) threads);
 		List<Future<List<Double>>> futures = new ArrayList<Future<List<Double>>>();				
-		for (int innerK = 0; innerK < innerCvList.size(); innerK++) {
-			Entry<List<Integer>, List<Integer>> innerCvEntry = innerCvList.get(innerK);
+		
+		for ( Entry<List<Integer>, List<Integer>> innerCvEntry : innerCvList ) {
 			futures.add(innerEs.submit(new Callable<List<Double>>() {
 				@Override
 				public List<Double> call() throws Exception {							
-					return buildGWANN(xArray, yArray, W, innerCvEntry, (int)nrHidden, 0, eta, opt, (int)batchSize, (int)iterations, (int)patience, kernel, bw, adaptive, seed).errors;								
+					return buildGWANN(xArray, yArray, W, innerCvEntry.getKey(), innerCvEntry.getValue(), (int)nrHidden, 0, eta, opt, (int)batchSize, (int)iterations, (int)patience, kernel, bw, adaptive, seed).errors;								
 				}
 			}));
 		}
 		innerEs.shutdown();
 		double[] mm;
+		
 		if( iterations >= 0 ) {
 			double mean = 0;
 			for (Future<List<Double>> f : futures) {
@@ -391,5 +388,83 @@ public class GWANN_RInterface {
 		} else
 			mm = getMinMeanIdx(futures);
 		return mm;
+	}
+	
+	public static void main(String[] args) {
+		Random r = new Random(0);
+		
+		boolean lowVar = false;
+		boolean linear = false;
+
+		List<double[]> samples = new ArrayList<>();
+		for (int lon = 0; lon < 25; lon++)
+			for (int lat = 0; lat < 25; lat++) {
+				double x1 = r.nextGaussian();
+				double x2 = r.nextGaussian();
+
+				double beta0 = 1.0;
+				double beta1 = 1.0 + (double) (lon + lat) / 12.0; // [1,5]
+
+				double beta2; // [1,5]
+				if (lowVar)
+					beta2 = 1 + 2 * (1 + Math.cos(Math.PI * lon / 24.0) * Math.cos(Math.PI * lat / 24.0));
+				else
+					beta2 = 1 + 2 * (1 + Math.cos(Math.PI * lon / 12.0) * Math.cos(Math.PI * lat / 12.0));
+
+				double er = r.nextGaussian() / 4.0;
+				double y;
+
+				if (linear) {
+					y = beta0 + beta1 * x1 + beta2 * x2 + er;
+				} else {
+					y = beta0 + 4.0 * Math.tanh(beta1 * x1 / 3.0) + 4.0 * Math.tanh(beta2 * x2 / 3.0) + er; // /3
+				}
+
+				double[] d = new double[] { lon, lat, x1, x2, y, beta0, beta1, beta2, er };
+				samples.add(d);
+			}
+		
+		double[][] xArray = new double[samples.size()][];
+		double[] yArray = new double[samples.size()];
+		for( int i = 0; i < samples.size(); i++ ) {
+			double[] d = samples.get(i);
+			xArray[i] = new double[] { d[2], d[3] };
+			yArray[i] = d[4];
+		}
+		
+		double[][] w = new double[samples.size()][samples.size()];
+		for( int i = 0; i < samples.size(); i++ )
+			for( int j = 0; j < samples.size(); j++ ) {
+				double[] d_i = samples.get(i);
+				double[] d_j = samples.get(j);
+				
+				w[i][j] = Math.sqrt( Math.pow(d_i[0]-d_j[0],2) +  Math.pow(d_i[1]-d_j[1],2) );
+			}
+		
+		int[] tIdx = new int[500];
+		for( int i = 0; i < 500; i++ )
+			tIdx[i] = i+1;
+		
+		int[] pIdx = new int[60];
+		for( int i = 0; i < 60; i++ )
+			pIdx[i] = i+1;
+						
+		run(xArray, yArray, w, tIdx, pIdx, 
+				5, // nr hidden
+				50, // batch size
+				"sgd", 
+				0.01, // eta
+				true, // lin out
+				"gaussian", 
+				-1.0, // bandwidth 
+				true, // adaptive 
+				false, // golden section 
+				true, // grid
+				1, // min 
+				3, // max
+				10, // steps
+				4000, // iterations
+				100, // patience 
+				10, 1, 8);	
 	}
 }

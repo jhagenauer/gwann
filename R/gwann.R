@@ -12,7 +12,7 @@
 #' @param kernel Kernel.
 #' @param bandwidth Bandwidth size. If NA, it is determined using CV.
 #' @param adaptive Adaptive instead of fixed bandwidth?
-#' @param goldenSectionSearch Use golden section search for finding appropriate bandwidth. Ignored if bandwidth is explicitly given
+#' @param goldenSectionSearch Use golden section search for finding appropriate bandwidth. Ignored if bandwidth is explicitly given.
 #' @param gridSearch If true use grid search for finding appropriate bandwidth else use local search routine. Ignored if bandwidth is explicitly given or golden section search is true.
 #' @param minBw Lower limit for bandwidth search.
 #' @param maxBw Upper limit for bandwidth search.
@@ -44,7 +44,7 @@
 #' }
 #' }
 #' @references
-#' Not yet published
+#' Hagenauer, Julian, and Marco Helbich. "A geographically weighted artificial neural network." International Journal of Geographical Information Science (2021): 1-21.
 #' @export
 gwann<-function(x,y,dm,trainIdx=1:nrow(dm),predIdx=1:nrow(dm),
                 nrHidden=4,batchSize=10,optimizer="nesterov",lr=0.1,linOut=T,
@@ -67,6 +67,7 @@ gwann<-function(x,y,dm,trainIdx=1:nrow(dm),predIdx=1:nrow(dm),
   if( nrow(dm) != ncol(dm) ) stop("dm must be quadratic!")
   if( length(y) != ncol(dm) ) stop("y must have the same length as dm rows!")
   if( any(is.na(y[trainIdx])) ) stop("trainIdx must not rever to any NAs in y!")
+  if( goldenSectionSearch & gridSearch) stop("unclear: golden section search or grid search?")
 
   r<-.jcall(obj="supervised.nnet.gwann.GWANN_RInterface",method="run",returnSig = "Lsupervised/nnet/gwann/ReturnObject;",
             .jarray(x,dispatch=T),
@@ -76,7 +77,7 @@ gwann<-function(x,y,dm,trainIdx=1:nrow(dm),predIdx=1:nrow(dm),
             predIdx,
             nrHidden,batchSize,optimizer,lr,linOut,
             kernel,bandwidth,adaptive,
-            gridSearch,goldenSectionSearch,minBw,maxBw,steps,
+            goldenSectionSearch,gridSearch,minBw,maxBw,steps,
             iterations,patience,
             folds,repeats,
             threads)

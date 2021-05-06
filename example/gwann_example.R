@@ -12,7 +12,8 @@ r<-gwann(x=x,y=y,dm=dm,
          trainIdx=1:nrow(x),predIdx=1:nrow(x),
          nrHidden=5,batchSize=100,lr=0.01,
          adaptive=F,
-         goldenSectionSearch=T,
+         bandwidth=10,
+         #goldenSectionSearch=T,
          #gridSearch=F, minBw=1, maxBw=3, steps=10,
          threads=8
          )
@@ -54,11 +55,10 @@ y<-as.numeric( toy4[,c("y")] )
 x<-x
 y<-y
 nrHidden<-5
-bandwidth<-1.9735
-batchSize<-100
+bandwidth<-(-1)
 opt="sgd"
 threads<-8
-batchSize<-10
+batchSize<-50
 lr<-0.01
 linOut<-T
 kernel<-"gaussian"
@@ -75,7 +75,11 @@ r<-.jcall(obj="supervised.nnet.gwann.GWANN_RInterface",method="run",returnSig = 
           as.integer(1:nrow(dm)), as.integer(1:nrow(dm)),
           nrHidden,batchSize,opt,lr,linOut,
           kernel,bandwidth,adaptive,
-          F,T,1,100,10,
+          F,
+          T,
+          1,
+          100,
+          10,
           iterations,patience,
           folds,repeats,
           threads)

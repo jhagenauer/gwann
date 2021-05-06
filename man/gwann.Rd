@@ -18,8 +18,8 @@ gwann(
   kernel = "gaussian",
   bandwidth = NA,
   adaptive = F,
-  gridSearch = F,
   goldenSectionSearch = T,
+  gridSearch = F,
   minBw = NA,
   maxBw = NA,
   steps = 20,
@@ -55,9 +55,9 @@ gwann(
 
 \item{adaptive}{Adaptive instead of fixed bandwidth?}
 
-\item{gridSearch}{If true use grid search for finding appropriate bandwidth else use local search routine. Ignored if bandwidth is explicitly given or golden section search is true.}
+\item{goldenSectionSearch}{Use golden section search for finding appropriate bandwidth. Ignored if bandwidth is explicitly given.}
 
-\item{goldenSectionSearch}{Use golden section search for finding appropriate bandwidth. Ignored if bandwidth is explicitly given}
+\item{gridSearch}{If true use grid search for finding appropriate bandwidth else use local search routine. Ignored if bandwidth is explicitly given or golden section search is true.}
 
 \item{minBw}{Lower limit for bandwidth search.}
 
@@ -103,5 +103,5 @@ if( all ( sapply( c("ggplot2","reshape2","viridis"), require, character.only=T )
 }
 }
 \references{
-Not yet published
+Hagenauer, Julian, and Marco Helbich. "A geographically weighted artificial neural network." International Journal of Geographical Information Science (2021): 1-21.
 }
