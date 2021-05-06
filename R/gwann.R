@@ -12,11 +12,12 @@
 #' @param kernel Kernel.
 #' @param bandwidth Bandwidth size. If NA, it is determined using CV.
 #' @param adaptive Adaptive instead of fixed bandwidth?
-#' @param gridSearch Use grid search or local optimization for finding appropriate bandwidth. Ignored if bandwidth is explicitly given.
+#' @param gridSearch If true use grid search for finding appropriate bandwidth else use local search routine. Ignored if bandwidth is explicitly given or golden section search is true.
+#' @param goldenSectionSearch Use golden section search for finding appropriate bandwidth. Ignored if bandwidth is explicitly given
 #' @param minBw Lower limit for bandwidth search.
 #' @param maxBw Upper limit for bandwidth search.
-#' @param steps Number of bandwidths to test when doing a grid search.
-#' @param iterations Number of training iterations. If NA, is determined using 10-fold CV.
+#' @param steps Number of bandwidths to test when doing a grid search/local search. Ignored if bandwidth is explicitly given or golden section search is used.
+#' @param iterations Number of training iterations. If NA, it is determined using 10-fold CV.
 #' @param patience After how many iterations with no improvement should training prematurely stop?
 #' @param folds Number of cross-validation folds
 #' @param repeats Number of repeats of cross-validation procedure
@@ -48,7 +49,7 @@
 gwann<-function(x,y,dm,trainIdx=1:nrow(dm),predIdx=1:nrow(dm),
                 nrHidden=4,batchSize=10,optimizer="nesterov",lr=0.1,linOut=T,
                 kernel="gaussian",bandwidth=NA,adaptive=F,
-                gridSearch=F, minBw=NA, maxBw=NA, steps=20,
+                gridSearch=F, goldenSectionSearch=T, minBw=NA, maxBw=NA, steps=20,
                 iterations=NA,patience=100,
                 folds=10,repeats=1,
                 threads=4) {

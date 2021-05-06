@@ -37,7 +37,7 @@ public class GWANN_RInterface {
 			int[] tIdx, int[] pIdx, 
 			double nrHidden, double batchSize, String optim, double eta, boolean linOut, 
 			String krnl, double bw_, boolean adaptive, 
-			boolean gridSearch, double minBw, double maxBw, double steps_,
+			boolean gridSearch, boolean goldenSectionSearch, double minBw, double maxBw, double steps_,
 			double iterations, double patience, 
 			double folds, double repeats,
 			double threads) {
@@ -84,97 +84,82 @@ public class GWANN_RInterface {
 
 		DoubleMatrix W = new DoubleMatrix(dm);
 		
+		List<Integer> ti = new ArrayList<>();
+		for( int i : trainIdx )
+			ti.add(i);	
+		List<Entry<List<Integer>, List<Integer>>> innerCvList = SupervisedUtils.getKFoldCVList( (int)folds, (int)repeats, ti, seed);	
+		
 		List<Double> v = new ArrayList<>();
 		for (double w : W.data)
 			v.add(w);
 		v = new ArrayList<>(new HashSet<>(v));
 		Collections.sort(v);
-
+		
 		double min = minBw < 0 ? ( adaptive ? 5 : v.get(1) / 4 ) : minBw;
 		double max = maxBw < 0 ? ( adaptive ? W.rows / 2 : v.get(v.size() - 1) / 2 ) : maxBw;
 		
-		double bestValError = Double.POSITIVE_INFINITY;
 		double bestValBw = adaptive ? (int) (min + (max - min) / 2) : min + (max - min) / 2;
+		int bestIts = -1;	
+		
+		double bestValError = Double.POSITIVE_INFINITY;
 		double prevBestValError = Double.POSITIVE_INFINITY;
-		int bestIts = -1;
-		Set<Double> bwDone = new HashSet<>();
-		for (int bwShrinkFactor = 2;; bwShrinkFactor *= 2) {
-
-			Set<Double> l = new HashSet<>();
-			for (int i = 1; i <= steps; i++) {
-				double a = bestValBw + Math.pow((double) i / steps, pow) * Math.min(max - bestValBw, (max - min) / bwShrinkFactor);
-				double b = bestValBw - Math.pow((double) i / steps, pow) * Math.min(bestValBw - min, (max - min) / bwShrinkFactor);
-				if (adaptive) {
-					a = (double) Math.round(a);
-					b = (double) Math.round(b);
-				}
-				if (a <= max)
-					l.add(a);
-				if (b >= min)
-					l.add(b);
-			}
-			l.add(bestValBw);
-
-			List<Double> ll = new ArrayList<>(l);
-			Collections.sort(ll);
+		
+		if( bw_ > 0 ) {
+			double[] m = getParamsCV(xArray, yArray, W, innerCvList, kernel, bw_, adaptive, eta, (int)batchSize, opt, (int)nrHidden, (int)iterations, (int)patience, (int)seed, (int)threads);
+			bestValError = m[0];
+			bestValBw = bw_;
+			bestIts = (int)m[2];
+		} else if( goldenSectionSearch ) { // determine best bw using golden section search 
+			double[] m = getParamsWithGoldenSection(min, max, xArray, yArray, W, innerCvList, kernel, adaptive, eta, (int)batchSize, opt, (int)nrHidden, (int)iterations, (int)patience, (int)seed, (int)threads);
+			bestValError = m[0];
+			bestValBw = m[1];
+			bestIts = (int)m[2];
+		} else { // determine best bw using grid search or local search routine 
 			
-			// bandwidth given?
-			if( bw_ > 0 ) {
-				ll.clear();
-				ll.add(bw_);
-			} else if( gridSearch ) {
-				ll.clear();
-				for( double a = min; a <=max; a+= (max-min)/steps )
-					ll.add(a);		
-			}
-			ll.removeAll(bwDone);
-
-			if (!ll.isEmpty())
-				System.out.println(bwShrinkFactor + ", current best bandwidth: " + bestValBw + ", RMSE:" + bestValError + ", bandwidths to test: " + ll);
-			for (double bw : ll) {
-				
-				ExecutorService innerEs = Executors.newFixedThreadPool((int) threads);
-				List<Future<List<Double>>> futures = new ArrayList<Future<List<Double>>>();
-				
-				List<Integer> ti = new ArrayList<>();
-				for( int i : trainIdx )
-					ti.add(i);
-
-				List<Entry<List<Integer>, List<Integer>>> innerCvList = SupervisedUtils.getKFoldCVList( (int)folds, (int)repeats, ti, seed);
-				for (int innerK = 0; innerK < innerCvList.size(); innerK++) {
-					Entry<List<Integer>, List<Integer>> innerCvEntry = innerCvList.get(innerK);
-					futures.add(innerEs.submit(new Callable<List<Double>>() {
-						@Override
-						public List<Double> call() throws Exception {							
-							return buildGWANN(xArray, yArray, W, innerCvEntry, (int)nrHidden, 0, eta, opt, (int)batchSize, (int)iterations, (int)patience, kernel, bw, adaptive, seed).errors;								
-						}
-					}));
-				}
-				innerEs.shutdown();
-				double[] mm;
-				if( iterations >= 0 ) {
-					double mean = 0;
-					for (Future<List<Double>> f : futures) {
-						try {
-							mean += f.get().get((int)iterations);
-						} catch (InterruptedException | ExecutionException ex) {
-							ex.printStackTrace();
-						}
+			Set<Double> bwDone = new HashSet<>();
+			for (int bwShrinkFactor = 2;; bwShrinkFactor *= 2) {
+	
+				Set<Double> l = new HashSet<>();
+				for (int i = 1; i <= steps; i++) {
+					double a = bestValBw + Math.pow((double) i / steps, pow) * Math.min(max - bestValBw, (max - min) / bwShrinkFactor);
+					double b = bestValBw - Math.pow((double) i / steps, pow) * Math.min(bestValBw - min, (max - min) / bwShrinkFactor);
+					if (adaptive) {
+						a = (double) Math.round(a);
+						b = (double) Math.round(b);
 					}
-					mm = new double[] { mean/futures.size(), (int)iterations };
-				} else
-				 mm	= getMinMeanIdx(futures);
-				if (mm[0] < bestValError) {
-					bestValError = mm[0];
-					bestValBw = bw;
-					bestIts = (int)mm[1];
+					if (a <= max)
+						l.add(a);
+					if (b >= min)
+						l.add(b);
 				}
-				bwDone.add(bw);
-				System.out.println(bw+" "+Arrays.toString(mm));
+				l.add(bestValBw);
+	
+				List<Double> ll = new ArrayList<>(l);
+				Collections.sort(ll);
+				
+				// bandwidth given?
+				if( gridSearch ) {
+					ll.clear();
+					for( double a = min; a <=max; a+= (max-min)/steps )
+						ll.add(a);		
+				}
+				ll.removeAll(bwDone);
+	
+				System.out.println(bwShrinkFactor + ", current best bandwidth: " + bestValBw + ", RMSE:" + bestValError + ", bandwidths to test: " + ll);
+				for (double bw : ll) {				
+					double[] mm = getParamsCV(xArray, yArray, W, innerCvList, kernel, bestValBw, adaptive, eta, (int)batchSize, opt, (int)nrHidden, (int)iterations, (int)patience, seed, (int)threads);
+					if (mm[0] < bestValError) {
+						bestValError = mm[0];
+						bestIts = (int)mm[1];
+						bestValBw = bw;
+					}
+					bwDone.add(bw);
+					System.out.println(bw+" "+Arrays.toString(mm));
+				}
+				if (prevBestValError - bestValError < eps || ll.isEmpty() )
+					break;
+				prevBestValError = bestValError;
 			}
-			if (prevBestValError - bestValError < eps || ll.isEmpty() )
-				break;
-			prevBestValError = bestValError;
 		}
 
 		System.out.println("Cross-validation results (folds: "+folds+", repeats: "+repeats+"):");
@@ -194,7 +179,6 @@ public class GWANN_RInterface {
 		ro.bw = bestValBw;
 
 		return ro;			
-		
 	}
 
 	public static double[] getMinMeanIdx(List<Future<List<Double>>> futures) {
@@ -222,7 +206,6 @@ public class GWANN_RInterface {
 				minMeanIdx = i;
 			}
 		}
-
 		return new double[] { minMean, minMeanIdx };
 	}
 	
@@ -338,5 +321,73 @@ public class GWANN_RInterface {
 				return tg;	
 			}
 		}
+	}
+	
+	public static double[] getParamsWithGoldenSection(double minRadius, double maxRadius, 
+			double[][] xArray, double[] yArray, DoubleMatrix W, List<Entry<List<Integer>, List<Integer>>> innerCvList, GWKernel kernel, boolean adaptive, double eta, int batchSize, Optimizer opt, int nrHidden, int iterations, int patience, int seed, int threads ) {
+		double xU = maxRadius;
+		double xL = minRadius;
+		double eps = 1e-04;
+		double R = (Math.sqrt(5) - 1) / 2.0;
+		double d = R * (xU - xL);
+		
+		double x1 = xL + d;
+		double x2 = xU - d;
+		double[] f1 = getParamsCV(xArray, yArray, W, innerCvList, kernel, x1, adaptive, eta, batchSize, opt, nrHidden, iterations, patience, seed,threads);
+		double[] f2 = getParamsCV(xArray, yArray, W, innerCvList, kernel, x2, adaptive, eta, batchSize, opt, nrHidden, iterations, patience, seed,threads);
+		
+		double d1 = f2[0] - f1[0];
+		
+		while ((Math.abs(d) > eps) && (Math.abs(d1) > eps)) {
+			d = R * d;
+			if (f1[0] < f2[0]) {
+				xL = x2;
+				x2 = x1;
+				x1 = xL + d;
+				f2 = f1;
+				f1 = getParamsCV(xArray, yArray, W, innerCvList, kernel, x1, adaptive, eta, batchSize, opt, nrHidden, iterations, patience, seed,threads);
+			} else {
+				xU = x1;
+				x1 = x2;
+				x2 = xU - d;
+				f1 = f2;
+				f2 = getParamsCV(xArray, yArray, W, innerCvList, kernel, x2, adaptive, eta, batchSize, opt, nrHidden, iterations, patience, seed,threads);
+			}
+			d1 = f2[0] - f1[0];
+		}
+		// returns cost, bandwidth, iterations
+		if( f1[0] < f2[0] )
+			return new double[] { f1[0], adaptive ? Math.round(x1) : x1, f1[1]};
+		else 
+			return new double[] { f2[0], adaptive ? Math.round(x2) : x2, f2[1]};
+	}
+	
+	public static double[] getParamsCV(double[][] xArray, double[] yArray, DoubleMatrix W, List<Entry<List<Integer>, List<Integer>>> innerCvList, GWKernel kernel, double bw, boolean adaptive, double eta, int batchSize, Optimizer opt, int nrHidden, int iterations, int patience, int seed, int threads ) {
+		ExecutorService innerEs = Executors.newFixedThreadPool((int) threads);
+		List<Future<List<Double>>> futures = new ArrayList<Future<List<Double>>>();				
+		for (int innerK = 0; innerK < innerCvList.size(); innerK++) {
+			Entry<List<Integer>, List<Integer>> innerCvEntry = innerCvList.get(innerK);
+			futures.add(innerEs.submit(new Callable<List<Double>>() {
+				@Override
+				public List<Double> call() throws Exception {							
+					return buildGWANN(xArray, yArray, W, innerCvEntry, (int)nrHidden, 0, eta, opt, (int)batchSize, (int)iterations, (int)patience, kernel, bw, adaptive, seed).errors;								
+				}
+			}));
+		}
+		innerEs.shutdown();
+		double[] mm;
+		if( iterations >= 0 ) {
+			double mean = 0;
+			for (Future<List<Double>> f : futures) {
+				try {
+					mean += f.get().get((int)iterations);
+				} catch (InterruptedException | ExecutionException ex) {
+					ex.printStackTrace();
+				}
+			}
+			mm = new double[] { mean/futures.size(), (int)iterations };
+		} else
+			mm = getMinMeanIdx(futures);
+		return mm;
 	}
 }
