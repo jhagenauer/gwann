@@ -63,7 +63,7 @@ lr<-0.01
 linOut<-T
 kernel<-"gaussian"
 adaptive<-T
-iterations<-2352
+iterations<-352
 folds<-10
 repeats<-1
 patience<-100

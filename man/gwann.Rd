@@ -18,7 +18,7 @@ gwann(
   kernel = "gaussian",
   bandwidth = NA,
   adaptive = F,
-  gwSearch = "goldenSection",
+  bwSearch = "goldenSection",
   bwMin = NA,
   bwMax = NA,
   steps = 20,
@@ -54,6 +54,8 @@ gwann(
 
 \item{adaptive}{Adaptive instead of fixed bandwidth?}
 
+\item{bwSearch}{Method for searching an appropriate bandwidth (goldenSection, grid, local). Ignored if bandwidth is explicitly given.}
+
 \item{bwMin}{Lower limit for bandwidth search.}
 
 \item{bwMax}{Upper limit for bandwidth search.}
@@ -69,8 +71,6 @@ gwann(
 \item{repeats}{Number of repeats of cross-validation procedure}
 
 \item{threads}{Number of threads to use.}
-
-\item{bwSearch}{Method for searching an appropriate bandwidth (goldenSection, grid, local). Ignored if bandwidth is explicitly given.}
 }
 \value{
 A list of five elements.

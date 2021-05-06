@@ -48,7 +48,7 @@
 gwann<-function(x,y,dm,trainIdx=1:nrow(dm),predIdx=1:nrow(dm),
                 nrHidden=4,batchSize=10,optimizer="nesterov",lr=0.1,linOut=T,
                 kernel="gaussian",bandwidth=NA,adaptive=F,
-                gwSearch="goldenSection", bwMin=NA, bwMax=NA, steps=20,
+                bwSearch="goldenSection", bwMin=NA, bwMax=NA, steps=20,
                 iterations=NA,patience=100,
                 folds=10,repeats=1,
                 threads=4) {
