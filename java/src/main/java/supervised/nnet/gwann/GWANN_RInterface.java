@@ -108,7 +108,7 @@ public class GWANN_RInterface {
 			double[] m = getParamsCV(xArray, yArray, W, innerCvList, kernel, bw_, adaptive, eta, (int)batchSize, opt, (int)nrHidden, (int)iterations, (int)patience, (int)seed, (int)threads);
 			bestValError = m[0];
 			bestValBw = bw_;
-			bestIts = (int)m[2];
+			bestIts = (int)m[1];
 		} else if( goldenSectionSearch ) { // determine best bw using golden section search 
 			System.out.println("Golden section search... this may take a while");
 			double[] m = getParamsWithGoldenSection(min, max, xArray, yArray, W, innerCvList, kernel, adaptive, eta, (int)batchSize, opt, (int)nrHidden, (int)iterations, (int)patience, (int)seed, (int)threads);

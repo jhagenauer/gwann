@@ -38,7 +38,7 @@ library(rJava)
 .jaddClassPath("inst/java/gt-api-19.1.jar")
 .jaddClassPath("inst/java/gt-data-19.1.jar")
 .jaddClassPath("inst/java/gt-main-19.1.jar")
-.jaddClassPath("inst/java/gwann-0.0.1-SNAPSHOT.jar")
+.jaddClassPath("inst/java/gwann-0.0.2-SNAPSHOT.jar")
 .jaddClassPath("inst/java/jblas-1.2.4.jar")
 .jaddClassPath("inst/java/jts-core-1.14.0.jar")
 .jaddClassPath("inst/java/jts-io-1.14.0.jar")
@@ -75,7 +75,7 @@ r<-.jcall(obj="supervised.nnet.gwann.GWANN_RInterface",method="run",returnSig = 
           as.integer(1:nrow(dm)), as.integer(1:nrow(dm)),
           nrHidden,batchSize,opt,lr,linOut,
           kernel,bandwidth,adaptive,
-          T,1,100,10,
+          F,T,1,100,10,
           iterations,patience,
           folds,repeats,
           threads)
