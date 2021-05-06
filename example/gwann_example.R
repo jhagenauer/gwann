@@ -12,7 +12,9 @@ r<-gwann(x=x,y=y,dm=dm,
          trainIdx=1:nrow(x),predIdx=1:nrow(x),
          nrHidden=5,batchSize=100,lr=0.01,
          adaptive=F,
-         gridSearch=F, minBw=1, maxBw=3, steps=10,threads=8
+         goldenSectionSearch=T,
+         #gridSearch=F, minBw=1, maxBw=3, steps=10,
+         threads=8
          )
 print(paste("RMSE: ",r$rmse))
 print(paste("Iterations: ",r$its))

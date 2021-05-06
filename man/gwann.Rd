@@ -19,6 +19,7 @@ gwann(
   bandwidth = NA,
   adaptive = F,
   gridSearch = F,
+  goldenSectionSearch = T,
   minBw = NA,
   maxBw = NA,
   steps = 20,
@@ -50,19 +51,21 @@ gwann(
 
 \item{kernel}{Kernel.}
 
-\item{bandwidth}{Bandwidth size. If NA, it is determined using 10-fold CV.}
+\item{bandwidth}{Bandwidth size. If NA, it is determined using CV.}
 
 \item{adaptive}{Adaptive instead of fixed bandwidth?}
 
-\item{gridSearch}{If bandwidth is NA, use grid search or local optimization for finding appropriate bandwidth.}
+\item{gridSearch}{If true use grid search for finding appropriate bandwidth else use local search routine. Ignored if bandwidth is explicitly given or golden section search is true.}
+
+\item{goldenSectionSearch}{Use golden section search for finding appropriate bandwidth. Ignored if bandwidth is explicitly given}
 
 \item{minBw}{Lower limit for bandwidth search.}
 
 \item{maxBw}{Upper limit for bandwidth search.}
 
-\item{steps}{Number of bandwidths to test when doing a grid search.}
+\item{steps}{Number of bandwidths to test when doing a grid search/local search. Ignored if bandwidth is explicitly given or golden section search is used.}
 
-\item{iterations}{Number of training iterations. If NA, is determined using 10-fold CV.}
+\item{iterations}{Number of training iterations. If NA, it is determined using 10-fold CV.}
 
 \item{patience}{After how many iterations with no improvement should training prematurely stop?}
 
