@@ -27,9 +27,8 @@ Java JDK 1.2 or higher (for JRI/REngine JDK 1.4 or higher). If it is not already
          nrHidden=5,batchSize=100,lr=0.01,
          adaptive=F,
          #bandwidth=10,
-         goldenSectionSearch=T,
-         gridSearch=F,
-         minBw=1, maxBw=3, steps=10,
+         bwSearch="goldenSection",
+         bwMin=1, bwMax=3, steps=10,
          threads=8
          )
     print(paste("RMSE: ",r$rmse))
