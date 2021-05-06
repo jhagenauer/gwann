@@ -100,6 +100,7 @@ public class GWANN_RInterface {
 		double prevBestValError = Double.POSITIVE_INFINITY;
 				
 		if( bw_ > 0 ) {
+			System.out.println("Fixed bandwidth...");
 			double[] m = getParamsCV(xArray, yArray, W, innerCvList, kernel, bw_, adaptive, eta, (int)batchSize, opt, (int)nrHidden, (int)iterations, (int)patience, (int)seed, (int)threads);
 			bestValError = m[0];
 			bestValBw = bw_;
