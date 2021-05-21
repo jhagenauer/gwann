@@ -66,7 +66,10 @@ gwann<-function(x,y,dm,trainIdx=1:nrow(dm),predIdx=1:nrow(dm),
   if( nrow(dm) != ncol(dm) ) stop("dm must be quadratic!")
   if( length(y) != ncol(dm) ) stop("y must have the same length as dm rows!")
   if( any(is.na(y[trainIdx])) ) stop("trainIdx must not rever to any NAs in y!")
-  if( !(bwSearch %in% c("goldenSection","grid","local") ) ) warning("Unknown method for searching bw. Using local search.")
+  if( is.na(bandwidth) & !(bwSearch %in% c("goldenSection","grid","local") ) ) {
+    warning("Unknown method for searching bw. Using golden section search.")
+    bwSearch<-"goldenSection"
+  }
 
   r<-.jcall(obj="supervised.nnet.gwann.GWANN_RInterface",method="run",returnSig = "Lsupervised/nnet/gwann/ReturnObject;",
             .jarray(x,dispatch=T),
