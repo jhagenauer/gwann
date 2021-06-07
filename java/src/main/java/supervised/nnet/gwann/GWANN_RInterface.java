@@ -167,7 +167,7 @@ public class GWANN_RInterface {
 		System.out.println("RMSE: " + bestValError);
 
 		System.out.println("Building final model with bandwidth "+bestValBw+" and "+bestIts+" iterations...");				
-		BuiltGwann tg = buildGWANN(xArray, yArray, W, trainIdx, predIdx, (int)nrHidden, 0, eta, opt, (int)batchSize, bestIts, (int)patience, kernel, bestValBw, adaptive, seed);
+		BuiltGwann tg = buildGWANN(xArray, yArray, W, trainIdx, predIdx, new int[] { (int)nrHidden }, eta, opt, (int)batchSize, bestIts, (int)patience, kernel, bestValBw, adaptive, seed);
 	
 		ReturnObject ro = new ReturnObject();
 		ro.predictions = tg.predictions;
@@ -207,7 +207,7 @@ public class GWANN_RInterface {
 		return new double[] { minMean, minMeanIdx };
 	}
 	
-	static BuiltGwann buildGWANN(double[][] xArray, double[] yArray, DoubleMatrix W, List<Integer> trainIdx, List<Integer> testIdx, int nrHidden0, int nrHidden1, double eta, Optimizer opt, 
+	static BuiltGwann buildGWANN(double[][] xArray, double[] yArray, DoubleMatrix W, List<Integer> trainIdx, List<Integer> testIdx, int[] nrHidden, double eta, Optimizer opt, 
 			int batchSize, int iterations, int patience, GWKernel kernel, double bw, boolean adaptive, int seed ) {
 		Random r = new Random(seed);
 			
@@ -248,20 +248,12 @@ public class GWANN_RInterface {
 		input.add(new Constant(1.0));
 		layerList.add(input.toArray(new Function[] {} ) );
 		
-		if( nrHidden0 > 0 ) {
+		for( int nh : nrHidden ) {
 			List<Function> hidden0 = new ArrayList<>();
-			while (hidden0.size() < nrHidden0)
+			while (hidden0.size() < nh)
 				hidden0.add(new TanH());
 			hidden0.add(new Constant(1.0));
 			layerList.add(hidden0.toArray(new Function[] {} ) );
-		}
-		
-		if( nrHidden1 > 0 ) {
-			List<Function> hidden1 = new ArrayList<>();
-			while (hidden1.size() < nrHidden1)
-				hidden1.add(new TanH());
-			hidden1.add(new Constant(1.0));
-			layerList.add( hidden1.toArray(new Function[] {} ) );
 		}
 		
 		List<Function> output = new ArrayList<>();
@@ -369,7 +361,7 @@ public class GWANN_RInterface {
 			futures.add(innerEs.submit(new Callable<List<Double>>() {
 				@Override
 				public List<Double> call() throws Exception {							
-					return buildGWANN(xArray, yArray, W, innerCvEntry.getKey(), innerCvEntry.getValue(), (int)nrHidden, 0, eta, opt, (int)batchSize, (int)iterations, (int)patience, kernel, bw, adaptive, seed).errors;								
+					return buildGWANN(xArray, yArray, W, innerCvEntry.getKey(), innerCvEntry.getValue(), new int[] { (int)nrHidden }, eta, opt, (int)batchSize, (int)iterations, (int)patience, kernel, bw, adaptive, seed).errors;								
 				}
 			}));
 		}
