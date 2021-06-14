@@ -86,7 +86,7 @@ public class GWRUtils {
 		return a;
 	}
 	
-	public static DoubleMatrix getKernelWeightsAdaptive(DoubleMatrix Wk, GWKernel kernel, int nb ) {
+	public static DoubleMatrix getKernelWeights(DoubleMatrix Wtrain, DoubleMatrix Wk, GWKernel kernel, int nb ) {
 		DoubleMatrix kW = new DoubleMatrix(Wk.rows,Wk.columns);
 		for (int i = 0; i < Wk.rows; i++) {
 			double bw = Wk.getRow(i).sort().get(nb);
@@ -98,7 +98,7 @@ public class GWRUtils {
 		return kW;
 	}
 	
-	public static DoubleMatrix getKernelWeightsFixed( DoubleMatrix W, GWKernel kernel, double bw ) {
+	public static DoubleMatrix getKernelWeights( DoubleMatrix W, GWKernel kernel, double bw ) {
 		DoubleMatrix kW = new DoubleMatrix(W.rows,W.columns);
 		for (int i = 0; i < W.rows; i++) {
 			double[] w = new double[W.columns];

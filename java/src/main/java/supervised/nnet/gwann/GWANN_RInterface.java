@@ -90,8 +90,8 @@ public class GWANN_RInterface {
 		v = new ArrayList<>(new HashSet<>(v));
 		Collections.sort(v);
 		
-		double min = bwMin < 0 ? ( adaptive ? 5 : v.get(1) / 4 ) : bwMin;
-		double max = bwMax < 0 ? ( adaptive ? W.rows / 2 : v.get(v.size() - 1) / 2 ) : bwMax;
+		double min = bwMin < 0 ? ( adaptive ? 5 : W.min() / 4 ) : bwMin;
+		double max = bwMax < 0 ? ( adaptive ? W.rows / 2 : W.max() / 2 ) : bwMax;
 				
 		double bestValBw = adaptive ? (int) (min + (max - min) / 2) : min + (max - min) / 2;
 		int bestIts = -1;	
@@ -236,8 +236,9 @@ public class GWANN_RInterface {
 		Normalizer n = new Normalizer(Normalizer.Transform.zScore, xTrain);
 		n.normalize(xVal);
 	
-		DoubleMatrix cvValW = W.get(DataUtils.toIntArray(trainIdx), DataUtils.toIntArray(testIdx)); // train to test
-		DoubleMatrix kW = adaptive ? GWRUtils.getKernelWeightsAdaptive(cvValW, kernel, (int) bw) : GWRUtils.getKernelWeightsFixed(cvValW, kernel, bw);
+		int[] trainIdxA = DataUtils.toIntArray(trainIdx);
+		DoubleMatrix cvValW = W.get( trainIdxA, DataUtils.toIntArray(testIdx)); // train to test
+		DoubleMatrix kW = adaptive ? GWRUtils.getKernelWeights(W.get(trainIdxA,trainIdxA), cvValW, kernel, (int) bw) : GWRUtils.getKernelWeights(cvValW, kernel, bw);
 		
 		List<Function[]> layerList = new ArrayList<>();
 		
