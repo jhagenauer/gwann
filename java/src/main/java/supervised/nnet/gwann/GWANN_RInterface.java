@@ -236,9 +236,8 @@ public class GWANN_RInterface {
 		Normalizer n = new Normalizer(Normalizer.Transform.zScore, xTrain);
 		n.normalize(xVal);
 	
-		DoubleMatrix cvTrainW = W.getRows(DataUtils.toIntArray(trainIdx)); // train to samples		
 		DoubleMatrix cvValW = W.get(DataUtils.toIntArray(trainIdx), DataUtils.toIntArray(testIdx)); // train to test
-		DoubleMatrix kW = adaptive ? GWRUtils.getKernelWeights(cvTrainW, cvValW, kernel, (int) bw) : GWRUtils.getKernelWeights(cvValW, kernel, bw);
+		DoubleMatrix kW = adaptive ? GWRUtils.getKernelWeightsAdaptive(cvValW, kernel, (int) bw) : GWRUtils.getKernelWeightsFixed(cvValW, kernel, bw);
 		
 		List<Function[]> layerList = new ArrayList<>();
 		
