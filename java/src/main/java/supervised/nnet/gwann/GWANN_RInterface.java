@@ -59,7 +59,6 @@ public class GWANN_RInterface {
 		return new double[] { minMean, minMeanIdx };
 	}
 	
-	// TODO neues interface für gwann test/vergleichen
 	public static ReturnObject run(
 			double[][] xArray_train, double[] yArray_train, double[][] W_train,
 			double[][] xArray_pred, double[] yArray_pred, double[][] W_train_pred,
