@@ -22,15 +22,15 @@ Java JDK 1.2 or higher (for JRI/REngine JDK 1.4 or higher). If it is not already
     x<-as.matrix(toy4[,c("x1","x2")])
     y<-as.numeric(toy4[,c("y")] )
 
-    r<-gwann(x=x,y=y,dm=dm,
-         trainIdx=1:nrow(x),predIdx=1:nrow(x),
+    r<-gwann(x_train=x_train,y_train=y_train,w_train=dm,
+         x_pred=x_train,y_pred=y_train,w_train_pred=dm,
          nrHidden=5,batchSize=100,lr=0.01,
          adaptive=F,
          #bandwidth=10,
          bwSearch="goldenSection",
          bwMin=min(dm)/4, bwMax=max(dm)/4, steps=10,
          threads=8
-         )
+	)
     print(paste("RMSE: ",r$rmse))
     print(paste("Iterations: ",r$its))
     print(paste("Bandwidth: ",r$bw))
