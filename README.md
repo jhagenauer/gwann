@@ -28,7 +28,7 @@ Java JDK 1.2 or higher (for JRI/REngine JDK 1.4 or higher). If it is not already
          adaptive=F,
          #bandwidth=10,
          bwSearch="goldenSection",
-         bwMin=1, bwMax=3, steps=10,
+         bwMin=min(dm)/4, bwMax=max(dm)/4, steps=10,
          threads=8
          )
     print(paste("RMSE: ",r$rmse))
