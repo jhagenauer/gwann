@@ -19,8 +19,8 @@ Java JDK 1.2 or higher (for JRI/REngine JDK 1.4 or higher). If it is not already
 
     data(toy4)
     dm<-as.matrix(dist(toy4[,c("lon","lat")])  )
-    x<-as.matrix(toy4[,c("x1","x2")])
-    y<-as.numeric(toy4[,c("y")] )
+    x_train<-as.matrix(toy4[,c("x1","x2")])
+    y_train<-as.numeric(toy4[,c("y")] )
 
     r<-gwann(x_train=x_train,y_train=y_train,w_train=dm,
          x_pred=x_train,y_pred=y_train,w_train_pred=dm,
