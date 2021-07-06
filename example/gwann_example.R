@@ -14,7 +14,7 @@ r<-gwann(x=x,y=y,dm=dm,
          adaptive=F,
          #bandwidth=10,
          bwSearch="goldenSection",
-         bwMin=1, bwMax=3, steps=10,
+         bwMin=min(dm)/4, bwMax=max(dm)/4, steps=10,
          threads=8
 )
 print(paste("RMSE: ",r$rmse))
