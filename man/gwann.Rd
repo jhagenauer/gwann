@@ -5,11 +5,12 @@
 \title{Build a Geographically Weighted Artificial Neural Network.}
 \usage{
 gwann(
-  x,
-  y,
-  dm,
-  trainIdx = 1:nrow(dm),
-  predIdx = 1:nrow(dm),
+  x_train,
+  y_train,
+  w_train,
+  x_pred,
+  y_pred,
+  w_train_pred,
   nrHidden = 4,
   batchSize = 10,
   optimizer = "nesterov",
@@ -30,15 +31,17 @@ gwann(
 )
 }
 \arguments{
-\item{x}{Matrix. Rows are observations, columns are independent variables.}
+\item{x_train}{Matrix of training data. Rows are observations, columns are independent variables.}
 
-\item{y}{Vector. Values represent target values for the observations in \code{x}.}
+\item{y_train}{Vector. Values represent target values for the observations in \code{x_train}.}
 
-\item{dm}{Matrix of distances between the observations of \code{x}.}
+\item{w_train}{Quadratic matrix of distances between the observations of \code{x_train}.}
 
-\item{trainIdx}{a vector containing the indices of observations of \code{x} used for training.}
+\item{x_pred}{Matrix of prediction data. Rows are observations, columns are independent variables.}
 
-\item{predIdx}{a vector containing the indices of observations of \code{x} used for prediction.}
+\item{y_pred}{Vector. Values represent target values for the observations in \code{x_pred}.}
+
+\item{w_train_pred}{Matrix of distances between the observations of \code{x_train} (rows) and \code{x_pred} (columns).}
 
 \item{nrHidden}{Number of hidden neurons.}
 
@@ -91,7 +94,7 @@ x<-as.matrix(toy4[,c("x1","x2")])
 y<-as.numeric( toy4[,c("y")] )
 
 \dontrun{
-r<-gwann(x=x,y=y,dm=dm,trainIdx=1:nrow(x),predIdx=1:nrow(x),nrHidden=5,batchSize=50,bandwidth=1.8,iterations=5610,lr=0.01)
+r<-gwann(x_train=x_train,y_train=y_train,w_train=dm,x_pred=x_train,y_pred=y_train,w_train_pred=dm,nrHidden=5,batchSize=100,lr=0.01,adaptive=F,#bandwidth=10,bwSearch="goldenSection",bwMin=min(dm)/4, bwMax=max(dm)/4, steps=10,threads=8)
 
 if( all ( sapply( c("ggplot2","reshape2","viridis"), require, character.only=T ) ) ) {
    s<-cbind( Prediction=diag(r$predictions), toy4[,c("lon","lat")] )

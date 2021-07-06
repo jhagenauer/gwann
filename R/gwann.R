@@ -1,10 +1,11 @@
 #' Build a Geographically Weighted Artificial Neural Network.
 #'
-#' @param x Matrix. Rows are observations, columns are independent variables.
-#' @param y Vector. Values represent target values for the observations in \code{x}.
-#' @param dm Matrix of distances between the observations of \code{x}.
-#' @param trainIdx a vector containing the indices of observations of \code{x} used for training.
-#' @param predIdx a vector containing the indices of observations of \code{x} used for prediction.
+#' @param x_train Matrix of training data. Rows are observations, columns are independent variables.
+#' @param y_train Vector. Values represent target values for the observations in \code{x_train}.
+#' @param w_train Quadratic matrix of distances between the observations of \code{x_train}.
+#' @param x_pred Matrix of prediction data. Rows are observations, columns are independent variables.
+#' @param y_pred Vector. Values represent target values for the observations in \code{x_pred}.
+#' @param w_train_pred Matrix of distances between the observations of \code{x_train} (rows) and \code{x_pred} (columns).
 #' @param nrHidden Number of hidden neurons.
 #' @param batchSize Batch size.
 #' @param optimizer Optimizer (sgd, momentum, nesterov).
@@ -35,7 +36,7 @@
 #' y<-as.numeric( toy4[,c("y")] )
 #'
 #' \dontrun{
-#' r<-gwann(x=x,y=y,dm=dm,trainIdx=1:nrow(x),predIdx=1:nrow(x),nrHidden=5,batchSize=50,bandwidth=1.8,iterations=5610,lr=0.01)
+#' r<-gwann(x_train=x_train,y_train=y_train,w_train=dm,x_pred=x_train,y_pred=y_train,w_train_pred=dm,nrHidden=5,batchSize=100,lr=0.01,adaptive=F,#bandwidth=10,bwSearch="goldenSection",bwMin=min(dm)/4, bwMax=max(dm)/4, steps=10,threads=8)
 #'
 #' if( all ( sapply( c("ggplot2","reshape2","viridis"), require, character.only=T ) ) ) {
 #'    s<-cbind( Prediction=diag(r$predictions), toy4[,c("lon","lat")] )
@@ -45,7 +46,7 @@
 #' @references
 #' Hagenauer, Julian, and Marco Helbich. "A geographically weighted artificial neural network." International Journal of Geographical Information Science (2021): 1-21.
 #' @export
-gwann<-function(x,y,dm,trainIdx=1:nrow(dm),predIdx=1:nrow(dm),
+gwann<-function(x_train,y_train,w_train,x_pred,y_pred,w_train_pred,
                 nrHidden=4,batchSize=10,optimizer="nesterov",lr=0.1,linOut=T,
                 kernel="gaussian",bandwidth=NA,adaptive=F,
                 bwSearch="goldenSection", bwMin=NA, bwMax=NA, steps=20,
@@ -63,20 +64,21 @@ gwann<-function(x,y,dm,trainIdx=1:nrow(dm),predIdx=1:nrow(dm),
   if( is.na(bwMax) )
     bwMax<-(-1)
 
-  if( nrow(dm) != ncol(dm) ) stop("dm must be quadratic!")
-  if( length(y) != ncol(dm) ) stop("y must have the same length as dm rows!")
-  if( any(is.na(y[trainIdx])) ) stop("trainIdx must not rever to any NAs in y!")
+  if( nrow(w_train) != ncol(w_train) ) stop("w_train must be quadratic!")
   if( is.na(bandwidth) & !(bwSearch %in% c("goldenSection","grid","local") ) ) {
     warning("Unknown method for searching bw. Using golden section search.")
     bwSearch<-"goldenSection"
   }
 
   r<-.jcall(obj="supervised.nnet.gwann.GWANN_RInterface",method="run",returnSig = "Lsupervised/nnet/gwann/ReturnObject;",
-            .jarray(x,dispatch=T),
-            y,
-            .jarray(dm,dispatch=T),
-            trainIdx,
-            predIdx,
+            .jarray(x_train,dispatch=T),
+            y_train,
+            .jarray(w_train,dispatch=T),
+
+            .jarray(x_pred,dispatch=T),
+            y_pred,
+            .jarray(w_train_pred,dispatch=T),
+
             nrHidden,batchSize,optimizer,lr,linOut,
             kernel,bandwidth,adaptive,
             bwSearch,bwMin,bwMax,steps,
@@ -91,6 +93,6 @@ gwann<-function(x,y,dm,trainIdx=1:nrow(dm),predIdx=1:nrow(dm),
       rmse=r$rmse,
       bw=r$bw,
       its=r$its
-      )
     )
+  )
 }

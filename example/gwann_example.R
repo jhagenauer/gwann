@@ -1,20 +1,22 @@
 library(ggplot2)
 library(viridis)
 library(reshape2)
+#devtools::install(args=c("--no-multiarch"))
 library(gwann)
 
 data(toy4)
-dm<-as.matrix(dist(toy4[,c("lon","lat")])  )
-x<-as.matrix(toy4[,c("x1","x2")])
-y<-as.numeric(toy4[,c("y")] )
 
-r<-gwann(x=x,y=y,dm=dm,
-         trainIdx=1:nrow(x),predIdx=1:nrow(x),
+x_train<-as.matrix(toy4[,c("x1","x2")])
+y_train<-as.numeric(toy4[,c("y")] )
+dm<-as.matrix(dist(toy4[,c("lon","lat")])  )
+
+r<-gwann(x_train=x_train,y_train=y_train,w_train=dm,
+         x_pred=x_train,y_pred=y_train,w_train_pred=dm,
          nrHidden=5,batchSize=100,lr=0.01,
          adaptive=F,
          #bandwidth=10,
          bwSearch="goldenSection",
-         bwMin=1, bwMax=3, steps=10,
+         bwMin=min(dm)/4, bwMax=max(dm)/4, steps=10,
          threads=8
 )
 print(paste("RMSE: ",r$rmse))
