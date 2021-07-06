@@ -189,7 +189,7 @@ public class GWANN_RInterface {
 		System.out.println("RMSE: " + bestValError);
 
 		System.out.println("Building final model with bandwidth "+bestValBw+" and "+bestIts+" iterations...");				
-		BuiltGwann tg = buildGWANN(xArray_train, yArray_train, new DoubleMatrix(W_train), xArray_pred, yArray_pred, new DoubleMatrix(W_train_pred), new int[] { (int)nrHidden }, eta, opt, (int)batchSize, bestIts, (int)patience, kernel, bestValBw, adaptive, seed);
+		BuiltGwann tg = buildGWANN(xArray_train, yArray_train, new DoubleMatrix(W_train), xArray_pred, yArray_pred, new DoubleMatrix(W_train_pred), new int[] { (int)nrHidden }, eta, opt, (int)batchSize, bestIts, Integer.MAX_VALUE, kernel, bestValBw, adaptive, seed);
 	
 		ReturnObject ro = new ReturnObject();
 		ro.predictions = tg.predictions;
