@@ -67,6 +67,7 @@ public class GWANN_RInterface {
 			String bwSearch, double bwMin, double bwMax, double steps_,
 			double iterations, double patience, 
 			double folds, double repeats,
+			double permutations,
 			double threads) {
 		
 		assert xArray_train.length == W_train.length &  
@@ -122,7 +123,7 @@ public class GWANN_RInterface {
 		double prevBestValError = Double.POSITIVE_INFINITY;
 				
 		if( bw_ > 0 ) {
-			System.out.println("Fixed bandwidth...");
+			System.out.println("Pre-specified bandwidth...");
 			double[] m = getParamsCV(xArray_train, yArray_train, W, innerCvList, kernel, bw_, adaptive, eta, (int)batchSize, opt, (int)nrHidden, (int)iterations, (int)patience, (int)seed, (int)threads);
 			bestValError = m[0];
 			bestValBw = bw_;
@@ -187,17 +188,48 @@ public class GWANN_RInterface {
 		System.out.println("Bandwidth: " + bestValBw);
 		System.out.println("Iterations: " + bestIts);
 		System.out.println("RMSE: " + bestValError);
+		
+		double[][][] imp = null;
+		if( permutations > 0 ) { // importance
+			System.out.println("Calculating feature importance...");
+			BuiltGwann bg = buildGWANN(xArray_train, yArray_train, new DoubleMatrix(W_train), xArray_train, yArray_train, new DoubleMatrix(W_train), new int[] { (int)nrHidden }, eta, opt, (int)batchSize, bestIts, Integer.MAX_VALUE, kernel, bestValBw, adaptive, seed);
+			double[][] preds = bg.predictions;
+									
+			imp = new double[xArray_train[0].length][preds.length][preds[0].length];
+			for( int i = 0; i < xArray_train[0].length; i++ ) { // for each variable
+				System.out.println("Feature "+i);
+				
+				for( int j = 0; j < permutations; j++ ) {
+					
+					double[][] copy = Arrays.stream(xArray_train).map(double[]::clone).toArray(double[][]::new);
+					List<Double> l = new ArrayList<>();
+					for( int k = 0; k < copy.length; k++ )
+						l.add(copy[k][i]);
+					Collections.shuffle(l);
+					for( int k = 0; k < l.size(); k++ )
+						copy[k][i] = l.get(k);
+					
+					double[][] preds_ = new double[copy.length][];
+					for( int k = 0; k < copy.length; k++ )
+						preds_[k] = bg.gwann.present(copy[k]);
+					
+					for( int k = 0; k < preds.length; k++ )
+						for( int p = 0; p < preds[0].length; p++ )
+							imp[i][k][p] += ( Math.pow(preds_[k][p] - yArray_train[k],2) - Math.pow(preds[k][p] - yArray_train[k],2) )/permutations;
+				}			
+			}
+		}
 
 		System.out.println("Building final model with bandwidth "+bestValBw+" and "+bestIts+" iterations...");				
 		BuiltGwann tg = buildGWANN(xArray_train, yArray_train, new DoubleMatrix(W_train), xArray_pred, yArray_pred, new DoubleMatrix(W_train_pred), new int[] { (int)nrHidden }, eta, opt, (int)batchSize, bestIts, Integer.MAX_VALUE, kernel, bestValBw, adaptive, seed);
 	
 		ReturnObject ro = new ReturnObject();
 		ro.predictions = tg.predictions;
+		ro.importance = imp;
 		ro.weights = tg.gwann.weights;
 		ro.rmse = bestValError;
 		ro.its = bestIts;
 		ro.bw = bestValBw;
-
 		return ro;			
 	}
 	
@@ -456,7 +488,7 @@ public class GWANN_RInterface {
 		for ( Entry<List<Integer>, List<Integer>> innerCvEntry : innerCvList ) {
 			futures.add(innerEs.submit(new Callable<List<Double>>() {
 				@Override
-				public List<Double> call() throws Exception {							
+				public List<Double> call() throws Exception {	
 					return buildGWANN(xArray, yArray, W, innerCvEntry.getKey(), innerCvEntry.getValue(), new int[] { (int)nrHidden }, eta, opt, (int)batchSize, (int)iterations, (int)patience, kernel, bw, adaptive, seed).errors;								
 				}
 			}));

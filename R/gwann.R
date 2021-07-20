@@ -2,7 +2,7 @@
 #'
 #' @param x_train Matrix of training data. Rows are observations, columns are independent variables.
 #' @param y_train Vector. Values represent target values for the observations in \code{x_train}.
-#' @param w_train Quadratic matrix of distances between the observations of \code{x_train}.
+#' @param w_train Quadratic matrix of distances between the observations of \code{x_train}. The matrix solely used for calculating the adaptive distances.
 #' @param x_pred Matrix of prediction data. Rows are observations, columns are independent variables.
 #' @param y_pred Vector. Values represent target values for the observations in \code{x_pred}.
 #' @param w_train_pred Matrix of distances between the observations of \code{x_train} (rows) and \code{x_pred} (columns).
@@ -21,6 +21,7 @@
 #' @param patience After how many iterations with no improvement should training prematurely stop?
 #' @param folds Number of cross-validation folds
 #' @param repeats Number of repeats of cross-validation procedure
+#' @param permutations Number of permutations for calculating feature importance (Experimental)
 #' @param threads Number of threads to use.
 #' @return A list of five elements.
 #' The first element \code{predictions} contains the predictions.
@@ -46,12 +47,12 @@
 #' @references
 #' Hagenauer, Julian, and Marco Helbich. "A geographically weighted artificial neural network." International Journal of Geographical Information Science (2021): 1-21.
 #' @export
-gwann<-function(x_train,y_train,w_train,x_pred,y_pred,w_train_pred,
+gwann<-function(x_train,y_train,w_train=NA,x_pred,y_pred=NA,w_train_pred,
                 nrHidden=4,batchSize=10,optimizer="nesterov",lr=0.1,linOut=T,
                 kernel="gaussian",bandwidth=NA,adaptive=F,
                 bwSearch="goldenSection", bwMin=NA, bwMax=NA, steps=20,
                 iterations=NA,patience=100,
-                folds=10,repeats=1,
+                folds=10,repeats=1,permutations=0,
                 threads=4) {
 
   # TODO Why not pass NA-values to java?
@@ -63,6 +64,8 @@ gwann<-function(x_train,y_train,w_train,x_pred,y_pred,w_train_pred,
     bwMin<-(-1)
   if( is.na(bwMax) )
     bwMax<-(-1)
+  if( all(is.na(y_pred)) )
+    y_pred<-as.numeric( rep(NA,nrow(x_pred)) )
 
   if( nrow(w_train) != ncol(w_train) ) stop("w_train must be quadratic!")
   if( is.na(bandwidth) & !(bwSearch %in% c("goldenSection","grid","local") ) ) {
@@ -84,11 +87,13 @@ gwann<-function(x_train,y_train,w_train,x_pred,y_pred,w_train_pred,
             bwSearch,bwMin,bwMax,steps,
             iterations,patience,
             folds,repeats,
+            permutations,
             threads)
 
   return(
     list(
       predictions=r$predictions,
+      importance=r$importance,
       weights=r$weights,
       rmse=r$rmse,
       bw=r$bw,
