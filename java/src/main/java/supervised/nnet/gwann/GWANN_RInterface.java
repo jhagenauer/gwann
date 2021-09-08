@@ -70,9 +70,11 @@ public class GWANN_RInterface {
 			double permutations,
 			double threads) {
 		
-		assert xArray_train.length == W_train.length &  
-				W_train.length == W_train[0].length & // quadratic
-				W_train_pred.length == xArray_train.length & W_train_pred[0].length == xArray_pred.length; 
+		assert 
+			xArray_train.length == W_train.length &  
+			W_train.length == W_train[0].length & // quadratic
+			W_train_pred.length == xArray_train.length & 
+			W_train_pred[0].length == xArray_pred.length; 
 		
 		GWKernel kernel;
 		if (krnl.equalsIgnoreCase("gaussian"))
@@ -290,8 +292,9 @@ public class GWANN_RInterface {
 		List<Double> errors = new ArrayList<>();
 		int noImp = 0;
 		double localBestValError = Double.POSITIVE_INFINITY;
-		for (int it = 0;; it++) {
-	
+		
+		for (int it = 0; it < iterations && noImp < patience; it++) {
+			
 			List<double[]> x = new ArrayList<>();
 			List<double[]> y = new ArrayList<>();
 			List<double[]> gwWeights = new ArrayList<>();
@@ -305,33 +308,31 @@ public class GWANN_RInterface {
 				gwWeights.add(kW.getRow(idx).data);
 			}
 			gwann.train(x, y, gwWeights);
-					
-			double[][] preds = new double[xVal.size()][];
-			for (int i = 0; i < xVal.size(); i++ ) {
-				double[][] out = gwann.presentInt(xVal.get(i))[0];
-				preds[i] = out[layers.length - 1];
-			}
-
-			List<Double> response = new ArrayList<>();
-			for( int i = 0; i < preds.length; i++ )
-				response.add( preds[i][i] );
-			double valError = SupervisedUtils.getRMSE(response, yVal, 0);
+												
+			List<Double> responseVal = new ArrayList<>();
+			for (int i = 0; i < xVal.size(); i++)
+				responseVal.add(gwann.present(xVal.get(i))[i]);
+			double valError = SupervisedUtils.getRMSE(responseVal, yVal, 0);
 			errors.add(valError);
 	
 			if (valError < localBestValError) {
 				localBestValError = valError;
 				noImp = 0;
 			} else
-				noImp++;
-	
-			if ( ( iterations >= 0 && it >= iterations ) || noImp >= patience  ) {
-				BuiltGwann tg = new BuiltGwann();
-				tg.gwann = gwann;
-				tg.errors= errors; // error for each iteration
-				tg.predictions = preds; // predictions of last iterations
-				return tg;	
-			}
+				noImp++;				
+		}		
+
+		double[][] preds = new double[xVal.size()][];
+		for (int i = 0; i < xVal.size(); i++ ) {
+			double[][] out = gwann.presentInt(xVal.get(i))[0];
+			preds[i] = out[layers.length - 1];
 		}
+								
+		BuiltGwann tg = new BuiltGwann();
+		tg.gwann = gwann;
+		tg.errors= errors; // error for each iteration
+		tg.predictions = preds; // predictions of last iterations
+		return tg;	
 	}
 	
 	@Deprecated
@@ -397,8 +398,8 @@ public class GWANN_RInterface {
 		List<Double> errors = new ArrayList<>();
 		int noImp = 0;
 		double localBestValError = Double.POSITIVE_INFINITY;
-		for (int it = 0;; it++) {
-	
+		for (int it = 0; it < iterations && noImp < patience; it++) {
+			
 			List<double[]> x = new ArrayList<>();
 			List<double[]> y = new ArrayList<>();
 			List<double[]> gwWeights = new ArrayList<>();
@@ -412,33 +413,31 @@ public class GWANN_RInterface {
 				gwWeights.add(kW.getRow(idx).data);
 			}
 			gwann.train(x, y, gwWeights);
-					
-			double[][] preds = new double[xVal.size()][];
-			for (int i = 0; i < xVal.size(); i++ ) {
-				double[][] out = gwann.presentInt(xVal.get(i))[0];
-				preds[i] = out[layers.length - 1];
-			}
-
-			List<Double> response = new ArrayList<>();
-			for( int i = 0; i < preds.length; i++ )
-				response.add( preds[i][i] );
-			double valError = SupervisedUtils.getRMSE(response, yVal, 0);
+												
+			List<Double> responseVal = new ArrayList<>();
+			for (int i = 0; i < xVal.size(); i++)
+				responseVal.add(gwann.present(xVal.get(i))[i]);
+			double valError = SupervisedUtils.getRMSE(responseVal, yVal, 0);
 			errors.add(valError);
 	
 			if (valError < localBestValError) {
 				localBestValError = valError;
 				noImp = 0;
 			} else
-				noImp++;
-	
-			if ( ( iterations >= 0 && it >= iterations ) || noImp >= patience  ) {
-				BuiltGwann tg = new BuiltGwann();
-				tg.gwann = gwann;
-				tg.errors= errors; // error for each iteration
-				tg.predictions = preds; // predictions of last iterations
-				return tg;	
-			}
+				noImp++;				
+		}		
+
+		double[][] preds = new double[xVal.size()][];
+		for (int i = 0; i < xVal.size(); i++ ) {
+			double[][] out = gwann.presentInt(xVal.get(i))[0];
+			preds[i] = out[layers.length - 1];
 		}
+								
+		BuiltGwann tg = new BuiltGwann();
+		tg.gwann = gwann;
+		tg.errors= errors; // error for each iteration
+		tg.predictions = preds; // predictions of last iterations
+		return tg;	
 	}
 	
 	public static double[] getParamsWithGoldenSection(double minRadius, double maxRadius, 
