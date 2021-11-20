@@ -425,7 +425,6 @@ public class GWANN_RInterface {
 						return buildGWANN(xArray_train, yTrain, W_train_train, xArray_test, yTest, W_train_test, new int[] { (int)nrHidden }, eta, opt, (int)batchSize, (int)iterations, (int)patience, kernel, bw, adaptive, seed, norm).errors;
 					else
 						return buildGWANN(xArray_train, yTrain, W_train_train, xArray_test, yTest, W_train_test, new int[] { (int)nrHidden }, eta, opt, (int)batchSize, Integer.MAX_VALUE, (int)patience, kernel, bw, adaptive, seed, norm).errors;
-					
 				}
 			}));
 		}
@@ -444,10 +443,8 @@ public class GWANN_RInterface {
 				}
 			}
 			mm = new double[] { mean/futures.size(), (int)iterations };
-		} else {
+		} else 
 			mm = getMinMeanIdx(futures);
-		}
-		
 		return mm;
 	}
 }

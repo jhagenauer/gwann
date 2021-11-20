@@ -27,7 +27,7 @@ w_train_pred<-dm
 
 nrHidden<-5
 norm<-T
-bandwidth<-4
+bandwidth<-(-1)
 opt="Nesterov"
 threads<-8
 batchSize<-50
