@@ -132,7 +132,7 @@ public class GWANN_RInterface {
 			bestValError = m[0];
 			bestValBw = bw_;
 			bestIts = (int)m[1];
-		} else if( bwSearch.equalsIgnoreCase("goldenSection") ) { // determine best bw using golden section search 
+		} else if( bwSearch.equalsIgnoreCase("goldenSection") || bwSearch.equalsIgnoreCase("golden_section") ) { // determine best bw using golden section search 
 			System.out.println("Golden section search...");
 			double[] m = getParamsWithGoldenSection(min, max, xArray_train, yArray_train, W, innerCvList, kernel, adaptive, eta, (int)batchSize, opt, (int)nrHidden, (int)iterations, (int)patience, (int)seed, (int)threads, norm);
 			bestValError = m[0];
@@ -240,7 +240,7 @@ public class GWANN_RInterface {
 	static BuiltGwann buildGWANN(double[][] xArray_train, double[] yArray_train, DoubleMatrix W_train, double[][] xArray_test, double[] yArray_test, DoubleMatrix W_train_test, int[] nrHidden, double eta, Optimizer opt, 
 			int batchSize, int iterations, int patience, GWKernel kernel, double bw, boolean adaptive, int seed, boolean norm ) {
 		Random r = new Random(seed);
-							
+					
 		List<double[]> xTrain = new ArrayList<>();
 		List<double[]> yTrain = new ArrayList<>();
 		for (int i = 0; i < xArray_train.length; i++ ) {
@@ -263,7 +263,6 @@ public class GWANN_RInterface {
 			yVal.add(y);
 		}
 		
-
 		if( norm ) {
 			ListNormalizer n = new ListNormalizer(Normalizer.Transform.zScore, xTrain);
 			n.normalize(xVal);
@@ -300,7 +299,7 @@ public class GWANN_RInterface {
 		List<Double> errors = new ArrayList<>();
 		int noImp = 0;
 		double localBestValError = Double.POSITIVE_INFINITY;
-		
+				
 		for (int it = 0; it < iterations && noImp < patience; it++) {
 			
 			List<double[]> x = new ArrayList<>();
@@ -329,7 +328,7 @@ public class GWANN_RInterface {
 			} else
 				noImp++;				
 		}		
-
+		
 		double[][] preds = new double[xVal.size()][];
 		for (int i = 0; i < xVal.size(); i++ ) {
 			double[][] out = gwann.presentInt(xVal.get(i))[0];
@@ -339,7 +338,7 @@ public class GWANN_RInterface {
 		BuiltGwann tg = new BuiltGwann();
 		tg.gwann = gwann;
 		tg.errors= errors; // error for each iteration
-		tg.predictions = preds; // predictions of last iterations
+		tg.predictions = preds; // predictions of last iterations		
 		return tg;	
 	}
 		
@@ -385,8 +384,8 @@ public class GWANN_RInterface {
 	
 	public static double[] getParamsCV(double[][] xArray, double[] yArray, DoubleMatrix W, List<Entry<List<Integer>, List<Integer>>> innerCvList, GWKernel kernel, double bw, boolean adaptive, double eta, int batchSize, Optimizer opt, int nrHidden, int iterations, int patience, int seed, int threads, boolean norm ) {
 		ExecutorService innerEs = Executors.newFixedThreadPool((int) threads);
-		List<Future<List<Double>>> futures = new ArrayList<Future<List<Double>>>();				
-		
+		List<Future<List<Double>>> futures = new ArrayList<Future<List<Double>>>();			
+				
 		for ( Entry<List<Integer>, List<Integer>> innerCvEntry : innerCvList ) {
 			futures.add(innerEs.submit(new Callable<List<Double>>() {
 				@Override
@@ -422,27 +421,33 @@ public class GWANN_RInterface {
 					for( int i = 0; i < xTest.size(); i++ )
 						xArray_test[i] = xTest.get(i);
 					
-					return buildGWANN(xArray_train, yTrain, W_train_train, xArray_test, yTest, W_train_test, new int[] { (int)nrHidden }, eta, opt, (int)batchSize, (int)iterations, (int)patience, kernel, bw, adaptive, seed, norm).errors;
+					if( iterations >= 0 )
+						return buildGWANN(xArray_train, yTrain, W_train_train, xArray_test, yTest, W_train_test, new int[] { (int)nrHidden }, eta, opt, (int)batchSize, (int)iterations, (int)patience, kernel, bw, adaptive, seed, norm).errors;
+					else
+						return buildGWANN(xArray_train, yTrain, W_train_train, xArray_test, yTest, W_train_test, new int[] { (int)nrHidden }, eta, opt, (int)batchSize, Integer.MAX_VALUE, (int)patience, kernel, bw, adaptive, seed, norm).errors;
+					
 				}
 			}));
 		}
 		innerEs.shutdown();
 		double[] mm;
-		
+				
 		if( iterations >= 0 ) {
 			double mean = 0;
 			for (Future<List<Double>> f : futures) {
 				try {
 					if( iterations > f.get().size() )
-						System.err.println("Iterations set too large. Either decrease iterations or increase patience!!!");
-					mean += f.get().get((int)iterations);
+						System.err.println("Iterations set too large ("+iterations+">"+f.get().size()+"). Either decrease iterations or increase patience!!!");
+					mean += f.get().get((int)iterations-1);
 				} catch (InterruptedException | ExecutionException ex) {
 					ex.printStackTrace();
 				}
 			}
 			mm = new double[] { mean/futures.size(), (int)iterations };
-		} else
+		} else {
 			mm = getMinMeanIdx(futures);
+		}
+		
 		return mm;
 	}
 }
