@@ -7,10 +7,11 @@
 gwann(
   x_train,
   y_train,
-  w_train,
+  w_train = NA,
   x_pred,
-  y_pred,
+  y_pred = NA,
   w_train_pred,
+  norm = T,
   nrHidden = 4,
   batchSize = 10,
   optimizer = "nesterov",
@@ -27,6 +28,7 @@ gwann(
   patience = 100,
   folds = 10,
   repeats = 1,
+  permutations = 0,
   threads = 4
 )
 }
@@ -35,13 +37,15 @@ gwann(
 
 \item{y_train}{Vector. Values represent target values for the observations in \code{x_train}.}
 
-\item{w_train}{Quadratic matrix of distances between the observations of \code{x_train}.}
+\item{w_train}{Quadratic matrix of distances between the observations of \code{x_train}. The matrix solely used for calculating the adaptive distances.}
 
 \item{x_pred}{Matrix of prediction data. Rows are observations, columns are independent variables.}
 
 \item{y_pred}{Vector. Values represent target values for the observations in \code{x_pred}.}
 
 \item{w_train_pred}{Matrix of distances between the observations of \code{x_train} (rows) and \code{x_pred} (columns).}
+
+\item{norm}{Center and scale independent variables before training? This affects the final model and the CV-procedure.}
 
 \item{nrHidden}{Number of hidden neurons.}
 
@@ -72,6 +76,8 @@ gwann(
 \item{folds}{Number of cross-validation folds}
 
 \item{repeats}{Number of repeats of cross-validation procedure}
+
+\item{permutations}{Number of permutations for calculating feature importance (Experimental)}
 
 \item{threads}{Number of threads to use.}
 }

@@ -63,6 +63,7 @@ public class GWANN_RInterface {
 	public static ReturnObject run(
 			double[][] xArray_train, double[] yArray_train, double[][] W_train,
 			double[][] xArray_pred, double[] yArray_pred, double[][] W_train_pred,
+			boolean norm,
 			double nrHidden, double batchSize, String optim, double eta, boolean linOut, 
 			String krnl, double bw_, boolean adaptive, 
 			String bwSearch, double bwMin, double bwMax, double steps_,
@@ -127,13 +128,13 @@ public class GWANN_RInterface {
 				
 		if( bw_ > 0 ) {
 			System.out.println("Pre-specified bandwidth...");
-			double[] m = getParamsCV(xArray_train, yArray_train, W, innerCvList, kernel, bw_, adaptive, eta, (int)batchSize, opt, (int)nrHidden, (int)iterations, (int)patience, (int)seed, (int)threads);
+			double[] m = getParamsCV(xArray_train, yArray_train, W, innerCvList, kernel, bw_, adaptive, eta, (int)batchSize, opt, (int)nrHidden, (int)iterations, (int)patience, (int)seed, (int)threads, norm);
 			bestValError = m[0];
 			bestValBw = bw_;
 			bestIts = (int)m[1];
 		} else if( bwSearch.equalsIgnoreCase("goldenSection") ) { // determine best bw using golden section search 
 			System.out.println("Golden section search...");
-			double[] m = getParamsWithGoldenSection(min, max, xArray_train, yArray_train, W, innerCvList, kernel, adaptive, eta, (int)batchSize, opt, (int)nrHidden, (int)iterations, (int)patience, (int)seed, (int)threads);
+			double[] m = getParamsWithGoldenSection(min, max, xArray_train, yArray_train, W, innerCvList, kernel, adaptive, eta, (int)batchSize, opt, (int)nrHidden, (int)iterations, (int)patience, (int)seed, (int)threads, norm);
 			bestValError = m[0];
 			bestValBw = m[1];
 			bestIts = (int)m[2];
@@ -172,7 +173,7 @@ public class GWANN_RInterface {
 	
 				System.out.println(bwShrinkFactor + ", current best bandwidth: " + bestValBw + ", RMSE:" + bestValError + ", bandwidths to test: " + ll);
 				for (double bw : ll) {				
-					double[] mm = getParamsCV(xArray_train, yArray_train, W, innerCvList, kernel, bestValBw, adaptive, eta, (int)batchSize, opt, (int)nrHidden, (int)iterations, (int)patience, seed, (int)threads);
+					double[] mm = getParamsCV(xArray_train, yArray_train, W, innerCvList, kernel, bestValBw, adaptive, eta, (int)batchSize, opt, (int)nrHidden, (int)iterations, (int)patience, seed, (int)threads, norm);
 					if (mm[0] < bestValError) {
 						bestValError = mm[0];
 						bestIts = (int)mm[1];
@@ -195,7 +196,7 @@ public class GWANN_RInterface {
 		double[][][] imp = null;
 		if( permutations > 0 ) { // importance
 			System.out.println("Calculating feature importance...");
-			BuiltGwann bg = buildGWANN(xArray_train, yArray_train, new DoubleMatrix(W_train), xArray_train, yArray_train, new DoubleMatrix(W_train), new int[] { (int)nrHidden }, eta, opt, (int)batchSize, bestIts, Integer.MAX_VALUE, kernel, bestValBw, adaptive, seed);
+			BuiltGwann bg = buildGWANN(xArray_train, yArray_train, new DoubleMatrix(W_train), xArray_train, yArray_train, new DoubleMatrix(W_train), new int[] { (int)nrHidden }, eta, opt, (int)batchSize, bestIts, Integer.MAX_VALUE, kernel, bestValBw, adaptive, seed, norm);
 			double[][] preds = bg.predictions;
 									
 			imp = new double[xArray_train[0].length][preds.length][preds[0].length];
@@ -224,7 +225,7 @@ public class GWANN_RInterface {
 		}
 
 		System.out.println("Building final model with bandwidth "+bestValBw+" and "+bestIts+" iterations...");				
-		BuiltGwann tg = buildGWANN(xArray_train, yArray_train, new DoubleMatrix(W_train), xArray_pred, yArray_pred, new DoubleMatrix(W_train_pred), new int[] { (int)nrHidden }, eta, opt, (int)batchSize, bestIts, Integer.MAX_VALUE, kernel, bestValBw, adaptive, seed);
+		BuiltGwann tg = buildGWANN(xArray_train, yArray_train, new DoubleMatrix(W_train), xArray_pred, yArray_pred, new DoubleMatrix(W_train_pred), new int[] { (int)nrHidden }, eta, opt, (int)batchSize, bestIts, Integer.MAX_VALUE, kernel, bestValBw, adaptive, seed, norm);
 	
 		ReturnObject ro = new ReturnObject();
 		ro.predictions = tg.predictions;
@@ -237,9 +238,9 @@ public class GWANN_RInterface {
 	}
 		
 	static BuiltGwann buildGWANN(double[][] xArray_train, double[] yArray_train, DoubleMatrix W_train, double[][] xArray_test, double[] yArray_test, DoubleMatrix W_train_test, int[] nrHidden, double eta, Optimizer opt, 
-			int batchSize, int iterations, int patience, GWKernel kernel, double bw, boolean adaptive, int seed ) {
+			int batchSize, int iterations, int patience, GWKernel kernel, double bw, boolean adaptive, int seed, boolean norm ) {
 		Random r = new Random(seed);
-			
+							
 		List<double[]> xTrain = new ArrayList<>();
 		List<double[]> yTrain = new ArrayList<>();
 		for (int i = 0; i < xArray_train.length; i++ ) {
@@ -260,6 +261,12 @@ public class GWANN_RInterface {
 			for (int j = 0; j < y.length; j++)
 				y[j] = yArray_test[i];
 			yVal.add(y);
+		}
+		
+
+		if( norm ) {
+			ListNormalizer n = new ListNormalizer(Normalizer.Transform.zScore, xTrain);
+			n.normalize(xVal);
 		}
 		
 		DoubleMatrix kW = adaptive ? GWRUtils.getKernelWeights(W_train, W_train_test, kernel, (int) bw) : GWRUtils.getKernelWeights(W_train_test, kernel, bw);
@@ -337,7 +344,7 @@ public class GWANN_RInterface {
 	}
 		
 	public static double[] getParamsWithGoldenSection(double minRadius, double maxRadius, 
-			double[][] xArray, double[] yArray, DoubleMatrix W, List<Entry<List<Integer>, List<Integer>>> innerCvList, GWKernel kernel, boolean adaptive, double eta, int batchSize, Optimizer opt, int nrHidden, int iterations, int patience, int seed, int threads ) {
+			double[][] xArray, double[] yArray, DoubleMatrix W, List<Entry<List<Integer>, List<Integer>>> innerCvList, GWKernel kernel, boolean adaptive, double eta, int batchSize, Optimizer opt, int nrHidden, int iterations, int patience, int seed, int threads, boolean norm ) {
 		double xU = maxRadius;
 		double xL = minRadius;
 		double eps = 1e-04;
@@ -346,8 +353,8 @@ public class GWANN_RInterface {
 		
 		double x1 = xL + d;
 		double x2 = xU - d;
-		double[] f1 = getParamsCV(xArray, yArray, W, innerCvList, kernel, x1, adaptive, eta, batchSize, opt, nrHidden, iterations, patience, seed,threads);
-		double[] f2 = getParamsCV(xArray, yArray, W, innerCvList, kernel, x2, adaptive, eta, batchSize, opt, nrHidden, iterations, patience, seed,threads);
+		double[] f1 = getParamsCV(xArray, yArray, W, innerCvList, kernel, x1, adaptive, eta, batchSize, opt, nrHidden, iterations, patience, seed,threads, norm);
+		double[] f2 = getParamsCV(xArray, yArray, W, innerCvList, kernel, x2, adaptive, eta, batchSize, opt, nrHidden, iterations, patience, seed,threads, norm);
 		
 		double d1 = f2[0] - f1[0];
 		
@@ -358,13 +365,13 @@ public class GWANN_RInterface {
 				x2 = x1;
 				x1 = xL + d;
 				f2 = f1;
-				f1 = getParamsCV(xArray, yArray, W, innerCvList, kernel, x1, adaptive, eta, batchSize, opt, nrHidden, iterations, patience, seed,threads);
+				f1 = getParamsCV(xArray, yArray, W, innerCvList, kernel, x1, adaptive, eta, batchSize, opt, nrHidden, iterations, patience, seed,threads, norm);
 			} else {
 				xU = x1;
 				x1 = x2;
 				x2 = xU - d;
 				f1 = f2;
-				f2 = getParamsCV(xArray, yArray, W, innerCvList, kernel, x2, adaptive, eta, batchSize, opt, nrHidden, iterations, patience, seed,threads);
+				f2 = getParamsCV(xArray, yArray, W, innerCvList, kernel, x2, adaptive, eta, batchSize, opt, nrHidden, iterations, patience, seed,threads, norm);
 			}
 			d1 = f2[0] - f1[0];
 			System.out.println(d+", "+d1);
@@ -376,7 +383,7 @@ public class GWANN_RInterface {
 			return new double[] { f2[0], adaptive ? Math.round(x2) : x2, f2[1]};
 	}
 	
-	public static double[] getParamsCV(double[][] xArray, double[] yArray, DoubleMatrix W, List<Entry<List<Integer>, List<Integer>>> innerCvList, GWKernel kernel, double bw, boolean adaptive, double eta, int batchSize, Optimizer opt, int nrHidden, int iterations, int patience, int seed, int threads ) {
+	public static double[] getParamsCV(double[][] xArray, double[] yArray, DoubleMatrix W, List<Entry<List<Integer>, List<Integer>>> innerCvList, GWKernel kernel, double bw, boolean adaptive, double eta, int batchSize, Optimizer opt, int nrHidden, int iterations, int patience, int seed, int threads, boolean norm ) {
 		ExecutorService innerEs = Executors.newFixedThreadPool((int) threads);
 		List<Future<List<Double>>> futures = new ArrayList<Future<List<Double>>>();				
 		
@@ -402,10 +409,7 @@ public class GWANN_RInterface {
 						xTest.add(Arrays.copyOf(xArray[idx], xArray[idx].length));
 						yTest[i] = yArray[idx];
 					}
-				
-					ListNormalizer n = new ListNormalizer(Normalizer.Transform.zScore, xTrain);
-					n.normalize(xTest);
-				
+								
 					int[] trainIdxA = DataUtils.toIntArray(trainIdx);
 					DoubleMatrix W_train_test = W.get( trainIdxA, DataUtils.toIntArray(testIdx)); // train to test
 					DoubleMatrix W_train_train = W.get(trainIdxA,trainIdxA);
@@ -418,7 +422,7 @@ public class GWANN_RInterface {
 					for( int i = 0; i < xTest.size(); i++ )
 						xArray_test[i] = xTest.get(i);
 					
-					return buildGWANN(xArray_train, yTrain, W_train_train, xArray_test, yTest, W_train_test, new int[] { (int)nrHidden }, eta, opt, (int)batchSize, (int)iterations, (int)patience, kernel, bw, adaptive, seed).errors;
+					return buildGWANN(xArray_train, yTrain, W_train_train, xArray_test, yTest, W_train_test, new int[] { (int)nrHidden }, eta, opt, (int)batchSize, (int)iterations, (int)patience, kernel, bw, adaptive, seed, norm).errors;
 				}
 			}));
 		}

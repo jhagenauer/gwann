@@ -7,8 +7,6 @@ import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
 public class ListNormalizer extends Normalizer {
 	
 	int[] fa;
-	Transform[] tt;
-	SummaryStatistics[][] ds;
 	
 	public ListNormalizer( Transform t, List<double[]> samples ) {
 		this( new Transform[] {t}, samples, null);
@@ -37,7 +35,9 @@ public class ListNormalizer extends Normalizer {
 			}
 			
 			// normalize
-			normalize(samples, i);			
+			for( int j = 0; j < fa.length; j++ )
+				for (int k = 0; k < samples.size(); k++ )
+					samples.get(k)[fa[j]] = normalize(samples.get(k)[fa[j]], i, j, false);			
 		}
 	}
 	
@@ -45,30 +45,18 @@ public class ListNormalizer extends Normalizer {
 	public ListNormalizer( Transform t, List<double[]> samples, int[] faa ) {
 		this( new Transform[] {t},samples,faa);
 	}
-	
-	public void normalize(List<double[]> samples) {	
+		
+	public void normalize(List<double[]> samples ) {	
 		for( int i = 0; i < tt.length; i++ ) 
-			normalize(samples, i );								
+			for( int j = 0; j < fa.length; j++ )
+				for (int k = 0; k < samples.size(); k++ )
+					samples.get(k)[fa[j]] = normalize(samples.get(k)[fa[j]], i, j, false);						
 	}
 	
-	private void normalize(List<double[]> samples, int i ) {
-		Transform t = tt[i];
-		for( int j = 0; j < fa.length; j++ )
-			for (double[] d : samples ) { 
-				if (t == Transform.zScore) 
-					d[fa[j]] = (d[fa[j]] - ds[i][j].getMean()) / ds[i][j].getStandardDeviation();
-				else if (t == Transform.scale01)
-					d[fa[j]] = (d[fa[j]] - ds[i][j].getMin()) / (ds[i][j].getMax() - ds[i][j].getMin());
-				else if( t == Transform.sqrt )
-					d[fa[j]] = Math.sqrt(d[fa[j]]);
-				else if( t == Transform.log )
-					d[fa[j]] = Math.log(d[fa[j]]);
-				else if( t == Transform.log1 )
-					d[fa[j]] = Math.log( d[fa[j]]+1.0 );
-				else if( t == Transform.none )
-					d[fa[j]] = d[fa[j]];					
-				else
-					throw new RuntimeException(t+" not supported!");							
-			}		
+	public void denormalize(List<double[]> samples ) {
+		for( int i = tt.length-1; i >= 0; i-- ) 
+			for( int j = 0; j < fa.length; j++ )
+				for (int k = 0; k < samples.size(); k++ )
+					samples.get(k)[fa[j]] = normalize(samples.get(k)[fa[j]], i, j, true);
 	}
 }
