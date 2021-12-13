@@ -9,11 +9,12 @@ import java.util.Map.Entry;
 import java.util.Random;
 
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public class SupervisedUtils {
 
-	private static Logger log = Logger.getLogger(SupervisedUtils.class);
+	private static Logger log = LogManager.getLogger(SupervisedUtils.class);
 	
 	public static List<Entry<List<Integer>, List<Integer>>> getKFoldCVList(int numFolds, int numRepeats, int numSamples ) {
 		return getKFoldCVList(numFolds, numRepeats, numSamples, 0);
