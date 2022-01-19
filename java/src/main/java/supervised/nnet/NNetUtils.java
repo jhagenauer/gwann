@@ -26,7 +26,7 @@ public class NNetUtils {
 		gorot_unif, norm05
 	}
 
-	public static double[] getParamsCV(List<double[]> samplesA, List<Entry<List<Integer>, List<Integer>>> innerCvList, int[] fa, int ta, double[] eta, int batchSize, NNet.Optimizer opt, double lambda, int[] nrHidden, int maxIt, int patience, int threads, Transform[] expTrans, Transform[] respTrans ) {
+	public static List<List<Double>> getErrors_CV(List<double[]> samplesA, List<Entry<List<Integer>, List<Integer>>> innerCvList, int[] fa, int ta, double[] eta, int batchSize, NNet.Optimizer opt, double lambda, int[] nrHidden, int maxIt, int patience, int threads, Transform[] expTrans, Transform[] respTrans ) {
 		ExecutorService innerEs = Executors.newFixedThreadPool(threads);
 		List<Future<List<Double>>> futures = new ArrayList<Future<List<Double>>>();
 		
@@ -62,7 +62,14 @@ public class NNetUtils {
 			}));
 		}
 		innerEs.shutdown();
-		return NNetUtils.getMinMeanIdx(futures);
+		List<List<Double>> errors = new ArrayList<>();
+		try {
+			for( Future<List<Double>> f : futures )
+				errors.add( f.get() );
+		} catch (InterruptedException | ExecutionException e) {
+			e.printStackTrace();
+		} 
+		return errors;
 	}
 
 	// cleaner interface
@@ -218,20 +225,17 @@ public class NNetUtils {
 		return weights;
 	}
 	
-	public static double[] getMinMeanIdx(List<Future<List<Double>>> futures) {			
+	public static double[] getBestErrorParams( List<List<Double>> errors ) {
 		int minSize = Integer.MAX_VALUE;
 		double[] mean = null; 
-		try {
-			for( Future<List<Double>> f : futures )	
-				minSize = Math.min(f.get().size(), minSize);
+		
+		for( List<Double> f : errors )	
+			minSize = Math.min(f.size(), minSize);
 						
-			mean = new double[minSize];
-			for( Future<List<Double>> f : futures )
-				for( int i = 0; i < mean.length; i++ )
-					mean[i] += f.get().get(i)/futures.size();
-		} catch (InterruptedException | ExecutionException e) {
-			e.printStackTrace();
-		} 
+		mean = new double[minSize];
+		for( List<Double> f : errors )
+			for( int i = 0; i < mean.length; i++ )
+				mean[i] += f.get(i)/errors.size();
 		
 		double minMean = mean[0];
 		int minMeanIdx = 0;

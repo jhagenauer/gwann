@@ -10,6 +10,7 @@ import java.util.Map;
 import org.jblas.DoubleMatrix;
 
 import dist.Dist;
+import jdk.internal.org.jline.utils.Log;
 
 public class GWUtils {
 
@@ -88,8 +89,9 @@ public class GWUtils {
 	
 	public static DoubleMatrix getKernelWeights(DoubleMatrix Wtrain, DoubleMatrix Wk, GWKernel kernel, int nb ) {
 		DoubleMatrix kW = new DoubleMatrix(Wk.rows,Wk.columns);
+		
 		for (int i = 0; i < Wk.rows; i++) {
-			double bw = Wk.getRow(i).sort().get(nb);
+			double bw = Wtrain.getRow(i).sort().get(nb);
 			double[] w = new double[Wk.columns];
 			for (int j = 0; j < w.length; j++)
 				w[j] = GWUtils.getKernelValue(kernel, Wk.get(i, j), bw);
@@ -97,7 +99,7 @@ public class GWUtils {
 		}
 		return kW;
 	}
-	
+		
 	public static DoubleMatrix getKernelWeights( DoubleMatrix W, GWKernel kernel, double bw ) {
 		DoubleMatrix kW = new DoubleMatrix(W.rows,W.columns);
 		for (int i = 0; i < W.rows; i++) {

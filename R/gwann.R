@@ -60,7 +60,7 @@ gwann<-function(x_train,y_train,w_train=NA,x_pred,y_pred=NA,w_train_pred,norm=T,
   if( is.na(bandwidth) )
     bandwidth<-(-1)
   if( is.na(iterations) )
-    iterations<-Inf
+    iterations<-(-1)
   else {
     print("Iterations given -> setting patience to number of iterations!")
     patience<-iterations

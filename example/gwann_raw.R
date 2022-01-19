@@ -1,11 +1,12 @@
 library(rJava)
 .jinit()
 .jaddClassPath("inst/java/commons-math3-3.6.1.jar")
-.jaddClassPath("inst/java/gwann-0.0.3-SNAPSHOT.jar")
+.jaddClassPath("inst/java/gwann-0.0.4-SNAPSHOT.jar")
 .jaddClassPath("inst/java/jblas-1.2.4.jar")
 .jaddClassPath("inst/java/log4j-api-2.17.1.jar")
 .jaddClassPath("inst/java/log4j-core-2.17.1.jar")
 
+.jmethods("supervised.nnet.gwann.GWANN_RInterface")
 
 data(toy4)
 
@@ -31,17 +32,15 @@ lr<-0.01
 linOut<-T
 kernel<-"gaussian"
 adaptive<-T
-iterations<-1000
+iterations<-(-1)
 folds<-10
 repeats<-1
-patience<-100
+patience<-1000
 bwSearch="goldenSection"
 bwMin<-1
 bwMax<-4
 steps=1
 permutations<-0
-
-.jmethods("supervised.nnet.gwann.GWANN_RInterface")
 
 r<-.jcall(obj="supervised.nnet.gwann.GWANN_RInterface",method="run",returnSig = "Lsupervised/nnet/gwann/Return_R;",
 

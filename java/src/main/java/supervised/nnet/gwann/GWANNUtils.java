@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Random;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -189,8 +190,8 @@ public class GWANNUtils {
 		
 		double x1 = xL + d;
 		double x2 = xU - d;
-		double[] f1 = getParamsCV(xArray, yArray, W, innerCvList, kernel, x1, adaptive, eta, batchSize, opt, lambda, nrHidden, iterations, patience, threads, baseWeights, explTrans, respTrans);
-		double[] f2 = getParamsCV(xArray, yArray, W, innerCvList, kernel, x2, adaptive, eta, batchSize, opt, lambda, nrHidden, iterations, patience, threads, baseWeights, explTrans, respTrans);
+		double[] f1 = NNetUtils.getBestErrorParams( getErrors_CV(xArray, yArray, W, innerCvList, kernel, x1, adaptive, eta, batchSize, opt, lambda, nrHidden, iterations, patience, threads, baseWeights, explTrans, respTrans) );
+		double[] f2 = NNetUtils.getBestErrorParams( getErrors_CV(xArray, yArray, W, innerCvList, kernel, x2, adaptive, eta, batchSize, opt, lambda, nrHidden, iterations, patience, threads, baseWeights, explTrans, respTrans) );
 		
 		double d1 = f2[0] - f1[0];
 		
@@ -201,13 +202,13 @@ public class GWANNUtils {
 				x2 = x1;
 				x1 = xL + d;
 				f2 = f1;
-				f1 = getParamsCV(xArray, yArray, W, innerCvList, kernel, x1, adaptive, eta, batchSize, opt, lambda, nrHidden, iterations, patience, threads, baseWeights, explTrans, respTrans );
+				f1 = NNetUtils.getBestErrorParams( getErrors_CV(xArray, yArray, W, innerCvList, kernel, x1, adaptive, eta, batchSize, opt, lambda, nrHidden, iterations, patience, threads, baseWeights, explTrans, respTrans ) );
 			} else {
 				xU = x1;
 				x1 = x2;
 				x2 = xU - d;
 				f1 = f2;
-				f2 = getParamsCV(xArray, yArray, W, innerCvList, kernel, x2, adaptive, eta, batchSize, opt, lambda, nrHidden, iterations, patience, threads, baseWeights, explTrans, respTrans );
+				f2 = NNetUtils.getBestErrorParams( getErrors_CV(xArray, yArray, W, innerCvList, kernel, x2, adaptive, eta, batchSize, opt, lambda, nrHidden, iterations, patience, threads, baseWeights, explTrans, respTrans ) );
 			}
 			d1 = f2[0] - f1[0];
 		}
@@ -218,7 +219,7 @@ public class GWANNUtils {
 			return new double[] { f2[0], adaptive ? Math.round(x2) : x2, f2[1]};
 	}
 	
-	public static double[] getParamsCV(
+	public static List<List<Double>> getErrors_CV(
 			List<double[]> xArray, List<Double> yArray, DoubleMatrix W, List<Entry<List<Integer>, List<Integer>>> innerCvList, 
 			GWKernel kernel, double bw, boolean adaptive, double[] eta, int batchSize, Optimizer opt, double lambda, int[] nrHidden, int iterations, int patience, int threads, double[][][] baseWeights, Transform[] explTrans, Transform[] respTrans ) {
 		
@@ -265,7 +266,15 @@ public class GWANNUtils {
 			}));
 		}
 		innerEs.shutdown();
-		return NNetUtils.getMinMeanIdx(futures);
+		
+		List<List<Double>> errors = new ArrayList<>();
+		try {
+			for( Future<List<Double>> f : futures )
+				errors.add( f.get() );
+		} catch (InterruptedException | ExecutionException e) {
+			e.printStackTrace();
+		} 
+		return errors;
 	}
 	
 	public static double[] getParamsWithGridSearch(double minRadius, double maxRadius, 
@@ -279,7 +288,7 @@ public class GWANNUtils {
 		double[] bestF = null;
 		int bestBw = -1;
 		for( int i = (int)minRadius; i <= maxRadius; i++ ) {
-			double[] f = getParamsCV(xArray, yArray, W, innerCvList, kernel, i, adaptive, eta, batchSize, opt, lambda, nrHidden, iterations, patience, threads, weights, expTrans, respTrans);
+			double[] f = NNetUtils.getBestErrorParams( getErrors_CV(xArray, yArray, W, innerCvList, kernel, i, adaptive, eta, batchSize, opt, lambda, nrHidden, iterations, patience, threads, weights, expTrans, respTrans) );
 			if( bestF == null || f[0] < bestF[0] ) { 
 				bestF = f;
 				bestBw = i;
@@ -338,14 +347,14 @@ public class GWANNUtils {
 	}
 	
 	@Deprecated
-	public static double[] getParamsCV(List<double[]> samplesA, DoubleMatrix W, List<Entry<List<Integer>, List<Integer>>> innerCvList, int[] fa, int ta, GWKernel kernel, double bw, boolean adaptive, double[] eta, int batchSize, Optimizer opt, double lambda, int[] nrHidden, int maxIt, int patience, int threads, double[][][] baseWeights, Transform[] expTrans, Transform[] respTrans ) {
+	public static double[] getErrors_CV(List<double[]> samplesA, DoubleMatrix W, List<Entry<List<Integer>, List<Integer>>> innerCvList, int[] fa, int ta, GWKernel kernel, double bw, boolean adaptive, double[] eta, int batchSize, Optimizer opt, double lambda, int[] nrHidden, int maxIt, int patience, int threads, double[][][] baseWeights, Transform[] expTrans, Transform[] respTrans ) {
 		List<double[]> xTrain = new ArrayList<>();
 		List<Double> yTrain = new ArrayList<>();
 		for (double[] d : samplesA ) {
 			xTrain.add(DataUtils.strip(d, fa));
 			yTrain.add(d[ta]);
 		}
-		return getParamsCV(xTrain, yTrain, W, innerCvList, kernel, bw, adaptive, eta, batchSize, opt, lambda, nrHidden, maxIt, patience, threads, baseWeights, expTrans, respTrans);
+		return NNetUtils.getBestErrorParams( getErrors_CV(xTrain, yTrain, W, innerCvList, kernel, bw, adaptive, eta, batchSize, opt, lambda, nrHidden, maxIt, patience, threads, baseWeights, expTrans, respTrans) );
 	}
 	
 	@Deprecated

@@ -1,6 +1,6 @@
 Package: gwann
 Title: Geographically Weighted Artificial Neural Network
-Version: 0.3
+Version: 0.4
 Authors@R: 
     person(given = "Julian",
            family = "Hagenauer",
