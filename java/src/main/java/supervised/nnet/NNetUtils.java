@@ -218,8 +218,7 @@ public class NNetUtils {
 		return weights;
 	}
 	
-	public static double[] getMinMeanIdx(List<Future<List<Double>>> futures) {
-				
+	public static double[] getMinMeanIdx(List<Future<List<Double>>> futures) {			
 		int minSize = Integer.MAX_VALUE;
 		double[] mean = null; 
 		try {
@@ -240,8 +239,7 @@ public class NNetUtils {
 			if (mean[i] < minMean ) {
 				minMean = mean[i];
 				minMeanIdx = i;
-			}						
+			}	
 		return new double[] { minMean, minMeanIdx };
 	}
-
 }

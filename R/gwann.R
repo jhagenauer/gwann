@@ -78,7 +78,7 @@ gwann<-function(x_train,y_train,w_train=NA,x_pred,y_pred=NA,w_train_pred,norm=T,
     bwSearch<-"goldenSection"
   }
 
-  r<-.jcall(obj="supervised.nnet.gwann.GWANN_RInterface",method="run",returnSig = "Lsupervised/nnet/gwann/ReturnObject;",
+  r<-.jcall(obj="supervised.nnet.gwann.GWANN_RInterface",method="run",returnSig = "Lsupervised/nnet/gwann/Return_R;",
             .jarray(x_train,dispatch=T),
             y_train,
             .jarray(w_train,dispatch=T),

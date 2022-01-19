@@ -22,10 +22,10 @@ public class GWANN_RInterface {
 			double[][] xArray_train, double[] yArray_train, double[][] W_train,
 			double[][] xArray_pred, double[] yArray_pred, double[][] W_train_pred,
 			boolean norm,
-			double nrHidden, double batchSize, String optim, double eta, boolean linOut, 
+			double nrHidden, double batchSize, String optim, double eta_, boolean linOut, 
 			String krnl, double bw_, boolean adaptive, 
 			String bwSearch, double bwMin, double bwMax, double steps_,
-			double iterations, double patience, 
+			double maxIts, double patience, 
 			double folds, double repeats,
 			double permutations,
 			double threads) {
@@ -65,6 +65,7 @@ public class GWANN_RInterface {
 		double eps = 1e-03; // oder lieber 4?
 		int pow = 3;
 		final int steps = (int)steps_ < 0 ? 10 : (int)steps_;
+		double[] eta = new double[] { eta_, eta_};
 		
 		Transform[] respTrans = new Transform[] {};
 		Transform[] explTrans = norm ? new Transform[] {Transform.zScore} : new Transform[] {};
@@ -99,14 +100,14 @@ public class GWANN_RInterface {
 				
 		if( bw_ > 0 ) {
 			System.out.println("Pre-specified bandwidth...");
-			double[] m = GWANNUtils.getParamsCV(xTrain_list, yTrain_list, W, innerCvList, kernel, bw_, adaptive, new double[] {eta}, (int)batchSize, opt, 0.0, new int[] {(int)nrHidden}, (int)iterations, (int)patience, (int)threads, null, explTrans, respTrans );
+			double[] m = GWANNUtils.getParamsCV(xTrain_list, yTrain_list, W, innerCvList, kernel, bw_, adaptive, eta, (int)batchSize, opt, 0.0, new int[] {(int)nrHidden}, (int)maxIts, (int)patience, (int)threads, null, explTrans, respTrans );
 			
 			bestValError = m[0];
 			bestValBw = bw_;
 			bestIts = (int)m[1];
 		} else if( bwSearch.equalsIgnoreCase("goldenSection") || bwSearch.equalsIgnoreCase("golden_section") ) { // determine best bw using golden section search 
 			System.out.println("Golden section search...");
-			double[] m = GWANNUtils.getParamsWithGoldenSection(min, max, xTrain_list, yTrain_list, W, innerCvList, kernel, adaptive, new double[] {eta}, (int)batchSize, opt, 0.0, new int[] {(int)nrHidden}, (int)iterations, (int)patience, (int)threads, null, explTrans, respTrans);
+			double[] m = GWANNUtils.getParamsWithGoldenSection(min, max, xTrain_list, yTrain_list, W, innerCvList, kernel, adaptive, eta, (int)batchSize, opt, 0.0, new int[] {(int)nrHidden}, (int)maxIts, (int)patience, (int)threads, null, explTrans, respTrans);
 						
 			bestValError = m[0];
 			bestValBw = m[1];
@@ -145,7 +146,7 @@ public class GWANN_RInterface {
 	
 				System.out.println(bwShrinkFactor + ", current best bandwidth: " + bestValBw + ", RMSE:" + bestValError + ", bandwidths to test: " + ll);
 				for (double bw : ll) {				
-					double[] mm = GWANNUtils.getParamsCV(xTrain_list, yTrain_list, W, innerCvList, kernel, bestValBw, adaptive, new double[] {eta}, (int)batchSize, opt, 0.0, new int[] {(int)nrHidden}, (int)iterations, (int)patience, (int)threads, null, explTrans, respTrans);
+					double[] mm = GWANNUtils.getParamsCV(xTrain_list, yTrain_list, W, innerCvList, kernel, bestValBw, adaptive, eta, (int)batchSize, opt, 0.0, new int[] {(int)nrHidden}, (int)maxIts, (int)patience, (int)threads, null, explTrans, respTrans);
 					if (mm[0] < bestValError) {
 						bestValError = mm[0];
 						bestIts = (int)mm[1];
@@ -171,7 +172,7 @@ public class GWANN_RInterface {
 			ReturnObject bg = GWANNUtils.buildGWANN(
 					xTrain_list, yTrain_list, W, 
 					xTrain_list, yTrain_list, W, 
-					new int[] { (int)nrHidden }, new double[] {eta}, opt, 0.0, (int)batchSize, bestIts, Integer.MAX_VALUE, kernel, bestValBw, adaptive, null, explTrans, respTrans);
+					new int[] { (int)nrHidden }, eta, opt, 0.0, (int)batchSize, bestIts, Integer.MAX_VALUE, kernel, bestValBw, adaptive, null, explTrans, respTrans);
 						
 			double[][] preds = bg.prediction.toArray(new double[][] {});
 									
@@ -204,7 +205,7 @@ public class GWANN_RInterface {
 		ReturnObject tg = GWANNUtils.buildGWANN(
 				xTrain_list, yTrain_list, W, 
 				xPred_list, yPred_list, new DoubleMatrix(W_train_pred), 
-				new int[] { (int)nrHidden }, new double[] {eta}, opt, 0.0, (int)batchSize, bestIts, Integer.MAX_VALUE, kernel, bestValBw, adaptive, null, explTrans, respTrans);
+				new int[] { (int)nrHidden }, eta, opt, 0.0, (int)batchSize, bestIts, Integer.MAX_VALUE, kernel, bestValBw, adaptive, null, explTrans, respTrans);
 					
 		Return_R ro = new Return_R();
 		ro.predictions = tg.prediction.toArray( new double[][] {} );
