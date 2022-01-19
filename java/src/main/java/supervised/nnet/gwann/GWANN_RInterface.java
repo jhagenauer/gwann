@@ -6,61 +6,19 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
-import java.util.Random;
 import java.util.Set;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 
 import org.jblas.DoubleMatrix;
 
 import supervised.SupervisedUtils;
-import supervised.nnet.NNet;
 import supervised.nnet.NNet.Optimizer;
-import supervised.nnet.NNet.initMode;
-import supervised.nnet.activation.Constant;
-import supervised.nnet.activation.Function;
-import supervised.nnet.activation.Linear;
-import supervised.nnet.activation.TanH;
-import utils.DataUtils;
-import utils.GWRUtils;
+import supervised.nnet.ReturnObject;
 import utils.GWRUtils.GWKernel;
-import utils.ListNormalizer;
-import utils.Normalizer;
+import utils.Normalizer.Transform;
 
 public class GWANN_RInterface {
-	
-	public static double[] getMinMeanIdx(List<Future<List<Double>>> futures) {
-		List<List<Double>> result = new ArrayList<List<Double>>();
-		for (Future<List<Double>> f : futures)
-			try {
-				result.add(f.get());
-			} catch (InterruptedException | ExecutionException ex) {
-				ex.printStackTrace();
-			}
-
-		double minMean = Double.POSITIVE_INFINITY;
-		int minMeanIdx = -1;
-		out: for (int i = 0;; i++) { // for each it
-			double mean = 0;
-			for (int j = 0; j < result.size(); j++) { // for each fold
-				if (i >= result.get(j).size())
-					break out;
-				mean += result.get(j).get(i);
-			}
-			mean /= result.size();
-
-			if (mean < minMean) {
-				minMean = mean;
-				minMeanIdx = i;
-			}
-		}
-		return new double[] { minMean, minMeanIdx };
-	}
-	
-	public static ReturnObject run(
+		
+	public static Return_R run(
 			double[][] xArray_train, double[] yArray_train, double[][] W_train,
 			double[][] xArray_pred, double[] yArray_pred, double[][] W_train_pred,
 			boolean norm,
@@ -107,10 +65,23 @@ public class GWANN_RInterface {
 		double eps = 1e-03; // oder lieber 4?
 		int pow = 3;
 		final int steps = (int)steps_ < 0 ? 10 : (int)steps_;
-
-		DoubleMatrix W = new DoubleMatrix(W_train);
-		List<Entry<List<Integer>, List<Integer>>> innerCvList = SupervisedUtils.getKFoldCVList( (int)folds, (int)repeats, xArray_train.length, seed);	
+		
+		Transform[] respTrans = new Transform[] {};
+		Transform[] explTrans = norm ? new Transform[] {Transform.zScore} : new Transform[] {};
 				
+		DoubleMatrix W = new DoubleMatrix(W_train);
+		List<Entry<List<Integer>, List<Integer>>> innerCvList = SupervisedUtils.getKFoldCVList( (int)folds, (int)repeats, xArray_train.length, seed);
+		
+		List<double[]> xTrain_list = Arrays.asList(xArray_train);
+		List<Double> yTrain_list = new ArrayList<>();
+		for( double d : yArray_train )
+			yTrain_list.add(d);	
+		
+		List<double[]> xPred_list = Arrays.asList(xArray_pred);
+		List<Double> yPred_list = new ArrayList<>();
+		for( double d : yArray_pred )
+			yPred_list.add(d);		
+						
 		List<Double> v = new ArrayList<>();
 		for (double w : W.data)
 			v.add(w);
@@ -128,13 +99,15 @@ public class GWANN_RInterface {
 				
 		if( bw_ > 0 ) {
 			System.out.println("Pre-specified bandwidth...");
-			double[] m = getParamsCV(xArray_train, yArray_train, W, innerCvList, kernel, bw_, adaptive, eta, (int)batchSize, opt, (int)nrHidden, (int)iterations, (int)patience, (int)seed, (int)threads, norm);
+			double[] m = GWANNUtils.getParamsCV(xTrain_list, yTrain_list, W, innerCvList, kernel, bw_, adaptive, new double[] {eta}, (int)batchSize, opt, 0.0, new int[] {(int)nrHidden}, (int)iterations, (int)patience, (int)threads, null, explTrans, respTrans );
+			
 			bestValError = m[0];
 			bestValBw = bw_;
 			bestIts = (int)m[1];
 		} else if( bwSearch.equalsIgnoreCase("goldenSection") || bwSearch.equalsIgnoreCase("golden_section") ) { // determine best bw using golden section search 
 			System.out.println("Golden section search...");
-			double[] m = getParamsWithGoldenSection(min, max, xArray_train, yArray_train, W, innerCvList, kernel, adaptive, eta, (int)batchSize, opt, (int)nrHidden, (int)iterations, (int)patience, (int)seed, (int)threads, norm);
+			double[] m = GWANNUtils.getParamsWithGoldenSection(min, max, xTrain_list, yTrain_list, W, innerCvList, kernel, adaptive, new double[] {eta}, (int)batchSize, opt, 0.0, new int[] {(int)nrHidden}, (int)iterations, (int)patience, (int)threads, null, explTrans, respTrans);
+						
 			bestValError = m[0];
 			bestValBw = m[1];
 			bestIts = (int)m[2];
@@ -161,7 +134,6 @@ public class GWANN_RInterface {
 				List<Double> ll = new ArrayList<>(l);
 				Collections.sort(ll);
 				
-				// bandwidth given?
 				if( bwSearch.equalsIgnoreCase("grid") ) {
 					ll.clear();
 					for( double a = min; a <=max; a+= (max-min)/steps )
@@ -173,7 +145,7 @@ public class GWANN_RInterface {
 	
 				System.out.println(bwShrinkFactor + ", current best bandwidth: " + bestValBw + ", RMSE:" + bestValError + ", bandwidths to test: " + ll);
 				for (double bw : ll) {				
-					double[] mm = getParamsCV(xArray_train, yArray_train, W, innerCvList, kernel, bestValBw, adaptive, eta, (int)batchSize, opt, (int)nrHidden, (int)iterations, (int)patience, seed, (int)threads, norm);
+					double[] mm = GWANNUtils.getParamsCV(xTrain_list, yTrain_list, W, innerCvList, kernel, bestValBw, adaptive, new double[] {eta}, (int)batchSize, opt, 0.0, new int[] {(int)nrHidden}, (int)iterations, (int)patience, (int)threads, null, explTrans, respTrans);
 					if (mm[0] < bestValError) {
 						bestValError = mm[0];
 						bestIts = (int)mm[1];
@@ -196,8 +168,12 @@ public class GWANN_RInterface {
 		double[][][] imp = null;
 		if( permutations > 0 ) { // importance
 			System.out.println("Calculating feature importance...");
-			BuiltGwann bg = buildGWANN(xArray_train, yArray_train, new DoubleMatrix(W_train), xArray_train, yArray_train, new DoubleMatrix(W_train), new int[] { (int)nrHidden }, eta, opt, (int)batchSize, bestIts, Integer.MAX_VALUE, kernel, bestValBw, adaptive, seed, norm);
-			double[][] preds = bg.predictions;
+			ReturnObject bg = GWANNUtils.buildGWANN(
+					xTrain_list, yTrain_list, W, 
+					xTrain_list, yTrain_list, W, 
+					new int[] { (int)nrHidden }, new double[] {eta}, opt, 0.0, (int)batchSize, bestIts, Integer.MAX_VALUE, kernel, bestValBw, adaptive, null, explTrans, respTrans);
+						
+			double[][] preds = bg.prediction.toArray(new double[][] {});
 									
 			imp = new double[xArray_train[0].length][preds.length][preds[0].length];
 			for( int i = 0; i < xArray_train[0].length; i++ ) { // for each variable
@@ -215,7 +191,7 @@ public class GWANN_RInterface {
 					
 					double[][] preds_ = new double[copy.length][];
 					for( int k = 0; k < copy.length; k++ )
-						preds_[k] = bg.gwann.present(copy[k]);
+						preds_[k] = bg.nnet.present(copy[k]);
 					
 					for( int k = 0; k < preds.length; k++ )
 						for( int p = 0; p < preds[0].length; p++ )
@@ -224,227 +200,19 @@ public class GWANN_RInterface {
 			}
 		}
 
-		System.out.println("Building final model with bandwidth "+bestValBw+" and "+bestIts+" iterations...");				
-		BuiltGwann tg = buildGWANN(xArray_train, yArray_train, new DoubleMatrix(W_train), xArray_pred, yArray_pred, new DoubleMatrix(W_train_pred), new int[] { (int)nrHidden }, eta, opt, (int)batchSize, bestIts, Integer.MAX_VALUE, kernel, bestValBw, adaptive, seed, norm);
-	
-		ReturnObject ro = new ReturnObject();
-		ro.predictions = tg.predictions;
+		System.out.println("Building final model with bandwidth "+bestValBw+" and "+bestIts+" iterations...");					
+		ReturnObject tg = GWANNUtils.buildGWANN(
+				xTrain_list, yTrain_list, W, 
+				xPred_list, yPred_list, new DoubleMatrix(W_train_pred), 
+				new int[] { (int)nrHidden }, new double[] {eta}, opt, 0.0, (int)batchSize, bestIts, Integer.MAX_VALUE, kernel, bestValBw, adaptive, null, explTrans, respTrans);
+					
+		Return_R ro = new Return_R();
+		ro.predictions = tg.prediction.toArray( new double[][] {} );
 		ro.importance = imp;
-		ro.weights = tg.gwann.weights;
+		ro.weights = tg.nnet.weights;
 		ro.rmse = bestValError;
 		ro.its = bestIts;
 		ro.bw = bestValBw;
 		return ro;			
-	}
-		
-	static BuiltGwann buildGWANN(double[][] xArray_train, double[] yArray_train, DoubleMatrix W_train, double[][] xArray_test, double[] yArray_test, DoubleMatrix W_train_test, int[] nrHidden, double eta, Optimizer opt, 
-			int batchSize, int iterations, int patience, GWKernel kernel, double bw, boolean adaptive, int seed, boolean norm ) {
-		Random r = new Random(seed);
-					
-		List<double[]> xTrain = new ArrayList<>();
-		List<double[]> yTrain = new ArrayList<>();
-		for (int i = 0; i < xArray_train.length; i++ ) {
-			xTrain.add(Arrays.copyOf(xArray_train[i], xArray_train[i].length));
-
-			double[] y = new double[yArray_train.length];
-			for (int j = 0; j < y.length; j++)
-				y[j] = yArray_train[i];
-			yTrain.add(y);
-		}
-		
-		List<double[]> xVal = new ArrayList<>();
-		List<double[]> yVal = new ArrayList<>();
-		for (int i = 0; i < xArray_test.length; i++ ) {
-			xVal.add(Arrays.copyOf(xArray_test[i], xArray_test[i].length));
-
-			double[] y = new double[yArray_test.length]; // nr of outputs
-			for (int j = 0; j < y.length; j++)
-				y[j] = yArray_test[i];
-			yVal.add(y);
-		}
-		
-		if( norm ) {
-			ListNormalizer n = new ListNormalizer(Normalizer.Transform.zScore, xTrain);
-			n.normalize(xVal);
-		}
-		
-		DoubleMatrix kW = adaptive ? GWRUtils.getKernelWeights(W_train, W_train_test, kernel, (int) bw) : GWRUtils.getKernelWeights(W_train_test, kernel, bw);
-		
-		List<Function[]> layerList = new ArrayList<>();
-		
-		List<Function> input = new ArrayList<>();
-		while (input.size() < xArray_test[0].length)
-			input.add(new Linear());
-		input.add(new Constant(1.0));
-		layerList.add(input.toArray(new Function[] {} ) );
-		
-		for( int nh : nrHidden ) {
-			List<Function> hidden0 = new ArrayList<>();
-			while (hidden0.size() < nh)
-				hidden0.add(new TanH());
-			hidden0.add(new Constant(1.0));
-			layerList.add(hidden0.toArray(new Function[] {} ) );
-		}
-		
-		List<Function> output = new ArrayList<>();
-		while (output.size() < yVal.size())
-			output.add(new Linear());
-		layerList.add(output.toArray(new Function[] {} ) );	
-				
-		Function[][] layers = layerList.toArray( new Function[][] {} );
-		double[][][] weights = NNet.getFullyConnectedWeights(layers, initMode.gorot_unif, 0);
-		GWANN gwann = new GWANN(layers, weights, eta, opt);
-				
-		List<Integer> batchReservoir = new ArrayList<>();
-		List<Double> errors = new ArrayList<>();
-		int noImp = 0;
-		double localBestValError = Double.POSITIVE_INFINITY;
-				
-		for (int it = 0; it < iterations && noImp < patience; it++) {
-			
-			List<double[]> x = new ArrayList<>();
-			List<double[]> y = new ArrayList<>();
-			List<double[]> gwWeights = new ArrayList<>();
-			while (x.size() < batchSize) {
-				if (batchReservoir.isEmpty())
-					for (int j = 0; j < xTrain.size(); j++)
-						batchReservoir.add(j);
-				int idx = batchReservoir.remove(r.nextInt(batchReservoir.size()));
-				x.add(xTrain.get(idx));
-				y.add(yTrain.get(idx));
-				gwWeights.add(kW.getRow(idx).data);
-			}
-			gwann.train(x, y, gwWeights);
-												
-			List<Double> responseVal = new ArrayList<>();
-			for (int i = 0; i < xVal.size(); i++)
-				responseVal.add(gwann.present(xVal.get(i))[i]);
-			double valError = SupervisedUtils.getRMSE(responseVal, yVal, 0);
-			errors.add(valError);
-	
-			if (valError < localBestValError) {
-				localBestValError = valError;
-				noImp = 0;
-			} else
-				noImp++;				
-		}		
-		
-		double[][] preds = new double[xVal.size()][];
-		for (int i = 0; i < xVal.size(); i++ ) {
-			double[][] out = gwann.presentInt(xVal.get(i))[0];
-			preds[i] = out[layers.length - 1];
-		}
-								
-		BuiltGwann tg = new BuiltGwann();
-		tg.gwann = gwann;
-		tg.errors= errors; // error for each iteration
-		tg.predictions = preds; // predictions of last iterations		
-		return tg;	
-	}
-		
-	public static double[] getParamsWithGoldenSection(double minRadius, double maxRadius, 
-			double[][] xArray, double[] yArray, DoubleMatrix W, List<Entry<List<Integer>, List<Integer>>> innerCvList, GWKernel kernel, boolean adaptive, double eta, int batchSize, Optimizer opt, int nrHidden, int iterations, int patience, int seed, int threads, boolean norm ) {
-		double xU = maxRadius;
-		double xL = minRadius;
-		double eps = 1e-04;
-		double R = (Math.sqrt(5) - 1) / 2.0;
-		double d = R * (xU - xL);
-		
-		double x1 = xL + d;
-		double x2 = xU - d;
-		double[] f1 = getParamsCV(xArray, yArray, W, innerCvList, kernel, x1, adaptive, eta, batchSize, opt, nrHidden, iterations, patience, seed,threads, norm);
-		double[] f2 = getParamsCV(xArray, yArray, W, innerCvList, kernel, x2, adaptive, eta, batchSize, opt, nrHidden, iterations, patience, seed,threads, norm);
-		
-		double d1 = f2[0] - f1[0];
-		
-		while ((Math.abs(d) > eps) && (Math.abs(d1) > eps)) {
-			d = R * d;
-			if (f1[0] < f2[0]) {
-				xL = x2;
-				x2 = x1;
-				x1 = xL + d;
-				f2 = f1;
-				f1 = getParamsCV(xArray, yArray, W, innerCvList, kernel, x1, adaptive, eta, batchSize, opt, nrHidden, iterations, patience, seed,threads, norm);
-			} else {
-				xU = x1;
-				x1 = x2;
-				x2 = xU - d;
-				f1 = f2;
-				f2 = getParamsCV(xArray, yArray, W, innerCvList, kernel, x2, adaptive, eta, batchSize, opt, nrHidden, iterations, patience, seed,threads, norm);
-			}
-			d1 = f2[0] - f1[0];
-			System.out.println(d+", "+d1);
-		}
-		// returns cost, bandwidth, iterations
-		if( f1[0] < f2[0] )
-			return new double[] { f1[0], adaptive ? Math.round(x1) : x1, f1[1]};
-		else 
-			return new double[] { f2[0], adaptive ? Math.round(x2) : x2, f2[1]};
-	}
-	
-	public static double[] getParamsCV(double[][] xArray, double[] yArray, DoubleMatrix W, List<Entry<List<Integer>, List<Integer>>> innerCvList, GWKernel kernel, double bw, boolean adaptive, double eta, int batchSize, Optimizer opt, int nrHidden, int iterations, int patience, int seed, int threads, boolean norm ) {
-		ExecutorService innerEs = Executors.newFixedThreadPool((int) threads);
-		List<Future<List<Double>>> futures = new ArrayList<Future<List<Double>>>();			
-				
-		for ( Entry<List<Integer>, List<Integer>> innerCvEntry : innerCvList ) {
-			futures.add(innerEs.submit(new Callable<List<Double>>() {
-				@Override
-				public List<Double> call() throws Exception {	
-					List<Integer> trainIdx = innerCvEntry.getKey();
-					List<Integer> testIdx = innerCvEntry.getValue();
-					
-					List<double[]> xTrain = new ArrayList<>();
-					double[] yTrain = new double[trainIdx.size()];
-					for (int i = 0; i < trainIdx.size(); i++ ) {
-						int idx = trainIdx.get(i);
-						xTrain.add(Arrays.copyOf(xArray[idx], xArray[idx].length));
-						yTrain[i] = yArray[idx];
-					}
-					
-					List<double[]> xTest = new ArrayList<>();
-					double[] yTest = new double[testIdx.size()];
-					for (int i = 0; i < testIdx.size(); i++ ) {
-						int idx = testIdx.get(i);
-						xTest.add(Arrays.copyOf(xArray[idx], xArray[idx].length));
-						yTest[i] = yArray[idx];
-					}
-								
-					int[] trainIdxA = DataUtils.toIntArray(trainIdx);
-					DoubleMatrix W_train_test = W.get( trainIdxA, DataUtils.toIntArray(testIdx)); // train to test
-					DoubleMatrix W_train_train = W.get(trainIdxA,trainIdxA);
-					
-					double[][] xArray_train = new double[xTrain.size()][];
-					for( int i = 0; i < xTrain.size(); i++ )
-						xArray_train[i] = xTrain.get(i);
-					
-					double[][] xArray_test = new double[xTest.size()][];
-					for( int i = 0; i < xTest.size(); i++ )
-						xArray_test[i] = xTest.get(i);
-					
-					if( iterations >= 0 )
-						return buildGWANN(xArray_train, yTrain, W_train_train, xArray_test, yTest, W_train_test, new int[] { (int)nrHidden }, eta, opt, (int)batchSize, (int)iterations, (int)patience, kernel, bw, adaptive, seed, norm).errors;
-					else
-						return buildGWANN(xArray_train, yTrain, W_train_train, xArray_test, yTest, W_train_test, new int[] { (int)nrHidden }, eta, opt, (int)batchSize, Integer.MAX_VALUE, (int)patience, kernel, bw, adaptive, seed, norm).errors;
-				}
-			}));
-		}
-		innerEs.shutdown();
-		double[] mm;
-				
-		if( iterations >= 0 ) {
-			double mean = 0;
-			for (Future<List<Double>> f : futures) {
-				try {
-					if( iterations > f.get().size() )
-						System.err.println("Iterations set too large ("+iterations+">"+f.get().size()+"). Either decrease iterations or increase patience!!!");
-					mean += f.get().get((int)iterations-1);
-				} catch (InterruptedException | ExecutionException ex) {
-					ex.printStackTrace();
-				}
-			}
-			mm = new double[] { mean/futures.size(), (int)iterations };
-		} else 
-			mm = getMinMeanIdx(futures);
-		return mm;
 	}
 }

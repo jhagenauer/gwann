@@ -54,7 +54,7 @@ public class ListNormalizer extends Normalizer {
 	}
 	
 	public void denormalize(List<double[]> samples ) {
-		for( int i = tt.length-1; i >= 0; i-- ) 
+		for( int i = tt.length-1; i >= 0 ; i-- ) 
 			for( int j = 0; j < fa.length; j++ )
 				for (int k = 0; k < samples.size(); k++ )
 					samples.get(k)[fa[j]] = normalize(samples.get(k)[fa[j]], i, j, true);

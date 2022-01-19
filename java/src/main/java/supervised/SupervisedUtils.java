@@ -2,15 +2,19 @@ package supervised;
 
 import java.util.AbstractMap;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Random;
+import java.util.Set;
 
-import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
+import org.apache.commons.math3.stat.correlation.PearsonsCorrelation;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+import supervised.nnet.NNet.Optimizer;
 
 public class SupervisedUtils {
 
@@ -19,6 +23,15 @@ public class SupervisedUtils {
 	public static List<Entry<List<Integer>, List<Integer>>> getKFoldCVList(int numFolds, int numRepeats, int numSamples ) {
 		return getKFoldCVList(numFolds, numRepeats, numSamples, 0);
 	}
+		
+	public static List<Integer> getIndicesWithNoNaN( List<double[]> samples, int ta ) {
+		List<Integer> l = new ArrayList<>();
+		for( int i = 0; i < samples.size(); i++ )
+			if( !Double.isNaN( samples.get(i)[ta]  ) ) 
+				l.add(i);
+		return l;
+	}
+	
 
 	public static List<Entry<List<Integer>, List<Integer>>> getKFoldCVList(int numFolds, int numRepeats, int numSamples, int seed ) {
 		List<Integer> samplesIdx = new ArrayList<>();
@@ -39,13 +52,33 @@ public class SupervisedUtils {
 			List<Integer> l = new ArrayList<Integer>(samplesIdx);
 			Collections.shuffle(l,r);
 			
-			int foldSize = samplesIdx.size() / numFolds;
+			double foldSize = (double)samplesIdx.size() / numFolds;
 			for (int fold = 0; fold < numFolds; fold++) {
-				List<Integer> val = new ArrayList<Integer>(l.subList(fold * foldSize, (fold + 1) * foldSize));
-				List<Integer> train = new ArrayList<Integer>( l.subList(0, (fold * foldSize) ) );
-				train.addAll( l.subList( (fold + 1) * foldSize, samplesIdx.size() ) );
+				int valStart = (int)Math.round(fold * foldSize);
+				int valEnd = (int)Math.round( (fold + 1) * foldSize );
+								
+				List<Integer> val = new ArrayList<Integer>(l.subList( valStart, valEnd));
+				List<Integer> train = new ArrayList<Integer>( l.subList(0, valStart ) );
+				train.addAll( l.subList( valEnd, samplesIdx.size() ) );
+				
 				cvList.add(new AbstractMap.SimpleEntry<List<Integer>, List<Integer>>(train, val));
 			}			
+		}		
+		return cvList;
+	}
+	
+	public static List<Entry<List<Integer>, List<Integer>>> getBootstrapList(int numRepeats, List<Integer> samplesIdx, int seed ) {
+		Random r = new Random(seed);		
+		List<Entry<List<Integer>, List<Integer>>> cvList = new ArrayList<Entry<List<Integer>, List<Integer>>>();
+		for (int repeat = 0; repeat < numRepeats; repeat++) {
+			List<Integer> train = new ArrayList<>();
+			while( train.size() != samplesIdx.size() ) {
+				int idx = r.nextInt(samplesIdx.size());
+				train.add( samplesIdx.get(idx) );
+			}
+			List<Integer> val = new ArrayList<>(samplesIdx);
+			val.removeAll(train);
+			cvList.add(new AbstractMap.SimpleEntry<List<Integer>, List<Integer>>(train, val));			
 		}		
 		return cvList;
 	}
@@ -80,6 +113,7 @@ public class SupervisedUtils {
 	}
 
 	// Mean sum of squares
+	@Deprecated
 	public static double getMSE(List<double[]> response, List<double[]> desired) {
 		if (response.size() != desired.size())
 			throw new RuntimeException("response.size() != desired.size()");
@@ -88,6 +122,20 @@ public class SupervisedUtils {
 		for (int i = 0; i < response.size(); i++)
 			mse += Math.pow(response.get(i)[0] - desired.get(i)[0], 2);
 		return mse / response.size();
+	}
+	
+	public static double getMSE(double[] response, double[] desired) {
+		if (response.length != desired.length)
+			throw new RuntimeException("response.length != desired.length");
+
+		double mse = 0;
+		for (int i = 0; i < response.length; i++)
+			mse += Math.pow(response[i] - desired[i], 2);
+		return mse / response.length;
+	}
+	
+	public static double getRMSE(double[] response, double[] desired ) {
+		return Math.sqrt(getMSE(response,desired));
 	}
 	
 	public static double getMSE(List<Double> response, List<double[]> samples, int ta) {
@@ -110,24 +158,65 @@ public class SupervisedUtils {
 		if (response.length != y.length)
 			throw new RuntimeException("response size != samples size ("+response.length+"!="+y.length+")" );
 
-		double ssRes = 0;
-		for (int i = 0; i < response.length; i++)
-			ssRes += Math.pow(y[i] - response[i], 2);
+		double ssr = 0;
+		for (int i = 0; i < y.length; i++)
+			ssr += Math.pow(y[i] - response[i], 2);
 		
-		SummaryStatistics ss = new SummaryStatistics();
-		for ( double d : y )
-			ss.addValue(d);
-
 		double mean = 0;
 		for (double d : y)
 			mean += d;
 		mean /= y.length;
 
-		double ssTot = 0;
-		for (double d : y )
-			ssTot += Math.pow(d - mean, 2);
-		
-		return 1.0 - ssRes / ssTot;
+		double varY = 0;
+		for (int i = 0; i < y.length; i++)
+			varY += Math.pow(y[i] - mean, 2);
+		return 1.0 - ssr / varY;
+	}
+	
+	public static double getR2_pearson(double[] response, double[] y ) {
+		return Math.pow(getPearson(response, y), 2);
+	}
+	
+	public static double getPearson(double[] response, double[] y ) {
+		if (response.length != y.length)
+			throw new RuntimeException("response size != samples size ("+response.length+"!="+y.length+")" );
+
+		PearsonsCorrelation pc = new PearsonsCorrelation();
+		return pc.correlation(response, y);
+	}
+
+	public static double getPearson(List<double[]> response, List<double[]> desired) {
+		if (response.size() != desired.size())
+			throw new RuntimeException();
+
+		double meanDesired = 0;
+		for (double[] d : desired)
+			meanDesired += d[0];
+		meanDesired /= desired.size();
+
+		double meanResponse = 0;
+		for (double[] d : response)
+			meanResponse += d[0];
+		meanResponse /= response.size();
+
+		double a = 0;
+		for (int i = 0; i < response.size(); i++)
+			a += (response.get(i)[0] - meanResponse) * (desired.get(i)[0] - meanDesired);
+
+		double b = 0;
+		for (int i = 0; i < response.size(); i++)
+			b += Math.pow(response.get(i)[0] - meanResponse, 2);
+		b = Math.sqrt(b);
+
+		double c = 0;
+		for (int i = 0; i < desired.size(); i++)
+			c += Math.pow(desired.get(i)[0] - meanDesired, 2);
+		c = Math.sqrt(c);
+
+		if (b == 0 || c == 0) // not sure about if this is ok
+			return 0;
+
+		return a / (b * c);
 	}
 	
 	public static double getMultiLogLoss(List<Double> response, List<double[]> samples, int ta ) {
@@ -214,6 +303,11 @@ public class SupervisedUtils {
 		return auc;
 	}
 	
+	public static void main(String[] args) {
+		List<Entry<List<Integer>, List<Integer>>> cvList = getKFoldCVList(2,1,10,0);
+		System.out.println(cvList);;
+	}
+
 	public static double getRSS(List<Double> response, List<double[]> samples, int ta) {
 		if (response.size() != samples.size())
 			throw new RuntimeException("response.size() != samples.size() "+response.size()+","+samples.size());
@@ -222,5 +316,21 @@ public class SupervisedUtils {
 		for (int i = 0; i < response.size(); i++)
 			rss += Math.pow(response.get(i) - samples.get(i)[ta], 2);
 		return rss;
+	}
+
+	public static int[] toIntArray(Collection<Integer> c) {
+		int[] j = new int[c.size()];
+		int i = 0;
+		for (int l : c)
+			j[i++] = l;
+		return j;
+	}
+	
+	public static double[] toDoubleArray(Collection<Double> c) {
+		double[] j = new double[c.size()];
+		int i = 0;
+		for (double l : c)
+			j[i++] = l;
+		return j;
 	}
 }

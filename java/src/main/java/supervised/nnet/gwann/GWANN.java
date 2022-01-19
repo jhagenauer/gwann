@@ -2,8 +2,9 @@ package supervised.nnet.gwann;
 
 import java.util.List;
 
+import org.apache.commons.math3.analysis.function.Constant;
+
 import supervised.nnet.NNet;
-import supervised.nnet.activation.Constant;
 import supervised.nnet.activation.Function;
 
 public class GWANN extends NNet {
@@ -11,9 +12,9 @@ public class GWANN extends NNet {
 	public GWANN(Function[][] l, double[][][] weights, double eta, Optimizer m ) {
 		super(l,weights,eta,m); 
 	}
-
-	public GWANN(Function[][] l, double[][][] weights, double eta ) {
-		super(l,weights,eta); 
+	
+	public GWANN(Function[][] l, double[][][] weights, double[] eta, Optimizer m ) {
+		super(l,weights,eta,m); 
 	}
 		
 	private double[][][] getErrorGradient( List<double[]> x, List<double[]> y, List<double[]> sampleWeights ) {
@@ -62,20 +63,19 @@ public class GWANN extends NNet {
 		
 	public void train( List<double[]> x, List<double[]> y, List<double[]>  gwWeights) {
 		double[][][] errorGrad = getErrorGradient(x,y,gwWeights);
-		double leta = eta/x.size();
+		double[] leta = new double[eta.length];
+		for( int i = 0; i < leta.length; i++ )
+			leta[i] = eta[i]/x.size();
 		
-		//leta = eta * Math.pow( 0.5, Math.floor( (double)t/iv));
-		
-		if( m == Optimizer.SGD )
-			updateSGD(errorGrad, leta);
-		else if( m == Optimizer.Momentum )
-			updateMomentum(errorGrad, leta);
-		else if( m == Optimizer.Nesterov )
-			updateNestrov(errorGrad, leta);
-		else if( m == Optimizer.RMSProp )
-			updateRMSProp(errorGrad, leta);
-		else if( m == Optimizer.Adam)
-			updateAdam(errorGrad, leta);
+		update(m,errorGrad, leta,lambda);
 		t++;
+	}
+	
+	public double[] weightsForLocation(int i ) {
+		double[][] w = weights[weights.length-1];
+		double[] d = new double[w.length];
+		for( int j = 0; j < d.length; j++ )
+			d[j] = w[j][i];
+		return d;
 	}
 }

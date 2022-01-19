@@ -1,6 +1,6 @@
 package supervised.nnet.activation;
 
-public class Sigmoid implements Function { // aka logistic function
+public class Logistic implements Function { // aka logistic function
 	@Override
 	public double f(double x) {
 		/*if( x > 16 )
