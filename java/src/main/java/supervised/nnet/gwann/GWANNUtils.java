@@ -26,8 +26,8 @@ import supervised.nnet.activation.Linear;
 import supervised.nnet.activation.Logistic;
 import supervised.nnet.activation.TanH;
 import utils.DataUtils;
-import utils.GWRUtils;
-import utils.GWRUtils.GWKernel;
+import utils.GWUtils;
+import utils.GWUtils.GWKernel;
 import utils.ListNormalizer;
 import utils.Normalizer.Transform;
 
@@ -47,7 +47,7 @@ public class GWANNUtils {
 			double[][][] baseWeights,
 			Transform[] expTrans, Transform[] respTrans ) {
 		Random r = new Random(0);		
-		DoubleMatrix kW = adaptive ? GWRUtils.getKernelWeights(W_train, W_train_val, kernel, (int) bw) : GWRUtils.getKernelWeights(W_train_val, kernel, bw);
+		DoubleMatrix kW = adaptive ? GWUtils.getKernelWeights(W_train, W_train_val, kernel, (int) bw) : GWUtils.getKernelWeights(W_train_val, kernel, bw);
 		
 		List<double[]> xTrain = new ArrayList<>();
 		for( double[] d : xTrain_ )

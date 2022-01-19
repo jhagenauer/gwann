@@ -13,7 +13,7 @@ import org.jblas.DoubleMatrix;
 import supervised.SupervisedUtils;
 import supervised.nnet.NNet.Optimizer;
 import supervised.nnet.ReturnObject;
-import utils.GWRUtils.GWKernel;
+import utils.GWUtils.GWKernel;
 import utils.Normalizer.Transform;
 
 public class GWANN_RInterface {

@@ -11,7 +11,7 @@ import org.jblas.DoubleMatrix;
 
 import dist.Dist;
 
-public class GWRUtils {
+public class GWUtils {
 
 	public static Map<double[], Double> getBandwidth(List<double[]> samples, Dist<double[]> dist, double bw, boolean adaptive) {
 		Map<double[], Double> bandwidth = new HashMap<>();
@@ -57,7 +57,7 @@ public class GWRUtils {
 	}
 	
 	public static DoubleMatrix getGWMean(DoubleMatrix X, DoubleMatrix W, GWKernel k, double bw) {						
-		DoubleMatrix W_ = GWRUtils.applyKernel(W, bw, k);
+		DoubleMatrix W_ = GWUtils.applyKernel(W, bw, k);
 		DoubleMatrix a = new DoubleMatrix(W_.rows,X.columns);
 		
 		for( int j = 0; j < W_.rows; j++ ) { // for each location
@@ -71,7 +71,7 @@ public class GWRUtils {
 		
 	public static DoubleMatrix getGWSD( DoubleMatrix X, DoubleMatrix W, GWKernel k, double bw ) {
 		DoubleMatrix mean = getGWMean(X, W, k, bw);
-		DoubleMatrix W_ = GWRUtils.applyKernel(W, bw, k);
+		DoubleMatrix W_ = GWUtils.applyKernel(W, bw, k);
 		
 		DoubleMatrix a = new DoubleMatrix(W_.rows,X.columns);
 		for( int j = 0; j < W_.rows; j++ ) {
@@ -92,7 +92,7 @@ public class GWRUtils {
 			double bw = Wk.getRow(i).sort().get(nb);
 			double[] w = new double[Wk.columns];
 			for (int j = 0; j < w.length; j++)
-				w[j] = GWRUtils.getKernelValue(kernel, Wk.get(i, j), bw);
+				w[j] = GWUtils.getKernelValue(kernel, Wk.get(i, j), bw);
 			kW.putRow(i,new DoubleMatrix(w));
 		}
 		return kW;
@@ -103,7 +103,7 @@ public class GWRUtils {
 		for (int i = 0; i < W.rows; i++) {
 			double[] w = new double[W.columns];
 			for (int j = 0; j < w.length; j++)
-				w[j] = GWRUtils.getKernelValue(kernel, W.get(i,j), bw);
+				w[j] = GWUtils.getKernelValue(kernel, W.get(i,j), bw);
 			kW.putRow(i, new DoubleMatrix(w));
 		}
 		return kW;
