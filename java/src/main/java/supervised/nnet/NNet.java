@@ -2,7 +2,11 @@ package supervised.nnet;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
+import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 
 import supervised.SupervisedNet;
 import supervised.nnet.activation.Constant;
@@ -247,7 +251,7 @@ public class NNet implements SupervisedNet {
 			System.out.println("Layer " + l);
 			for (int i = 0; i < weights[l].length; i++)
 				for (int j = 0; j < weights[l][i].length; j++)
-					if (!(layer[l + 1][j] instanceof Constant)) // skip NA-connections to constant neurons
+					//if (!(layer[l + 1][j] instanceof Constant)) // skip NA-connections to constant neurons
 						System.out.println("l" + l + "n" + i + (layer[l][i] instanceof Constant ? "b" : "") + " --> l" + (l + 1) + "n" + j + (layer[l + 1][j] instanceof Constant ? "b" : "") + ": " + weights[l][i][j]);
 		}
 	}
@@ -258,6 +262,32 @@ public class NNet implements SupervisedNet {
 			for (int j = 0; j < weights[l][i].length; j++)
 				if (!(layer[l + 1][j] instanceof Constant)) // skip NA-connections to constant neurons
 					System.out.println("l" + l + "n" + i + (layer[l][i] instanceof Constant ? "b" : "") + " --> l" + (l + 1) + "n" + j + (layer[l + 1][j] instanceof Constant ? "b" : "") + ": " + weights[l][i][j]);
+	}
+	
+	public void summarize() {
+		System.out.println("Neurons:");
+		for( int l = 0; l < layer.length; l++ ) {
+			Map<String,Integer> counts = new HashMap<>();
+			for( Function c : layer[l] ) {
+				String s = c.getClass().toString();
+				if( !counts.containsKey(s) )
+					counts.put(s, 0);
+				counts.put(s, counts.get(s)+1);
+			}
+			System.out.println(l+","+counts);
+		}
+		System.out.println("Weights:");	
+		for (int l = 0; l < weights.length; l++) {
+			DescriptiveStatistics ds = new DescriptiveStatistics();			
+			int nans = 0;
+			for (int i = 0; i < weights[l].length; i++)
+				for (int j = 0; j < weights[l][i].length; j++)
+					if( Double.isNaN( weights[l][i][j] ) )
+							nans++;
+					else
+						ds.addValue(weights[l][i][j]);			
+			System.out.println(l+", min:"+ds.getMin()+", mean: "+ds.getMean()+", max: "+ds.getMax()+", sd: "+ds.getStandardDeviation()+", N: "+ds.getN()+", NaNs: "+nans);							
+		}
 	}
 
 	public int getNumParameters() {

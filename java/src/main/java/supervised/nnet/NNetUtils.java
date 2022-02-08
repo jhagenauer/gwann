@@ -11,6 +11,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import supervised.SupervisedUtils;
 import supervised.nnet.activation.Constant;
 import supervised.nnet.activation.Function;
@@ -21,6 +24,8 @@ import utils.ListNormalizer;
 import utils.Normalizer.Transform;
 
 public class NNetUtils {
+	
+	private static Logger log = LogManager.getLogger(NNetUtils.class);
 
 	public static enum initMode {
 		gorot_unif, norm05
@@ -231,11 +236,19 @@ public class NNetUtils {
 		
 		for( List<Double> f : errors )	
 			minSize = Math.min(f.size(), minSize);
+		
+		boolean warned = false;
 						
 		mean = new double[minSize];
 		for( List<Double> f : errors )
-			for( int i = 0; i < mean.length; i++ )
-				mean[i] += f.get(i)/errors.size();
+			for( int i = 0; i < mean.length; i++ ) {
+				double d = f.get(i);
+				if( Double.isNaN(d) && !warned ) {
+					log.warn("NaN-error value found! Parameter estimation probably not reliable!!!!");
+					warned = true;
+				}
+				mean[i] += d/errors.size();
+			}
 		
 		double minMean = mean[0];
 		int minMeanIdx = 0;

@@ -15,12 +15,15 @@ public abstract class Normalizer {
 		Transform t = tt[i];
 
 		double nd;
-		if (t == Transform.zScore)
+		if (t == Transform.zScore) {
+			double sd = ds[i][col].getStandardDeviation();
+			assert !Double.isNaN(sd);
+			
 			if (!inv)
-				nd = (d - ds[i][col].getMean()) / ds[i][col].getStandardDeviation();
+				nd = (d - ds[i][col].getMean()) / sd;
 			else
-				nd = d * ds[i][col].getStandardDeviation() + ds[i][col].getMean();
-		else if (t == Transform.scale01)
+				nd = d * sd + ds[i][col].getMean();
+		} else if (t == Transform.scale01)
 			if (!inv)
 				nd = (d - ds[i][col].getMin()) / (ds[i][col].getMax() - ds[i][col].getMin());
 			else

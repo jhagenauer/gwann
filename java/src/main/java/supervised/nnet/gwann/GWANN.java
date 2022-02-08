@@ -1,10 +1,8 @@
 package supervised.nnet.gwann;
 
 import java.util.List;
-
-import org.apache.commons.math3.analysis.function.Constant;
-
 import supervised.nnet.NNet;
+import supervised.nnet.activation.Constant;
 import supervised.nnet.activation.Function;
 
 public class GWANN extends NNet {
@@ -66,7 +64,7 @@ public class GWANN extends NNet {
 		double[] leta = new double[eta.length];
 		for( int i = 0; i < leta.length; i++ )
 			leta[i] = eta[i]/x.size();
-		
+				
 		update(m,errorGrad, leta,lambda);
 		t++;
 	}

@@ -27,11 +27,15 @@ public class ListNormalizer extends Normalizer {
 		
 		this.ds = new SummaryStatistics[tt.length][fa.length];
 		for( int i = 0; i < tt.length; i++ ) {
+			
 			// calculate summary statistics before applying t
 			for( int j = 0; j < fa.length; j++ ) {
 				ds[i][j] = new SummaryStatistics();
 				for( double[] d : samples )
-					ds[i][j].addValue(d[j]);			
+					ds[i][j].addValue(d[j]);
+				
+				assert !Double.isNaN( ds[i][j].getMean() );
+				
 			}
 			
 			// normalize

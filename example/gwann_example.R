@@ -3,6 +3,7 @@ library(viridis)
 library(reshape2)
 devtools::install(args=c("--no-multiarch"))
 library(gwann)
+library(gwann)
 
 data(toy4)
 
@@ -10,7 +11,7 @@ x_train<-as.matrix(toy4[,c("x1","x2")])
 y_train<-as.numeric(toy4[,c("y")] )
 dm<-as.matrix(dist(toy4[,c("lon","lat")])  )
 
-r<-gwann::gwann(x_train=x_train,y_train=y_train,w_train=dm,
+r<-gwann(x_train=x_train,y_train=y_train,w_train=dm,
          x_pred=x_train,y_pred=y_train,w_train_pred=dm,
          nrHidden=5,batchSize=100,lr=0.01,
          adaptive=F,
