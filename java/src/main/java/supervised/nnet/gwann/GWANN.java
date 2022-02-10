@@ -41,7 +41,7 @@ public class GWANN extends NNet {
 							errorGrad[l-1][h][i] += out[l-1][h] * delta[l][i];	
 					}
 				} else {
-					for (int i = 0; i < layer[l].length; i++) { 
+					for (int i = 0; i < layer[l].length; i++) {
 						
 						double s = 0;	
 						for (int j = 0; j < weights[l][i].length; j++)
