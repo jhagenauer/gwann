@@ -48,7 +48,7 @@
 #' @references
 #' Hagenauer, Julian, and Marco Helbich. "A geographically weighted artificial neural network." International Journal of Geographical Information Science (2021): 1-21.
 #' @export
-gwann<-function(x_train,y_train,w_train,x_pred,y_pred,w_train_pred,norm=T,
+gwann<-function(x_train,y_train,w_train,x_pred,y_pred=NA,w_train_pred,norm=T,
                 nrHidden=4,batchSize=10,optimizer="nesterov",lr=0.1,linOut=T,
                 kernel="gaussian",bandwidth=NA,adaptive=F,
                 bwSearch="goldenSection", bwMin=NA, bwMax=NA, steps=20,

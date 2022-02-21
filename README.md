@@ -26,7 +26,7 @@ Java JDK 1.2 or higher (for JRI/REngine JDK 1.4 or higher). If it is not already
 
     r<-gwann(x_train=x_train,y_train=y_train,w_train=dm,
     	x_pred=x_train,y_pred=y_train,w_train_pred=dm,
-	nrHidden=5,batchSize=100,lr=0.01,
+	nrHidden=5,batchSize=100,lr=0.05,
 	adaptive=F,
 	#bandwidth=10,
 	bwSearch="goldenSection",
