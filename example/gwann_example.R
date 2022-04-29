@@ -14,7 +14,7 @@ dm<-as.matrix(dist(toy4[,c("lon","lat")])  )
 s_test<-sample(nrow(x),0.3*nrow(x))
 
 r<-gwann(x_train=x[-s_test,],y_train=y[-s_test],w_train=dm[-s_test,-s_test],
-         x_pred=x[s_test,],y_pred=y[s_test],w_train_pred=dm[-s_test,s_test],
+         x_pred=x[s_test,],w_train_pred=dm[-s_test,s_test],
          nrHidden=5,batchSize=100,lr=0.01,
          adaptive=F,
          bwSearch="goldenSection",

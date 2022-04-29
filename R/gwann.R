@@ -4,7 +4,7 @@
 #' @param y_train Vector. Values represent target values for the observations in \code{x_train}.
 #' @param w_train Quadratic matrix of distances between the observations of \code{x_train}. The matrix solely used for calculating the adaptive distances.
 #' @param x_pred Matrix of prediction data. Rows are observations, columns are independent variables.
-#' @param w_train_pred Matrix of distances between the observations of \code{x_train} (rows) and \code{x_pred} (columns).
+#' @param w_pred Matrix of distances between the observations of \code{x_train} (rows) and \code{x_pred} (columns).
 #' @param norm Center and scale independent variables before training? This affects the final model and the CV-procedure.
 #' @param nrHidden Number of hidden neurons.
 #' @param batchSize Batch size.
@@ -47,7 +47,7 @@
 #' @references
 #' Hagenauer, Julian, and Marco Helbich. "A geographically weighted artificial neural network." International Journal of Geographical Information Science (2021): 1-21.
 #' @export
-gwann<-function(x_train,y_train,w_train,x_pred,w_train_pred,norm=T,
+gwann<-function(x_train,y_train,w_train,x_pred,w_pred,norm=T,
                 nrHidden=4,batchSize=10,optimizer="nesterov",lr=0.1,linOut=T,
                 kernel="gaussian",bandwidth=NA,adaptive=F,
                 bwSearch="goldenSection", bwMin=NA, bwMax=NA, steps=20,
@@ -72,9 +72,8 @@ gwann<-function(x_train,y_train,w_train,x_pred,w_train_pred,norm=T,
     y_pred<-as.numeric( rep(NA,nrow(x_pred)) )
 
   if( nrow(w_train) != ncol(w_train) ) stop("w_train must be quadratic!")
-  if( nrow(w_train_pred) != nrow(x_train) & ncol(w_train_pred) != nrow(x_pred) ) stop(paste0("w_train_pred must have ",nrow(x_train), "rows and ",nrow(x_pred), " columns "))
+  if( nrow(w_pred) != nrow(x_train) & ncol(w_train_pred) != nrow(x_pred) ) stop(paste0("w_pred must have ",nrow(x_train), "rows and ",nrow(x_pred), " columns "))
   if( nrow(x_train) != length(y_train) ) stop("Number of rows of x_train does not match length of y_train")
-  if( nrow(x_pred) != length(y_pred) ) stop("Number of rows of x_pred does not match length of y_pred")
   if( is.na(bandwidth) & !(bwSearch %in% c("goldenSection","grid","local") ) ) {
     warning("Unknown method for searching bw. Using golden section search.")
     bwSearch<-"goldenSection"

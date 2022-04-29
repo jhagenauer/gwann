@@ -7,10 +7,9 @@
 gwann(
   x_train,
   y_train,
-  w_train = NA,
+  w_train,
   x_pred,
-  y_pred = NA,
-  w_train_pred,
+  w_pred,
   norm = T,
   nrHidden = 4,
   batchSize = 10,
@@ -41,9 +40,7 @@ gwann(
 
 \item{x_pred}{Matrix of prediction data. Rows are observations, columns are independent variables.}
 
-\item{y_pred}{Vector. Values represent target values for the observations in \code{x_pred}.}
-
-\item{w_train_pred}{Matrix of distances between the observations of \code{x_train} (rows) and \code{x_pred} (columns).}
+\item{w_pred}{Matrix of distances between the observations of \code{x_train} (rows) and \code{x_pred} (columns).}
 
 \item{norm}{Center and scale independent variables before training? This affects the final model and the CV-procedure.}
 
