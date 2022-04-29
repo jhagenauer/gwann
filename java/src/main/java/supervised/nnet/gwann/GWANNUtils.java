@@ -331,7 +331,21 @@ public class GWANNUtils {
 			yTrain.add(d[ta]);
 		}
 		
-		List<List<Double>> errors = getErrors_CV(xTrain, yTrain, W, innerCvList, kernel, bw, adaptive, eta, batchSize, opt, lambda, nrHidden, maxIt, patience, threads, baseWeights, a, expTrans, respTrans);		
+		List<List<Double>> errors = getErrors_CV(xTrain, yTrain, W, innerCvList, kernel, bw, adaptive, eta, batchSize, opt, lambda, nrHidden, maxIt, patience, threads, baseWeights, a, expTrans, respTrans);
+		
+		/*try {
+			Files.write(Paths.get("errors.csv"), "k,it,rmse\n".getBytes(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);			
+			for( int k = 0; k < errors.size(); k++ ) {
+				List<Double> e = errors.get(k);
+				String s = "";
+				for( int i = 0; i < e.size(); i++ )
+					s += k+","+i+","+e.get(i)+"\n";
+				Files.write(Paths.get("errors.csv"), s.getBytes(), StandardOpenOption.APPEND);				
+			}
+		} catch (IOException e3) {
+			e3.printStackTrace();		
+		}*/		
+		
 		return NNetUtils.getBestErrorParams( errors );
 	}
 	

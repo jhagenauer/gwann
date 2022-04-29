@@ -21,7 +21,7 @@ public class GWANN_RInterface {
 		
 	public static Return_R run(
 			double[][] xArray_train, double[] yArray_train, double[][] W_train,
-			double[][] xArray_pred, double[] yArray_pred, double[][] W_train_pred,
+			double[][] xArray_pred, /*double[] yArray_pred,*/ double[][] W_train_pred,
 			boolean norm,
 			double nrHidden, double batchSize, String optim, double eta_, boolean linOut, 
 			String krnl, double bw_, boolean adaptive, 
@@ -81,8 +81,10 @@ public class GWANN_RInterface {
 		
 		List<double[]> xPred_list = Arrays.asList(xArray_pred);
 		List<Double> yPred_list = new ArrayList<>();
-		for( double d : yArray_pred )
-			yPred_list.add(d);		
+		/*for( double d : yArray_pred )
+			yPred_list.add(d);*/
+		for( int i = 0; i < xArray_pred.length; i++ )
+			yPred_list.add( Double.NaN );
 						
 		List<Double> v = new ArrayList<>();
 		for (double w : W.data)

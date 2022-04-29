@@ -4,7 +4,6 @@
 #' @param y_train Vector. Values represent target values for the observations in \code{x_train}.
 #' @param w_train Quadratic matrix of distances between the observations of \code{x_train}. The matrix solely used for calculating the adaptive distances.
 #' @param x_pred Matrix of prediction data. Rows are observations, columns are independent variables.
-#' @param y_pred Vector. Values represent target values for the observations in \code{x_pred}.
 #' @param w_train_pred Matrix of distances between the observations of \code{x_train} (rows) and \code{x_pred} (columns).
 #' @param norm Center and scale independent variables before training? This affects the final model and the CV-procedure.
 #' @param nrHidden Number of hidden neurons.
@@ -48,7 +47,7 @@
 #' @references
 #' Hagenauer, Julian, and Marco Helbich. "A geographically weighted artificial neural network." International Journal of Geographical Information Science (2021): 1-21.
 #' @export
-gwann<-function(x_train,y_train,w_train,x_pred,y_pred=NA,w_train_pred,norm=T,
+gwann<-function(x_train,y_train,w_train,x_pred,w_train_pred,norm=T,
                 nrHidden=4,batchSize=10,optimizer="nesterov",lr=0.1,linOut=T,
                 kernel="gaussian",bandwidth=NA,adaptive=F,
                 bwSearch="goldenSection", bwMin=NA, bwMax=NA, steps=20,
@@ -87,7 +86,6 @@ gwann<-function(x_train,y_train,w_train,x_pred,y_pred=NA,w_train_pred,norm=T,
             .jarray(w_train,dispatch=T),
 
             .jarray(x_pred,dispatch=T),
-            y_pred,
             .jarray(w_train_pred,dispatch=T),
 
             norm,nrHidden,batchSize,optimizer,lr,linOut,

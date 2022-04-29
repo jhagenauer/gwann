@@ -10,7 +10,6 @@ import java.util.Map;
 import org.jblas.DoubleMatrix;
 
 import dist.Dist;
-import jdk.internal.org.jline.utils.Log;
 
 public class GWUtils {
 
