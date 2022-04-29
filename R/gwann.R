@@ -30,19 +30,14 @@
 #' The fourth element \code{bandwidth} is the bandwidth that is used to train the final model.
 #' The fifth element \code{iterations} is the numer of training iterations for the final model.
 #' @examples
-#' data(toy4)
+#' \dontrun{
+#' #' data(toy4)
 #'
 #' dm<-as.matrix( dist(toy4[,c("lon","lat")])  )
 #' x<-as.matrix(toy4[,c("x1","x2")])
 #' y<-as.numeric( toy4[,c("y")] )
 #'
-#' \dontrun{
-#' r<-gwann(x_train=x_train,y_train=y_train,w_train=dm,x_pred=x_train,w_train_pred=dm,nrHidden=5,batchSize=100,lr=0.01,adaptive=F,#bandwidth=10,bwSearch="goldenSection",bwMin=min(dm)/4, bwMax=max(dm)/4, steps=10,threads=8)
-#'
-#' if( all ( sapply( c("ggplot2","reshape2","viridis"), require, character.only=T ) ) ) {
-#'    s<-cbind( Prediction=diag(r$predictions), toy4[,c("lon","lat")] )
-#'    ggplot(s,aes(lon,lat,fill=Prediction)) + geom_raster() + scale_fill_viridis() + coord_fixed()
-#' }
+#' r<-gwann(x_train=x,y_train=y,w_train=dm,x_pred=x,w_pred=dm,nrHidden=5,batchSize=100,lr=0.01,adaptive=F,bwSearch="goldenSection",bwMin=min(dm)/4, bwMax=max(dm)/4, steps=10,threads=8)
 #' }
 #' @references
 #' Hagenauer, Julian, and Marco Helbich. "A geographically weighted artificial neural network." International Journal of Geographical Information Science (2021): 1-21.
