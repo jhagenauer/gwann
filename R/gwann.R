@@ -83,7 +83,7 @@ gwann<-function(x_train,y_train,w_train,x_pred,w_pred,norm=T,
             .jarray(w_train,dispatch=T),
 
             .jarray(x_pred,dispatch=T),
-            .jarray(w_train_pred,dispatch=T),
+            .jarray(w_pred,dispatch=T),
 
             norm,nrHidden,batchSize,optimizer,lr,linOut,
             kernel,bandwidth,adaptive,
