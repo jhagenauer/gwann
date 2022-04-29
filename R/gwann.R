@@ -37,7 +37,7 @@
 #' y<-as.numeric( toy4[,c("y")] )
 #'
 #' \dontrun{
-#' r<-gwann(x_train=x_train,y_train=y_train,w_train=dm,x_pred=x_train,y_pred=y_train,w_train_pred=dm,nrHidden=5,batchSize=100,lr=0.01,adaptive=F,#bandwidth=10,bwSearch="goldenSection",bwMin=min(dm)/4, bwMax=max(dm)/4, steps=10,threads=8)
+#' r<-gwann(x_train=x_train,y_train=y_train,w_train=dm,x_pred=x_train,w_train_pred=dm,nrHidden=5,batchSize=100,lr=0.01,adaptive=F,#bandwidth=10,bwSearch="goldenSection",bwMin=min(dm)/4, bwMax=max(dm)/4, steps=10,threads=8)
 #'
 #' if( all ( sapply( c("ggplot2","reshape2","viridis"), require, character.only=T ) ) ) {
 #'    s<-cbind( Prediction=diag(r$predictions), toy4[,c("lon","lat")] )
@@ -68,8 +68,6 @@ gwann<-function(x_train,y_train,w_train,x_pred,w_pred,norm=T,
     bwMin<-(-1)
   if( is.na(bwMax) )
     bwMax<-(-1)
-  if( all(is.na(y_pred)) )
-    y_pred<-as.numeric( rep(NA,nrow(x_pred)) )
 
   if( nrow(w_train) != ncol(w_train) ) stop("w_train must be quadratic!")
   if( nrow(w_pred) != nrow(x_train) & ncol(w_train_pred) != nrow(x_pred) ) stop(paste0("w_pred must have ",nrow(x_train), "rows and ",nrow(x_pred), " columns "))
