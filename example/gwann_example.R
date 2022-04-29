@@ -2,7 +2,7 @@ library(viridis)
 library(reshape2)
 devtools::install(args=c("--no-multiarch"))
 library(gwann)
-library(gwann)
+library(ggplot2)
 
 data(toy4)
 
@@ -24,3 +24,8 @@ print(paste("Out-of-sample RMSE: ",sqrt(mean((p-y[s_test])^2))))
 print(paste("In-sample RMSE: ",r$rmse))
 print(paste("Iterations: ",r$its))
 print(paste("Bandwidth: ",r$bw))
+
+# plot predictions
+s<-cbind( Prediction=p, toy4[s_test,c("lon","lat")] )
+ggplot(s,aes(lon,lat,fill=Prediction)) + geom_raster() + scale_fill_viridis() + coord_fixed()
+
