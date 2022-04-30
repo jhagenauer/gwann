@@ -7,8 +7,7 @@ Java JDK 1.2 or higher (for JRI/REngine JDK 1.4 or higher). If it is not already
 ### Install
     Sys.setenv("R_REMOTES_NO_ERRORS_FROM_WARNINGS" = "true")
     if (!require("devtools"))
-       install.packages("devtools")
-    options(devtools.install.args = "--no-multiarch")
+       install.packages("devtools",INSTALL_opts="--no-multiarch")
     devtools::install_github("jhagenauer/gwann")
     
 ### Example
