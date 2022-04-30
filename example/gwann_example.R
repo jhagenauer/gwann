@@ -1,6 +1,4 @@
 library(viridis)
-library(reshape2)
-devtools::install(args=c("--no-multiarch"))
 library(gwann)
 library(ggplot2)
 

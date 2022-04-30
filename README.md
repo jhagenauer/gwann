@@ -8,13 +8,12 @@ Java JDK 1.2 or higher (for JRI/REngine JDK 1.4 or higher). If it is not already
     Sys.setenv("R_REMOTES_NO_ERRORS_FROM_WARNINGS" = "true")
     if (!require("devtools"))
        install.packages("devtools")
-    devtools::install_github("jhagenauer/gwann",INSTALL_opts=c("--no-multiarch"))
+    options(devtools.install.args = "--no-multiarch")
+    devtools::install_github("jhagenauer/gwann")
     
 ### Example
 
     library(viridis)
-    library(reshape2)
-    devtools::install(args=c("--no-multiarch"))
     library(gwann)
     library(ggplot2)
     

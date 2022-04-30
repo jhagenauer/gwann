@@ -14,7 +14,6 @@ import supervised.nnet.activation.Function;
 
 public class NNet implements SupervisedNet {
 	
-	public static double mu = 0.9;
 	public Function[][] layer;
 	public double[][][] weights;
 	protected double[] eta;
@@ -162,7 +161,7 @@ public class NNet implements SupervisedNet {
 					}
 		} else if( opt == Optimizer.Nesterov ) {
 			int lInit = 0;
-			//double mu = 0.9;
+			double mu = 0.9;
 			for (int l = lInit; l < weights.length; l++)
 				for (int i = 0; i < weights[l].length; i++)
 					for (int j = 0; j < weights[l][i].length; j++) {
