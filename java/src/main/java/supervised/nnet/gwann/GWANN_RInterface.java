@@ -128,33 +128,41 @@ public class GWANN_RInterface {
 		} else if( iterations < 0 ){ // determine best bw using grid search or local search routine 			
 			Set<Double> bwDone = new HashSet<>();
 			for (int bwShrinkFactor = 2;; bwShrinkFactor *= 2) {
-	
-				Set<Double> l = new HashSet<>();
-				for (int i = 1; i <= steps; i++) {
-					double a = bestValBw + Math.pow((double) i / steps, pow) * Math.min(max - bestValBw, (max - min) / bwShrinkFactor);
-					double b = bestValBw - Math.pow((double) i / steps, pow) * Math.min(bestValBw - min, (max - min) / bwShrinkFactor);
-					if (adaptive) {
-						a = (double) Math.round(a);
-						b = (double) Math.round(b);
-					}
-					if (a <= max)
-						l.add(a);
-					if (b >= min)
-						l.add(b);
-				}
-				l.add(bestValBw);
-	
-				List<Double> ll = new ArrayList<>(l);
-				Collections.sort(ll);
-				
+		
+				List<Double> ll = new ArrayList<>();
 				if( bwSearch.equalsIgnoreCase("grid") ) {
+					System.out.println("Grid search...");
+					
 					ll.clear();
 					for( double a = min; a <=max; a+= (max-min)/steps )
-						ll.add(a);
-					System.out.println("Grid search...");
-				} else
+						if (adaptive)
+							ll.add((double) Math.round(a));
+						else
+							ll.add(a);
+				} else {
 					System.out.println("Local search routine...");
+					
+					Set<Double> l = new HashSet<>();
+					for (int i = 1; i <= steps; i++) {
+						double a = bestValBw + Math.pow((double) i / steps, pow) * Math.min(max - bestValBw, (max - min) / bwShrinkFactor);
+						double b = bestValBw - Math.pow((double) i / steps, pow) * Math.min(bestValBw - min, (max - min) / bwShrinkFactor);
+						if (adaptive) {
+							a = (double) Math.round(a);
+							b = (double) Math.round(b);
+						}
+						if (a <= max)
+							l.add(a);
+						if (b >= min)
+							l.add(b);
+					}
+					l.add(bestValBw);
+					ll.addAll(l);
+				}
+				
+				Collections.sort(ll);				
 				ll.removeAll(bwDone);
+				ll = new ArrayList<Double>( new HashSet<Double>(ll) ); // remove duplicates
+				System.out.println("ll: "+ll);
 	
 				System.out.println(bwShrinkFactor + ", current best bandwidth: " + bestValBw + ", RMSE:" + bestValError + ", bandwidths to test: " + ll);
 				for (double bw : ll) {				
@@ -179,7 +187,7 @@ public class GWANN_RInterface {
 		System.out.println("Cross-validation results (folds: "+folds+", repeats: "+repeats+"):");
 		System.out.println("Bandwidth: " + bestValBw);
 		System.out.println("Iterations: " + bestIts);
-		System.out.println("RMSE: " + bestValError);
+		System.out.println("RMSE (In-sample): " + bestValError);
 		
 		double[][][] imp = null;
 		if( permutations > 0 ) { // importance
