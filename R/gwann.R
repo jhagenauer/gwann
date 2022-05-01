@@ -26,7 +26,6 @@
 #' @return A list of five elements.
 #' The first element \code{predictions} contains the predictions.
 #' The second elemnt \code{weights} contains the connection weights of the hidden neurons to the output neurons.
-#' The third element \code{rmse} is the mean RMSE of the CV procedure.
 #' The fourth element \code{bandwidth} is the bandwidth that is used to train the final model.
 #' The fifth element \code{iterations} is the numer of training iterations for the final model.
 #' @examples
@@ -93,7 +92,6 @@ gwann<-function(x_train,y_train,w_train,x_pred,w_pred,norm=T,
       predictions=r$predictions,
       importance=r$importance,
       weights=r$weights,
-      rmse=r$rmse,
       bw=r$bw,
       its=r$its
     )

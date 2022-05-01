@@ -18,8 +18,7 @@ r<-gwann(x_train=x[-s_test,],y_train=y[-s_test],w_train=dm[-s_test,-s_test],
          threads=1
 )
 p<-diag(r$predictions)
-print(paste("Out-of-sample RMSE: ",sqrt(mean((p-y[s_test])^2))))
-print(paste("In-sample RMSE: ",r$rmse))
+print(paste("RMSE: ",sqrt(mean((p-y[s_test])^2))))
 print(paste("Iterations: ",r$its))
 print(paste("Bandwidth: ",r$bw))
 

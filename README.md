@@ -32,8 +32,7 @@ Java JDK 1.2 or higher (for JRI/REngine JDK 1.4 or higher). If it is not already
     threads=1
     )
     p<-diag(r$predictions)
-    print(paste("Out-of-sample RMSE: ",sqrt(mean((p-y[s_test])^2))))
-    print(paste("In-sample RMSE: ",r$rmse))
+    print(paste("RMSE: ",sqrt(mean((p-y[s_test])^2))))
     print(paste("Iterations: ",r$its))
     print(paste("Bandwidth: ",r$bw))
     
@@ -43,4 +42,4 @@ Java JDK 1.2 or higher (for JRI/REngine JDK 1.4 or higher). If it is not already
 
 ### References
 
-Hagenauer, Julian, and Marco Helbich. "A geographically weighted artificial neural network." International Journal of Geographical Information Science (2021): 1-21.
+Julian Hagenauer & Marco Helbich (2022) A geographically weighted artificial neural network, International Journal of Geographical Information Science, 36:2, 215-235, DOI: 10.1080/13658816.2021.1871618 

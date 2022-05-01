@@ -82,7 +82,6 @@ gwann(
 A list of five elements.
 The first element \code{predictions} contains the predictions.
 The second elemnt \code{weights} contains the connection weights of the hidden neurons to the output neurons.
-The third element \code{rmse} is the mean RMSE of the CV procedure.
 The fourth element \code{bandwidth} is the bandwidth that is used to train the final model.
 The fifth element \code{iterations} is the numer of training iterations for the final model.
 }
