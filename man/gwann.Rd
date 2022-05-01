@@ -11,10 +11,10 @@ gwann(
   x_pred,
   w_pred,
   norm = T,
-  nrHidden = 4,
-  batchSize = 10,
+  nrHidden = 100,
+  batchSize = 50,
   optimizer = "nesterov",
-  lr = 0.1,
+  lr = 0.01,
   linOut = T,
   kernel = "gaussian",
   bandwidth = NA,
@@ -24,7 +24,7 @@ gwann(
   bwMax = NA,
   steps = 20,
   iterations = NA,
-  patience = 100,
+  patience = 200,
   folds = 10,
   repeats = 1,
   permutations = 0,
@@ -58,7 +58,7 @@ gwann(
 
 \item{adaptive}{Adaptive instead of fixed bandwidth?}
 
-\item{bwSearch}{Method for searching an appropriate bandwidth (goldenSection, grid, local). Ignored if bandwidth is explicitly given.}
+\item{bwSearch}{Method for searching an appropriate bandwidth (goldenSection or grid). Ignored if bandwidth is explicitly given.}
 
 \item{bwMin}{Lower limit for bandwidth search.}
 
@@ -100,5 +100,5 @@ r<-gwann(x_train=x,y_train=y,w_train=dm,x_pred=x,w_pred=dm,nrHidden=5,batchSize=
 }
 }
 \references{
-Hagenauer, Julian, and Marco Helbich. "A geographically weighted artificial neural network." International Journal of Geographical Information Science (2021): 1-21.
+Julian Hagenauer & Marco Helbich (2022) A geographically weighted artificial neural network, International Journal of Geographical Information Science, 36:2, 215-235, DOI: 10.1080/13658816.2021.1871618
 }

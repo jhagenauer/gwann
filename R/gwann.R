@@ -13,7 +13,7 @@
 #' @param kernel Kernel.
 #' @param bandwidth Bandwidth size. If NA, it is determined using CV.
 #' @param adaptive Adaptive instead of fixed bandwidth?
-#' @param bwSearch Method for searching an appropriate bandwidth (goldenSection, grid, local). Ignored if bandwidth is explicitly given.
+#' @param bwSearch Method for searching an appropriate bandwidth (goldenSection or grid). Ignored if bandwidth is explicitly given.
 #' @param bwMin Lower limit for bandwidth search.
 #' @param bwMax Upper limit for bandwidth search.
 #' @param steps Number of bandwidths to test when doing a grid search/local search. Ignored if bandwidth is explicitly given or golden section search is used.
@@ -66,7 +66,7 @@ gwann<-function(x_train,y_train,w_train,x_pred,w_pred,norm=T,
   if( nrow(w_train) != ncol(w_train) ) stop("w_train must be quadratic!")
   if( nrow(w_pred) != nrow(x_train) & ncol(w_pred) != nrow(x_pred) ) stop(paste0("w_pred must have ",nrow(x_train), "rows and ",nrow(x_pred), " columns "))
   if( nrow(x_train) != length(y_train) ) stop("Number of rows of x_train does not match length of y_train")
-  if( is.na(bandwidth) & !(bwSearch %in% c("goldenSection","grid","local") ) ) {
+  if( is.na(bandwidth) & !(bwSearch %in% c("goldenSection","grid") ) ) {
     warning("Unknown method for searching bw. Using golden section search.")
     bwSearch<-"goldenSection"
   }

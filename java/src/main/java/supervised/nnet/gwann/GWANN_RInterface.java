@@ -126,61 +126,28 @@ public class GWANN_RInterface {
 			bestValBw = m[1];
 			bestIts = (int)m[2]+1;
 		} else if( iterations < 0 ){ // determine best bw using grid search or local search routine 			
-			Set<Double> bwDone = new HashSet<>();
-			for (int bwShrinkFactor = 2;; bwShrinkFactor *= 2) {
-		
-				List<Double> ll = new ArrayList<>();
-				if( bwSearch.equalsIgnoreCase("grid") ) {
-					System.out.println("Grid search...");
+			System.out.println("Grid search...");
+			
+			List<Double> ll = new ArrayList<>();			
+			for( double a = min; a <=max; a+= (max-min)/steps )
+				if (adaptive)
+					ll.add((double) Math.round(a));
+				else
+					ll.add(a);
 					
-					ll.clear();
-					for( double a = min; a <=max; a+= (max-min)/steps )
-						if (adaptive)
-							ll.add((double) Math.round(a));
-						else
-							ll.add(a);
-				} else {
-					System.out.println("Local search routine...");
-					
-					Set<Double> l = new HashSet<>();
-					for (int i = 1; i <= steps; i++) {
-						double a = bestValBw + Math.pow((double) i / steps, pow) * Math.min(max - bestValBw, (max - min) / bwShrinkFactor);
-						double b = bestValBw - Math.pow((double) i / steps, pow) * Math.min(bestValBw - min, (max - min) / bwShrinkFactor);
-						if (adaptive) {
-							a = (double) Math.round(a);
-							b = (double) Math.round(b);
-						}
-						if (a <= max)
-							l.add(a);
-						if (b >= min)
-							l.add(b);
-					}
-					l.add(bestValBw);
-					ll.addAll(l);
-				}
+			ll = new ArrayList<Double>( new HashSet<Double>(ll) ); // remove duplicates
+			System.out.println("To test: "+ll);
+			for (double bw : ll) {				
+				List<List<Double>> errors = GWANNUtils.getErrors_CV(xTrain_list, yTrain_list, W, innerCvList, kernel, bestValBw, adaptive, eta, (int)batchSize, opt, 0.0, new int[] {(int)nrHidden}, (int)maxIts, (int)patience, (int)threads, null, -1, explTrans, respTrans);
+				double[] mm = NNetUtils.getBestErrorParams(errors);
 				
-				Collections.sort(ll);				
-				ll.removeAll(bwDone);
-				ll = new ArrayList<Double>( new HashSet<Double>(ll) ); // remove duplicates
-				System.out.println("ll: "+ll);
-	
-				System.out.println(bwShrinkFactor + ", current best bandwidth: " + bestValBw + ", RMSE:" + bestValError + ", bandwidths to test: " + ll);
-				for (double bw : ll) {				
-					List<List<Double>> errors = GWANNUtils.getErrors_CV(xTrain_list, yTrain_list, W, innerCvList, kernel, bestValBw, adaptive, eta, (int)batchSize, opt, 0.0, new int[] {(int)nrHidden}, (int)maxIts, (int)patience, (int)threads, null, -1, explTrans, respTrans);
-					double[] mm = NNetUtils.getBestErrorParams(errors);
-					
-					if (mm[0] < bestValError) {
-						bestValError = mm[0];
-						bestIts = (int)mm[1]+1;
-						bestValBw = bw;
-					}
-					bwDone.add(bw);
+				if (mm[0] < bestValError) {
+					bestValError = mm[0];
+					bestIts = (int)mm[1]+1;
+					bestValBw = bw;
 					System.out.println(bw+" "+Arrays.toString(mm));
 				}
-				if (prevBestValError - bestValError < eps || ll.isEmpty() )
-					break;
-				prevBestValError = bestValError;
-			}
+			}			
 		} else 
 			throw new RuntimeException("Combination of bandwith/iterations not implemented yet!");
 		
