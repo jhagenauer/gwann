@@ -139,14 +139,18 @@ public class GWANN_RInterface {
 			System.out.println("To test: "+ll);
 			for (double bw : ll) {				
 				List<List<Double>> errors = GWANNUtils.getErrors_CV(xTrain_list, yTrain_list, W, innerCvList, kernel, bestValBw, adaptive, eta, (int)batchSize, opt, 0.0, new int[] {(int)nrHidden}, (int)maxIts, (int)patience, (int)threads, null, -1, explTrans, respTrans);
-				double[] mm = NNetUtils.getBestErrorParams(errors);
 				
+				int max_it = 0;
+				for( List<Double> e : errors)
+					max_it = Math.max(e.size(),max_it);
+				
+				double[] mm = NNetUtils.getBestErrorParams(errors);
 				if (mm[0] < bestValError) {
 					bestValError = mm[0];
 					bestIts = (int)mm[1]+1;
 					bestValBw = bw;
-					System.out.println(bw+" "+Arrays.toString(mm));
 				}
+				System.out.println(bw+" "+Arrays.toString(mm)+","+max_it);
 			}			
 		} else 
 			throw new RuntimeException("Combination of bandwith/iterations not implemented yet!");
