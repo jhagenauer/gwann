@@ -130,9 +130,10 @@ public class GWANN_RInterface {
 					ll.add(a);
 					
 			ll = new ArrayList<Double>( new HashSet<Double>(ll) ); // remove duplicates
+			Collections.sort(ll);
 			System.out.println("To test: "+ll);
 			for (double bw : ll) {				
-				List<List<Double>> errors = GWANNUtils.getErrors_CV(xTrain_list, yTrain_list, W, innerCvList, kernel, bestValBw, adaptive, eta, (int)batchSize, opt, 0.0, new int[] {(int)nrHidden}, (int)cv_max_iterations, (int)cv_patience, (int)threads, null, -1, explTrans, respTrans);
+				List<List<Double>> errors = GWANNUtils.getErrors_CV(xTrain_list, yTrain_list, W, innerCvList, kernel, bw, adaptive, eta, (int)batchSize, opt, 0.0, new int[] {(int)nrHidden}, (int)cv_max_iterations, (int)cv_patience, (int)threads, null, -1, explTrans, respTrans);
 				
 				int max_it = 0;
 				for( List<Double> e : errors)
