@@ -6,7 +6,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
-import java.util.Set;
 
 import org.jblas.DoubleMatrix;
 
@@ -26,8 +25,8 @@ public class GWANN_RInterface {
 			double nrHidden, double batchSize, String optim, double eta_, boolean linOut, 
 			String krnl, double bw_, boolean adaptive, 
 			String bwSearch, double bwMin, double bwMax, double steps_,
-			double iterations, double patience, 
-			double folds, double repeats,
+			double iterations, 
+			double cv_max_iterations,double cv_patience, double cv_folds, double cv_repeats,
 			double permutations,
 			double threads) {
 		
@@ -62,9 +61,6 @@ public class GWANN_RInterface {
 			throw new RuntimeException("Unknown optimizer");
 
 		int seed = 0;
-
-		double eps = 1e-03; // oder lieber 4?
-		int pow = 3;
 		final int steps = (int)steps_ < 0 ? 10 : (int)steps_;
 		double[] eta = new double[] { eta_, eta_};
 		
@@ -72,7 +68,7 @@ public class GWANN_RInterface {
 		Transform[] explTrans = norm ? new Transform[] {Transform.zScore} : new Transform[] {};
 				
 		DoubleMatrix W = new DoubleMatrix(W_train);
-		List<Entry<List<Integer>, List<Integer>>> innerCvList = SupervisedUtils.getKFoldCVList( (int)folds, (int)repeats, xArray_train.length, seed);
+		List<Entry<List<Integer>, List<Integer>>> innerCvList = SupervisedUtils.getKFoldCVList( (int)cv_folds, (int)cv_repeats, xArray_train.length, seed);
 		
 		List<double[]> xTrain_list = Arrays.asList(xArray_train);
 		List<Double> yTrain_list = new ArrayList<>();
@@ -97,10 +93,8 @@ public class GWANN_RInterface {
 				
 		double bestValBw = adaptive ? (int) (min + (max - min) / 2) : min + (max - min) / 2;
 		int bestIts = -1;
-		int maxIts = 99999;
 		
 		double bestValError = Double.POSITIVE_INFINITY;
-		double prevBestValError = Double.POSITIVE_INFINITY;
 						
 		if( bw_ > 0 && iterations > 0 ) { // bw and its are given
 			List<List<Double>> errors = GWANNUtils.getErrors_CV(xTrain_list, yTrain_list, W, innerCvList, kernel, bw_, adaptive, eta, (int)batchSize, opt, 0.0, new int[] {(int)nrHidden}, (int)iterations, (int)iterations, (int)threads, null, -1, explTrans, respTrans );
@@ -112,7 +106,7 @@ public class GWANN_RInterface {
 			bestIts = (int)iterations;			
 		} else if( bw_ > 0 && iterations < 0 ) {
 			System.out.println("Pre-specified bandwidth...");
-			List<List<Double>> errors = GWANNUtils.getErrors_CV(xTrain_list, yTrain_list, W, innerCvList, kernel, bw_, adaptive, eta, (int)batchSize, opt, 0.0, new int[] {(int)nrHidden}, (int)maxIts, (int)patience, (int)threads, null, -1, explTrans, respTrans );
+			List<List<Double>> errors = GWANNUtils.getErrors_CV(xTrain_list, yTrain_list, W, innerCvList, kernel, bw_, adaptive, eta, (int)batchSize, opt, 0.0, new int[] {(int)nrHidden}, (int)cv_max_iterations, (int)cv_patience, (int)threads, null, -1, explTrans, respTrans );
 			double[] m = NNetUtils.getBestErrorParams(errors);
 			
 			bestValError = m[0];
@@ -120,7 +114,7 @@ public class GWANN_RInterface {
 			bestIts = (int)m[1]+1;
 		} else if( ( bwSearch.equalsIgnoreCase("goldenSection") || bwSearch.equalsIgnoreCase("golden_section") ) && iterations < 0 ) { // determine best bw using golden section search 
 			System.out.println("Golden section search...");
-			double[] m = GWANNUtils.getParamsWithGoldenSection(min, max, xTrain_list, yTrain_list, W, innerCvList, kernel, adaptive, eta, (int)batchSize, opt, 0.0, new int[] {(int)nrHidden}, (int)maxIts, (int)patience, (int)threads, null, -1, explTrans, respTrans);
+			double[] m = GWANNUtils.getParamsWithGoldenSection(min, max, xTrain_list, yTrain_list, W, innerCvList, kernel, adaptive, eta, (int)batchSize, opt, 0.0, new int[] {(int)nrHidden}, (int)cv_max_iterations, (int)cv_patience, (int)threads, null, -1, explTrans, respTrans);
 						
 			bestValError = m[0];
 			bestValBw = m[1];
@@ -138,7 +132,7 @@ public class GWANN_RInterface {
 			ll = new ArrayList<Double>( new HashSet<Double>(ll) ); // remove duplicates
 			System.out.println("To test: "+ll);
 			for (double bw : ll) {				
-				List<List<Double>> errors = GWANNUtils.getErrors_CV(xTrain_list, yTrain_list, W, innerCvList, kernel, bestValBw, adaptive, eta, (int)batchSize, opt, 0.0, new int[] {(int)nrHidden}, (int)maxIts, (int)patience, (int)threads, null, -1, explTrans, respTrans);
+				List<List<Double>> errors = GWANNUtils.getErrors_CV(xTrain_list, yTrain_list, W, innerCvList, kernel, bestValBw, adaptive, eta, (int)batchSize, opt, 0.0, new int[] {(int)nrHidden}, (int)cv_max_iterations, (int)cv_patience, (int)threads, null, -1, explTrans, respTrans);
 				
 				int max_it = 0;
 				for( List<Double> e : errors)
@@ -155,7 +149,7 @@ public class GWANN_RInterface {
 		} else 
 			throw new RuntimeException("Combination of bandwith/iterations not implemented yet!");
 		
-		System.out.println("Cross-validation results for hyperparameter search (folds: "+folds+", repeats: "+repeats+"):");
+		System.out.println("Cross-validation results for hyperparameter search (folds: "+cv_folds+", repeats: "+cv_repeats+"):");
 		System.out.println("Bandwidth: " + bestValBw);
 		System.out.println("Iterations: " + bestIts);
 		System.out.println("RMSE: " + bestValError);

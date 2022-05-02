@@ -18,10 +18,11 @@
 #' @param bwMax Upper limit for bandwidth search.
 #' @param steps Number of bandwidths to test when doing a grid search/local search. Ignored if bandwidth is explicitly given or golden section search is used.
 #' @param iterations Number of training iterations. If NA, it is determined using 10-fold CV.
-#' @param patience After how many iterations with no improvement should training prematurely stop?
-#' @param folds Number of cross-validation folds
-#' @param repeats Number of repeats of cross-validation procedure
-#' @param permutations Number of permutations for calculating feature importance (Experimental)
+#' @param cv_max_iterations Maximum number of iterations during CV.
+#' @param cv_patience After how many iterations with no improvement should training during CV prematurely stop?
+#' @param cv_folds Number of CV folds.
+#' @param cv_repeats Number of repeats of CV.
+#' @param permutations Number of permutations for calculating feature importance (Experimental).
 #' @param threads Number of threads to use.
 #' @return A list of five elements.
 #' The first element \code{predictions} contains the predictions.
@@ -45,8 +46,9 @@ gwann<-function(x_train,y_train,w_train,x_pred,w_pred,norm=T,
                 nrHidden=100,batchSize=50,optimizer="nesterov",lr=0.01,linOut=T,
                 kernel="gaussian",bandwidth=NA,adaptive=F,
                 bwSearch="goldenSection", bwMin=NA, bwMax=NA, steps=20,
-                iterations=NA,patience=200,
-                folds=10,repeats=1,permutations=0,
+                iterations=NA,
+                cv_max_iterations=Inf,cv_patience=200,cv_folds=10,cv_repeats=1,
+                permutations=0,
                 threads=4) {
 
   # TODO Why not pass NA-values to java?
@@ -54,10 +56,6 @@ gwann<-function(x_train,y_train,w_train,x_pred,w_pred,norm=T,
     bandwidth<-(-1)
   if( is.na(iterations) )
     iterations<-(-1)
-  else {
-    print("Iterations given -> setting patience to number of iterations!")
-    patience<-iterations
-  }
   if( is.na(bwMin) )
     bwMin<-(-1)
   if( is.na(bwMax) )
@@ -82,8 +80,8 @@ gwann<-function(x_train,y_train,w_train,x_pred,w_pred,norm=T,
             norm,nrHidden,batchSize,optimizer,lr,linOut,
             kernel,bandwidth,adaptive,
             bwSearch,bwMin,bwMax,steps,
-            iterations,patience,
-            folds,repeats,
+            iterations,
+            cv_max_iterations,cv_patience,cv_folds,cv_repeats,
             permutations,
             threads)
 

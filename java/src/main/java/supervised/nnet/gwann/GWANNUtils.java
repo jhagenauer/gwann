@@ -220,7 +220,7 @@ public class GWANNUtils {
 	public static List<List<Double>> getErrors_CV(
 			List<double[]> xArray, List<Double> yArray, DoubleMatrix W, List<Entry<List<Integer>, List<Integer>>> innerCvList, 
 			GWKernel kernel, double bw, boolean adaptive, double[] eta, int batchSize, Optimizer opt, double lambda, int[] nrHidden, int iterations, int patience, int threads, double[][][] baseWeights, double a, Transform[] explTrans, Transform[] respTrans ) {
-		
+				
 		ExecutorService innerEs = Executors.newFixedThreadPool((int) threads);
 		List<Future<List<Double>>> futures = new ArrayList<Future<List<Double>>>();			
 				
@@ -257,9 +257,10 @@ public class GWANNUtils {
 					
 					List<double[]> xArray_test = new ArrayList<>();
 					for( int i = 0; i < xTest.size(); i++ )
-						xArray_test.add(xTest.get(i));					
+						xArray_test.add(xTest.get(i));	
 					
-					return buildGWANN(xArray_train, yTrain, W_train_train, xArray_test, yTest, W_train_test, nrHidden, eta, opt, 0.0, batchSize, iterations, patience, kernel, bw, adaptive, baseWeights, a, explTrans, respTrans, 0).errors;
+					List<Double> errors = buildGWANN(xArray_train, yTrain, W_train_train, xArray_test, yTest, W_train_test, nrHidden, eta, opt, 0.0, batchSize, iterations, patience, kernel, bw, adaptive, baseWeights, a, explTrans, respTrans, 0).errors;
+					return errors;
 				}
 			}));
 		}
@@ -331,21 +332,7 @@ public class GWANNUtils {
 			yTrain.add(d[ta]);
 		}
 		
-		List<List<Double>> errors = getErrors_CV(xTrain, yTrain, W, innerCvList, kernel, bw, adaptive, eta, batchSize, opt, lambda, nrHidden, maxIt, patience, threads, baseWeights, a, expTrans, respTrans);
-		
-		/*try {
-			Files.write(Paths.get("errors.csv"), "k,it,rmse\n".getBytes(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);			
-			for( int k = 0; k < errors.size(); k++ ) {
-				List<Double> e = errors.get(k);
-				String s = "";
-				for( int i = 0; i < e.size(); i++ )
-					s += k+","+i+","+e.get(i)+"\n";
-				Files.write(Paths.get("errors.csv"), s.getBytes(), StandardOpenOption.APPEND);				
-			}
-		} catch (IOException e3) {
-			e3.printStackTrace();		
-		}*/		
-		
+		List<List<Double>> errors = getErrors_CV(xTrain, yTrain, W, innerCvList, kernel, bw, adaptive, eta, batchSize, opt, lambda, nrHidden, maxIt, patience, threads, baseWeights, a, expTrans, respTrans);		
 		return NNetUtils.getBestErrorParams( errors );
 	}
 	
