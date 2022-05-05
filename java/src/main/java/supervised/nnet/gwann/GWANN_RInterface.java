@@ -64,7 +64,7 @@ public class GWANN_RInterface {
 		final int steps = (int)steps_ < 0 ? 10 : (int)steps_;
 		double[] eta = new double[] { eta_, eta_};
 		
-		Transform[] respTrans = new Transform[] {};
+		Transform[] respTrans = norm ? new Transform[] {Transform.zScore} : new Transform[] {};
 		Transform[] explTrans = norm ? new Transform[] {Transform.zScore} : new Transform[] {};
 				
 		DoubleMatrix W = new DoubleMatrix(W_train);
@@ -97,6 +97,7 @@ public class GWANN_RInterface {
 		double bestValError = Double.POSITIVE_INFINITY;
 						
 		if( bw_ > 0 && iterations > 0 ) { // bw and its are given
+			System.out.println("Iterations and bandwidth given. cv_max_iterations and cv_patience are ignored.");
 			List<List<Double>> errors = GWANNUtils.getErrors_CV(xTrain_list, yTrain_list, W, innerCvList, kernel, bw_, adaptive, eta, (int)batchSize, opt, 0.0, new int[] {(int)nrHidden}, (int)iterations, (int)iterations, (int)threads, null, -1, explTrans, respTrans );
 			double mean = 0;
 			for( List<Double> e : errors )
@@ -197,7 +198,8 @@ public class GWANN_RInterface {
 				new int[] { (int)nrHidden }, eta, opt, 0.0, (int)batchSize, bestIts, Integer.MAX_VALUE, kernel, bestValBw, adaptive, null, -1, explTrans, respTrans,0);
 					
 		Return_R ro = new Return_R();
-		ro.predictions = tg.prediction.toArray( new double[][] {} );
+		
+		ro.predictions = tg.prediction_denormed.toArray( new double[][] {} );
 		ro.importance = imp;
 		ro.weights = tg.nnet.weights;
 		//ro.rmse = bestValError;

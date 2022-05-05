@@ -24,9 +24,10 @@ gwann(
   bwMax = NA,
   steps = 20,
   iterations = NA,
-  patience = 200,
-  folds = 10,
-  repeats = 1,
+  cv_max_iterations = Inf,
+  cv_patience = 200,
+  cv_folds = 10,
+  cv_repeats = 1,
   permutations = 0,
   threads = 4
 )
@@ -42,7 +43,7 @@ gwann(
 
 \item{w_pred}{Matrix of distances between the observations of \code{x_train} (rows) and \code{x_pred} (columns).}
 
-\item{norm}{Center and scale independent variables before training? This affects the final model and the CV-procedure.}
+\item{norm}{Center and scale variables before training? This affects the final model and the CV-procedure.}
 
 \item{nrHidden}{Number of hidden neurons.}
 
@@ -66,15 +67,17 @@ gwann(
 
 \item{steps}{Number of bandwidths to test when doing a grid search/local search. Ignored if bandwidth is explicitly given or golden section search is used.}
 
-\item{iterations}{Number of training iterations. If NA, it is determined using 10-fold CV.}
+\item{iterations}{Number of training iterations. If NA, it is determined using 10-fold CV. If given, \code{cv_max_iterations} and \code{cv_patience} are ignored.}
 
-\item{patience}{After how many iterations with no improvement should training prematurely stop?}
+\item{cv_max_iterations}{Maximum number of iterations during CV.}
 
-\item{folds}{Number of cross-validation folds}
+\item{cv_patience}{After how many iterations with no improvement should training during CV prematurely stop?}
 
-\item{repeats}{Number of repeats of cross-validation procedure}
+\item{cv_folds}{Number of CV folds.}
 
-\item{permutations}{Number of permutations for calculating feature importance (Experimental)}
+\item{cv_repeats}{Number of repeats of CV.}
+
+\item{permutations}{Number of permutations for calculating feature importance (Experimental).}
 
 \item{threads}{Number of threads to use.}
 }

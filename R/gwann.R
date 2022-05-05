@@ -5,7 +5,7 @@
 #' @param w_train Quadratic matrix of distances between the observations of \code{x_train}. The matrix solely used for calculating the adaptive distances.
 #' @param x_pred Matrix of prediction data. Rows are observations, columns are independent variables.
 #' @param w_pred Matrix of distances between the observations of \code{x_train} (rows) and \code{x_pred} (columns).
-#' @param norm Center and scale independent variables before training? This affects the final model and the CV-procedure.
+#' @param norm Center and scale variables before training? This affects the final model and the CV-procedure.
 #' @param nrHidden Number of hidden neurons.
 #' @param batchSize Batch size.
 #' @param optimizer Optimizer (sgd, momentum, nesterov).
@@ -17,7 +17,7 @@
 #' @param bwMin Lower limit for bandwidth search.
 #' @param bwMax Upper limit for bandwidth search.
 #' @param steps Number of bandwidths to test when doing a grid search/local search. Ignored if bandwidth is explicitly given or golden section search is used.
-#' @param iterations Number of training iterations. If NA, it is determined using 10-fold CV.
+#' @param iterations Number of training iterations. If NA, it is determined using 10-fold CV. If given, \code{cv_max_iterations} and \code{cv_patience} are ignored.
 #' @param cv_max_iterations Maximum number of iterations during CV.
 #' @param cv_patience After how many iterations with no improvement should training during CV prematurely stop?
 #' @param cv_folds Number of CV folds.
