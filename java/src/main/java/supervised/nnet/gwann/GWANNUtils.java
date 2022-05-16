@@ -11,8 +11,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jblas.DoubleMatrix;
 
 import supervised.SupervisedUtils;
@@ -31,8 +29,6 @@ import utils.ListNormalizer;
 import utils.Normalizer.Transform;
 
 public class GWANNUtils {
-	
-	private static Logger log = LogManager.getLogger(GWANNUtils.class);
 	
 	public static boolean logistic = false;	
 			
@@ -286,7 +282,7 @@ public class GWANNUtils {
 				
 		double[] bestF = null;
 		int bestBw = -1;
-		for( int i = (int)minRadius; i <= maxRadius; i+=steps ) {
+		for( int i = (int)minRadius; i <= maxRadius; i+=(maxRadius-minRadius)/steps ) {
 			double[] f = NNetUtils.getBestErrorParams( getErrors_CV(xArray, yArray, W, innerCvList, kernel, i, adaptive, eta, batchSize, opt, lambda, nrHidden, iterations, patience, threads, weights, a, expTrans, respTrans) );
 			if( bestF == null || f[0] < bestF[0] ) { 
 				bestF = f;

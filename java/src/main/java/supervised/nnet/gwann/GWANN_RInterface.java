@@ -170,12 +170,12 @@ public class GWANN_RInterface {
 			for( int i = 0; i < xArray_train[0].length; i++ ) { // for each variable
 				System.out.println("Feature "+i);
 				
-				for( int j = 0; j < permutations; j++ ) {
-					
-					double[][] copy = Arrays.stream(xArray_train).map(double[]::clone).toArray(double[][]::new);
-					List<Double> l = new ArrayList<>();
-					for( int k = 0; k < copy.length; k++ )
-						l.add(copy[k][i]);
+				double[][] copy = Arrays.stream(xArray_train).map(double[]::clone).toArray(double[][]::new);
+				List<Double> l = new ArrayList<>();
+				for( int k = 0; k < copy.length; k++ )
+					l.add(copy[k][i]);
+				
+				for( int j = 0; j < permutations; j++ ) {					
 					Collections.shuffle(l);
 					for( int k = 0; k < l.size(); k++ )
 						copy[k][i] = l.get(k);
