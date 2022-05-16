@@ -24,12 +24,12 @@ Java JDK 1.2 or higher (for JRI/REngine JDK 1.4 or higher). If it is not already
     s_test<-sample(nrow(x),0.3*nrow(x)) # indices of test samples
     
     r<-gwann(x_train=x[-s_test,],y_train=y[-s_test],w_train=dm[-s_test,-s_test],
-    x_pred=x[s_test,],w_pred=dm[-s_test,s_test],
-    nrHidden=5,batchSize=100,lr=0.01,
-    adaptive=F,
-    bwSearch="goldenSection",
-    bwMin=min(dm)/4, bwMax=max(dm)/4, steps=10,permutations=100,
-    threads=1
+         x_pred=x[s_test,],w_pred=dm[-s_test,s_test],
+         nrHidden=5,batchSize=50,lr=0.05,
+         adaptive=F,cv_patience=100,cv_max_iterations=2000,
+         bwSearch="goldenSection",
+         bwMin=min(dm)/4, bwMax=max(dm)/4,
+         threads=8
     )
     p<-diag(r$predictions)
     print(paste("RMSE: ",sqrt(mean((p-y[s_test])^2))))
