@@ -43,11 +43,11 @@
 #' Julian Hagenauer & Marco Helbich (2022) A geographically weighted artificial neural network, International Journal of Geographical Information Science, 36:2, 215-235, DOI: 10.1080/13658816.2021.1871618
 #' @export
 gwann<-function(x_train,y_train,w_train,x_pred,w_pred,norm=T,
-                nrHidden=100,batchSize=50,optimizer="nesterov",lr=0.01,linOut=T,
+                nrHidden=ncol(x_train)*2,batchSize=50,optimizer="nesterov",lr=0.1,linOut=T,
                 kernel="gaussian",bandwidth=NA,adaptive=F,
                 bwSearch="goldenSection", bwMin=NA, bwMax=NA, steps=20,
                 iterations=NA,
-                cv_max_iterations=Inf,cv_patience=200,cv_folds=10,cv_repeats=1,
+                cv_max_iterations=Inf,cv_patience=999,cv_folds=10,cv_repeats=1,
                 permutations=0,
                 threads=4) {
 
