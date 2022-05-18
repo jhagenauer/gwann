@@ -152,9 +152,9 @@ public class GWANN_RInterface {
 			throw new RuntimeException("Combination of bandwith/iterations not implemented yet!");
 		
 		System.out.println("Cross-validation results for hyperparameter search (folds: "+cv_folds+", repeats: "+cv_repeats+"):");
-		System.out.println("Bandwidth: " + bestValBw);
-		System.out.println("Iterations: " + bestIts);
-		System.out.println("RMSE: " + bestValError);
+		System.out.println("\tBandwidth: " + bestValBw);
+		System.out.println("\tIterations: " + bestIts);
+		System.out.println("\tRMSE: " + bestValError);
 		
 		double[][][] imp = null;
 		if( permutations > 0 ) { // importance
