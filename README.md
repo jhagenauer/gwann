@@ -41,7 +41,7 @@ Java JDK 1.2 or higher (for JRI/REngine JDK 1.4 or higher). If it is not already
 
 ### Note
 
-The performance of GWANN depends on the chosen hyperparameters. The learning rate (lr) and the number of hidden neurons (nrHidden) have a substantial effect on the performance and therefore should be chosen carefully.
+The performance of GWANN depends on the chosen hyperparameters. The learning rate (lr) and the number of hidden neurons (nrHidden) have a substantial effect on the performance and therefore should be chosen carefully. (The number of iterations as well as the bandwidth are also important but are by default automatically determined by GWANN using cross-validation.)
 
 ### References
 
