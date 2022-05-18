@@ -30,4 +30,5 @@ for( s_train in folds ) {
     df<-rbind(df,data.frame(bs=p$bs,lr=p$lr,n=p$n,rmse=rmse))
   }
 }
-aggregate(df,by=list(df$lr,df$n),mean)
+re<-aggregate(df,by=list(df$lr,df$n,df$bs),mean)
+head(re[order(re$rmse),])
