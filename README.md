@@ -25,10 +25,9 @@ Java JDK 1.2 or higher (for JRI/REngine JDK 1.4 or higher). If it is not already
     
     r<-gwann(x_train=x[-s_test,],y_train=y[-s_test],w_train=dm[-s_test,-s_test],
          x_pred=x[s_test,],w_pred=dm[-s_test,s_test],
-         nrHidden=5,batchSize=50,lr=0.05,
-         adaptive=F,cv_patience=100,cv_max_iterations=2000,
-         bwSearch="goldenSection",
-         bwMin=min(dm)/4, bwMax=max(dm)/4,
+         nrHidden=25,batchSize=50,lr=0.1,
+         adaptive=F,cv_patience=999,cv_max_iterations=99999,
+         bwSearch="goldenSection",bwMin=min(dm)/4, bwMax=max(dm)/4,
          threads=8
     )
     p<-diag(r$predictions)
@@ -39,6 +38,10 @@ Java JDK 1.2 or higher (for JRI/REngine JDK 1.4 or higher). If it is not already
     # plot predictions
     s<-cbind( Prediction=p, toy4[s_test,c("lon","lat")] )
     ggplot(s,aes(lon,lat,fill=Prediction)) + geom_raster() + scale_fill_viridis() + coord_fixed()
+
+### Note
+
+The performance of GWANN depends strictly on the chosen hyperparameters. In particular the bandwidth, learning rate and number of hidden neurons have a substantial effect on the performance.
 
 ### References
 
