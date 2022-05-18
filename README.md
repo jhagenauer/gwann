@@ -26,7 +26,7 @@ Java JDK 1.2 or higher (for JRI/REngine JDK 1.4 or higher). If it is not already
     r<-gwann(x_train=x[-s_test,],y_train=y[-s_test],w_train=dm[-s_test,-s_test],
          x_pred=x[s_test,],w_pred=dm[-s_test,s_test],
          nrHidden=30,batchSize=50,lr=0.1,
-         adaptive=F,cv_patience=999,cv_max_iterations=99999,
+         adaptive=F,
          bwSearch="goldenSection",bwMin=min(dm)/4, bwMax=max(dm)/4,
          threads=8
     )
@@ -41,7 +41,8 @@ Java JDK 1.2 or higher (for JRI/REngine JDK 1.4 or higher). If it is not already
 
 ### Note
 
-The performance of GWANN depends on the chosen hyperparameters. The learning rate (lr) and the number of hidden neurons (nrHidden) have a substantial effect on the performance and therefore should be chosen carefully. (The number of iterations as well as the bandwidth are also important but are by default automatically determined by GWANN using cross-validation.)
+- The performance of GWANN depends on the chosen hyperparameters. The learning rate (lr) and the number of hidden neurons (nrHidden) have a substantial effect on the performance and therefore should be chosen carefully. (The number of iterations as well as the bandwidth are also important but are by default automatically determined by GWANN using cross-validation.)
+- The performance of GWANN depends also on the distribution of the data. Transforming the data, e.g. to make their distribution normal, often substantially improves the performance of GWANN.
 
 ### References
 
