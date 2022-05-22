@@ -191,12 +191,13 @@ public class GWANN_RInterface {
 			}
 		}
 
-		System.out.println("Building final model with bandwidth "+bestValBw+" and "+bestIts+" iterations...");					
+		System.out.println("Building final model with bandwidth "+bestValBw+" and "+bestIts+" iterations...");	
+		long time = System.currentTimeMillis();
 		ReturnObject tg = GWANNUtils.buildGWANN(
 				xTrain_list, yTrain_list, W, 
 				xPred_list, yPred_list, new DoubleMatrix(W_train_pred), 
 				new int[] { (int)nrHidden }, eta, opt, 0.0, (int)batchSize, bestIts, Integer.MAX_VALUE, kernel, bestValBw, adaptive, null, -1, explTrans, respTrans,0);
-					
+		double secs = (System.currentTimeMillis()-time)/1000;			
 		Return_R ro = new Return_R();
 		
 		ro.predictions = tg.prediction_denormed.toArray( new double[][] {} );
@@ -205,6 +206,7 @@ public class GWANN_RInterface {
 		//ro.rmse = bestValError;
 		ro.its = bestIts;
 		ro.bw = bestValBw;
+		ro.secs = secs;
 		return ro;			
 	}
 }

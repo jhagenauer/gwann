@@ -1,7 +1,7 @@
 library(rJava)
 .jinit()
 .jaddClassPath("inst/java/commons-math3-3.6.1.jar")
-.jaddClassPath("inst/java/gwann-0.0.4-SNAPSHOT.jar")
+.jaddClassPath("inst/java/gwann-0.0.5-SNAPSHOT.jar")
 .jaddClassPath("inst/java/jblas-1.2.4.jar")
 .jaddClassPath("inst/java/log4j-api-2.17.1.jar")
 .jaddClassPath("inst/java/log4j-core-2.17.1.jar")

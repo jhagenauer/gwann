@@ -11,10 +11,10 @@ gwann(
   x_pred,
   w_pred,
   norm = T,
-  nrHidden = 100,
+  nrHidden = ncol(x_train) * 2,
   batchSize = 50,
   optimizer = "nesterov",
-  lr = 0.01,
+  lr = 0.1,
   linOut = T,
   kernel = "gaussian",
   bandwidth = NA,
@@ -25,7 +25,7 @@ gwann(
   steps = 20,
   iterations = NA,
   cv_max_iterations = Inf,
-  cv_patience = 200,
+  cv_patience = 999,
   cv_folds = 10,
   cv_repeats = 1,
   permutations = 0,
@@ -77,7 +77,7 @@ gwann(
 
 \item{cv_repeats}{Number of repeats of CV.}
 
-\item{permutations}{Number of permutations for calculating feature importance (Experimental).}
+\item{permutations}{Number of permutations for calculating feature importance (EXPERIMENTAL).}
 
 \item{threads}{Number of threads to use.}
 }
@@ -87,6 +87,7 @@ The first element \code{predictions} contains the predictions.
 The second elemnt \code{weights} contains the connection weights of the hidden neurons to the output neurons.
 The fourth element \code{bandwidth} is the bandwidth that is used to train the final model.
 The fifth element \code{iterations} is the numer of training iterations for the final model.
+The sixth element \code{seconds} is the numer of seconds it took to build the final model.
 }
 \description{
 Build a Geographically Weighted Artificial Neural Network.

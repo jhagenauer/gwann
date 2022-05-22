@@ -29,6 +29,7 @@
 #' The second elemnt \code{weights} contains the connection weights of the hidden neurons to the output neurons.
 #' The fourth element \code{bandwidth} is the bandwidth that is used to train the final model.
 #' The fifth element \code{iterations} is the numer of training iterations for the final model.
+#' The sixth element \code{seconds} is the numer of seconds it took to build the final model.
 #' @examples
 #' \dontrun{
 #' #' data(toy4)
@@ -91,7 +92,8 @@ gwann<-function(x_train,y_train,w_train,x_pred,w_pred,norm=T,
       importance=r$importance,
       weights=r$weights,
       bw=r$bw,
-      its=r$its
+      its=r$its,
+	  seconds=r$secs
     )
   )
 }

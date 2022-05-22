@@ -7,4 +7,5 @@ public class Return_R {
 	public double rmse;
 	public double bw;
 	public double its;
+	public double secs;
 }
