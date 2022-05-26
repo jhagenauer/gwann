@@ -91,9 +91,9 @@ gwann<-function(x_train,y_train,w_train,x_pred,w_pred,norm=T,
       predictions=r$predictions,
       importance=r$importance,
       weights=r$weights,
-      bw=r$bw,
-      its=r$its,
-	  seconds=r$secs
+      bandwidth=r$bw,
+      iterations=r$its,
+	    seconds=as.difftime(r$secs,units="secs")
     )
   )
 }

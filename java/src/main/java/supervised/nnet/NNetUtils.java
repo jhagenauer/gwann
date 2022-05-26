@@ -139,7 +139,6 @@ public class NNetUtils {
 		double[][][] weights = NNetUtils.getFullyConnectedWeights(layers, NNetUtils.initMode.gorot_unif, 0);
 	
 		NNet nnet = new NNet(layers, weights, eta, opt);
-		nnet.lambda = lambda;
 	
 		List<Integer> batchReservoir = new ArrayList<>();
 		List<Double> errors = new ArrayList<>();

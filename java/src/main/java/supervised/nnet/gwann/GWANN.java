@@ -65,7 +65,7 @@ public class GWANN extends NNet {
 		for( int i = 0; i < leta.length; i++ )
 			leta[i] = eta[i]/x.size();
 				
-		update(m,errorGrad, leta,lambda);
+		update(m,errorGrad, leta);
 		t++;
 	}
 	
