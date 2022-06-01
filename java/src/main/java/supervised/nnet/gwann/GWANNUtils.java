@@ -62,11 +62,13 @@ public class GWANNUtils {
 			xVal.add( Arrays.copyOf(d, d.length) );
 		
 		List<double[]> yVal = new ArrayList<double[]>();
+		List<double[]> yVal_orig = new ArrayList<>();
 		for( double d : yVal_ ) {
 			double[] nd = new double[yVal_.size()];
 			for( int i = 0; i < nd.length; i++ )
 				nd[i] = d;
 			yVal.add(nd);
+			yVal_orig.add( Arrays.copyOf(nd, nd.length));
 		}
 		
 		ListNormalizer lnXTrain = new ListNormalizer( expTrans, xTrain);
@@ -132,10 +134,23 @@ public class GWANNUtils {
 			}
 			gwann.train(x, y, gwWeights);
 									
-			List<Double> responseVal = new ArrayList<>();
+			// get response and denormalize
+			List<double[]> response= new ArrayList<>();
 			for (int i = 0; i < xVal.size(); i++)
-				responseVal.add(gwann.present(xVal.get(i))[i]);
-			double valError = SupervisedUtils.getRMSE(responseVal, yVal, 0);
+				response.add(gwann.present(xVal.get(i)));
+			lnYTrain.denormalize(response);
+			
+			// response-diag
+			double[] res = new double[response.size()];
+			for (int i = 0; i < xVal.size(); i++)
+				res[i] = response.get(i)[i];
+			
+			// desired
+			double[] des = new double[yVal_orig.size()];
+			for( int i = 0; i < yVal_orig.size(); i++ )
+				des[i] = yVal_orig.get(i)[0];
+						
+			double valError = SupervisedUtils.getRMSE(res, des);
 			errors.add(valError);
 	
 			if (valError < localBestValError) {
@@ -144,31 +159,29 @@ public class GWANNUtils {
 			} else
 				noImp++;				
 		}
-								
+							
+		// get response and denormalize
 		List<double[]> response= new ArrayList<>();
 		for (int i = 0; i < xVal.size(); i++)
 			response.add(gwann.present(xVal.get(i)));
+		lnYTrain.denormalize(response);
 		
+		// response-diag
 		double[] res = new double[response.size()];
 		for (int i = 0; i < xVal.size(); i++)
 			res[i] = response.get(i)[i];
 		
-		double[] des = new double[yVal.size()];
-		for( int i = 0; i < yVal.size(); i++ )
-			des[i] = yVal.get(i)[0];
-					
-		List<double[]> response_denormed = new ArrayList<>();
-		for( double[] d : response )
-			response_denormed.add( Arrays.copyOf(d, d.length));
-		lnYTrain.denormalize(response_denormed);
-								
+		// desired
+		double[] des = new double[yVal_orig.size()];
+		for( int i = 0; i < yVal_orig.size(); i++ )
+			des[i] = yVal_orig.get(i)[0];
+										
 		ReturnObject ro = new ReturnObject();
 		ro.errors = errors;
 		ro.rmse = SupervisedUtils.getRMSE(res, des);
 		ro.r2 = SupervisedUtils.getR2(res, des );
 		ro.nnet = gwann;
 		ro.prediction = response;	
-		ro.prediction_denormed = response_denormed;
 		return ro;
 	}
 		

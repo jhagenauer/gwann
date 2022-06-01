@@ -201,7 +201,7 @@ public class GWANN_RInterface {
 		double secs = (System.currentTimeMillis()-time)/1000;			
 		Return_R ro = new Return_R();
 		
-		ro.predictions = tg.prediction_denormed.toArray( new double[][] {} );
+		ro.predictions = tg.prediction.toArray( new double[][] {} );
 		ro.importance = imp;
 		ro.weights = tg.nnet.weights;
 		//ro.rmse = bestValError;

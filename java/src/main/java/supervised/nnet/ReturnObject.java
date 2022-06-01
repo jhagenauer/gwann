@@ -8,5 +8,4 @@ public class ReturnObject {
 	public double rmse;
 	public double r2;
 	public List<double[]> prediction;
-	public List<double[]> prediction_denormed;
 }

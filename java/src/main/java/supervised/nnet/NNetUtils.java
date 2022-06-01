@@ -98,13 +98,12 @@ public class NNetUtils {
 		for (double[] d : xVal_)
 			xVal.add(Arrays.copyOf(d, d.length));
 	
-		List<double[]> yVal = new ArrayList<double[]>();
+		List<double[]> yVal = new ArrayList<>();
+		List<double[]> yVal_orig = new ArrayList<>();
 		for (double d : yVal_) {
-			/*double[] nd = new double[yVal_.size()];
-			for (int i = 0; i < nd.length; i++)
-				nd[i] = d;*/
 			double[] nd = new double[] {d};
 			yVal.add(nd);
+			yVal_orig.add( Arrays.copyOf(nd, nd.length));
 		}
 	
 		ListNormalizer lnXTrain = new ListNormalizer(expTrans, xTrain);
@@ -158,11 +157,24 @@ public class NNetUtils {
 				y.add(yTrain.get(idx));
 			}
 			nnet.train(x, y);
-	
-			List<Double> responseVal = new ArrayList<>();
+			
+			// get response and denormalize
+			List<double[]> response= new ArrayList<>();
 			for (int i = 0; i < xVal.size(); i++)
-				responseVal.add( nnet.present(xVal.get(i))[0] );  // only the first
-			double valError = SupervisedUtils.getRMSE(responseVal, yVal, 0);
+				response.add(nnet.present(xVal.get(i)));
+			lnYTrain.denormalize(response);
+					
+			// response-diag
+			double[] res = new double[response.size()];
+			for (int i = 0; i < xVal.size(); i++)
+				res[i] = response.get(i)[i];
+					
+			// desired
+			double[] des = new double[yVal_orig.size()];
+			for( int i = 0; i < yVal_orig.size(); i++ )
+				des[i] = yVal_orig.get(i)[0];
+	
+			double valError = SupervisedUtils.getRMSE(res, des);
 			errors.add(valError);
 	
 			if (valError < localBestValError) {
@@ -172,31 +184,28 @@ public class NNetUtils {
 				noImp++;
 		}
 	
-		double[] des = new double[yVal.size()];
-		for (int i = 0; i < yVal.size(); i++)
-			des[i] = yVal.get(i)[0];
-	
-		List<double[]> response = new ArrayList<>();
+		// get response and denormalize
+		List<double[]> response= new ArrayList<>();
 		for (int i = 0; i < xVal.size(); i++)
 			response.add(nnet.present(xVal.get(i)));
-	
+		lnYTrain.denormalize(response);
+				
+		// response-diag
 		double[] res = new double[response.size()];
 		for (int i = 0; i < xVal.size(); i++)
-			res[i] = response.get(i)[0]; // only the first
-		double valError = SupervisedUtils.getRMSE(res, des);
-	
-		List<double[]> response_denormed = new ArrayList<>();
-		for (double[] d : response)
-			response_denormed.add(Arrays.copyOf(d, d.length));
-		lnYTrain.denormalize(response_denormed);
-		
+			res[i] = response.get(i)[i];
+				
+		// desired
+		double[] des = new double[yVal_orig.size()];
+		for( int i = 0; i < yVal_orig.size(); i++ )
+			des[i] = yVal_orig.get(i)[0];
+												
 		ReturnObject ro = new ReturnObject();
 		ro.errors = errors;
-		ro.rmse = valError;
-		ro.r2 = SupervisedUtils.getR2(res, des);
+		ro.rmse = SupervisedUtils.getRMSE(res, des);
+		ro.r2 = SupervisedUtils.getR2(res, des );
 		ro.nnet = nnet;
-		ro.prediction = response;
-		ro.prediction_denormed = response_denormed;
+		ro.prediction = response;	
 		return ro;
 	}
 
@@ -231,23 +240,13 @@ public class NNetUtils {
 	
 	public static double[] getBestErrorParams( List<List<Double>> errors ) {
 		int minSize = Integer.MAX_VALUE;
-		double[] mean = null; 
-		
 		for( List<Double> f : errors )	
 			minSize = Math.min(f.size(), minSize);
-		
-		boolean warned = false;
-						
-		mean = new double[minSize];
+					
+		double[] mean = new double[minSize];
 		for( List<Double> f : errors )
-			for( int i = 0; i < mean.length; i++ ) {
-				double d = f.get(i);
-				if( Double.isNaN(d) && !warned ) {
-					log.warn("NaN-error value found! Parameter estimation probably not reliable!!!!");
-					warned = true;
-				}
-				mean[i] += d/errors.size();
-			}
+			for( int i = 0; i < mean.length; i++ )
+				mean[i] += f.get(i)/errors.size();
 		
 		double minMean = mean[0];
 		int minMeanIdx = 0;
