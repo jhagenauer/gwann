@@ -19,8 +19,8 @@ r<-gwann(x_train=x[-s_test,],y_train=y[-s_test],w_train=dm[-s_test,-s_test],
 )
 p<-diag(r$predictions)
 print(paste("RMSE: ",sqrt(mean((p-y[s_test])^2))))
-print(paste("Iterations: ",r$its))
-print(paste("Bandwidth: ",r$bw))
+print(paste("Iterations: ",r$iterations))
+print(paste("Bandwidth: ",r$bandwidth))
 
 # plot predictions
 s<-cbind( Prediction=p, toy4[s_test,c("lon","lat")] )
