@@ -60,20 +60,26 @@ public class GWANNUtils {
 		List<double[]> xVal = new ArrayList<>();
 		for( double[] d : xVal_ )
 			xVal.add( Arrays.copyOf(d, d.length) );
-		
+				
 		List<double[]> yVal = new ArrayList<double[]>();
-		List<double[]> yVal_orig = new ArrayList<>();
-		for( double d : yVal_ ) {
+		for( int i = 0; i < yVal_.size(); i++ ) {
+			double d = yVal_.get(i);			
 			double[] nd = new double[yVal_.size()];
-			for( int i = 0; i < nd.length; i++ )
-				nd[i] = d;
-			yVal.add(nd);
-			yVal_orig.add( Arrays.copyOf(nd, nd.length));
+			for( int j = 0; j < nd.length; j++ )
+				nd[j] = d;
+			yVal.add( nd );
 		}
+				
+		double[] des = new double[yVal_.size()];
+		for( int i = 0; i < yVal_.size(); i++ ) {
+			double d = yVal_.get(i);
+			des[i] = d;
+		}	
 		
 		ListNormalizer lnXTrain = new ListNormalizer( expTrans, xTrain);
-		ListNormalizer lnYTrain = new ListNormalizer( respTrans, yTrain);										
 		lnXTrain.normalize(xVal);
+		
+		ListNormalizer lnYTrain = new ListNormalizer( respTrans, yTrain);										
 		lnYTrain.normalize(yVal);
 		
 		List<Function[]> layerList = new ArrayList<>();
@@ -133,22 +139,14 @@ public class GWANNUtils {
 				gwWeights.add(kW.getRow(idx).data);
 			}
 			gwann.train(x, y, gwWeights);
-									
-			// get response and denormalize
-			List<double[]> response= new ArrayList<>();
-			for (int i = 0; i < xVal.size(); i++)
-				response.add(gwann.present(xVal.get(i)));
-			lnYTrain.denormalize(response);
-			
-			// response-diag
-			double[] res = new double[response.size()];
-			for (int i = 0; i < xVal.size(); i++)
-				res[i] = response.get(i)[i];
-			
-			// desired
-			double[] des = new double[yVal_orig.size()];
-			for( int i = 0; i < yVal_orig.size(); i++ )
-				des[i] = yVal_orig.get(i)[0];
+											
+			// get denormalized response-diag 
+			double[] res= new double[xVal.size()];
+			for (int i = 0; i < xVal.size(); i++) {
+				double[] d = gwann.present(xVal.get(i));
+				lnYTrain.denormalize(d, i);
+				res[i] = d[i];
+			}
 						
 			double valError = SupervisedUtils.getRMSE(res, des);
 			errors.add(valError);
@@ -160,7 +158,7 @@ public class GWANNUtils {
 				noImp++;				
 		}
 							
-		// get response and denormalize
+		// get full response and denormalize
 		List<double[]> response= new ArrayList<>();
 		for (int i = 0; i < xVal.size(); i++)
 			response.add(gwann.present(xVal.get(i)));
@@ -170,12 +168,7 @@ public class GWANNUtils {
 		double[] res = new double[response.size()];
 		for (int i = 0; i < xVal.size(); i++)
 			res[i] = response.get(i)[i];
-		
-		// desired
-		double[] des = new double[yVal_orig.size()];
-		for( int i = 0; i < yVal_orig.size(); i++ )
-			des[i] = yVal_orig.get(i)[0];
-										
+												
 		ReturnObject ro = new ReturnObject();
 		ro.errors = errors;
 		ro.rmse = SupervisedUtils.getRMSE(res, des);

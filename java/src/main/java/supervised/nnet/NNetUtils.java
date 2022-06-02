@@ -87,9 +87,6 @@ public class NNetUtils {
 	
 		List<double[]> yTrain = new ArrayList<>();
 		for (double d : yTrain_) {
-			/*double[] nd = new double[yVal_.size()];
-			for (int i = 0; i < nd.length; i++)
-				nd[i] = d;*/
 			double[] nd = new double[] {d};
 			yTrain.add(nd);
 		}
@@ -98,14 +95,15 @@ public class NNetUtils {
 		for (double[] d : xVal_)
 			xVal.add(Arrays.copyOf(d, d.length));
 	
+		double[] des = new double[yVal_.size()];
 		List<double[]> yVal = new ArrayList<>();
-		List<double[]> yVal_orig = new ArrayList<>();
-		for (double d : yVal_) {
-			double[] nd = new double[] {d};
-			yVal.add(nd);
-			yVal_orig.add( Arrays.copyOf(nd, nd.length));
+		for( int i = 0; i < yVal_.size(); i++ ) {
+			double d = yVal_.get(i);
+			des[i] = yVal_.get(i);
+
+			yVal.add( new double[] {d});
 		}
-	
+			
 		ListNormalizer lnXTrain = new ListNormalizer(expTrans, xTrain);
 		lnXTrain.normalize(xVal);
 		
@@ -158,21 +156,13 @@ public class NNetUtils {
 			}
 			nnet.train(x, y);
 			
-			// get response and denormalize
-			List<double[]> response= new ArrayList<>();
-			for (int i = 0; i < xVal.size(); i++)
-				response.add(nnet.present(xVal.get(i)));
-			lnYTrain.denormalize(response);
-					
-			// response-diag
-			double[] res = new double[response.size()];
-			for (int i = 0; i < xVal.size(); i++)
-				res[i] = response.get(i)[i];
-					
-			// desired
-			double[] des = new double[yVal_orig.size()];
-			for( int i = 0; i < yVal_orig.size(); i++ )
-				des[i] = yVal_orig.get(i)[0];
+			// get denormalized response
+			double[] res= new double[xVal.size()];
+			for (int i = 0; i < xVal.size(); i++) {
+				double[] d = nnet.present(xVal.get(i));
+				lnYTrain.denormalize(d, 0);
+				res[i] = d[0];
+			}
 	
 			double valError = SupervisedUtils.getRMSE(res, des);
 			errors.add(valError);
@@ -190,15 +180,10 @@ public class NNetUtils {
 			response.add(nnet.present(xVal.get(i)));
 		lnYTrain.denormalize(response);
 				
-		// response-diag
+		// response, only first
 		double[] res = new double[response.size()];
 		for (int i = 0; i < xVal.size(); i++)
-			res[i] = response.get(i)[i];
-				
-		// desired
-		double[] des = new double[yVal_orig.size()];
-		for( int i = 0; i < yVal_orig.size(); i++ )
-			des[i] = yVal_orig.get(i)[0];
+			res[i] = response.get(i)[0];
 												
 		ReturnObject ro = new ReturnObject();
 		ro.errors = errors;
