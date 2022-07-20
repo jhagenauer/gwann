@@ -62,6 +62,7 @@ gwann<-function(x_train,y_train,w_train,x_pred,w_pred,norm=T,
   if( is.na(bwMax) )
     bwMax<-(-1)
 
+  if( any( apply(x_train,2,sd) == 0 ) ) warning("Zero variance column found in training data!")
   if( nrow(w_train) != ncol(w_train) ) stop("w_train must be quadratic!")
   if( nrow(w_pred) != nrow(x_train) & ncol(w_pred) != nrow(x_pred) ) stop(paste0("w_pred must have ",nrow(x_train), "rows and ",nrow(x_pred), " columns "))
   if( nrow(x_train) != length(y_train) ) stop("Number of rows of x_train does not match length of y_train")

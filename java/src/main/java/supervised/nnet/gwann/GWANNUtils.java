@@ -30,7 +30,7 @@ import utils.Normalizer.Transform;
 
 public class GWANNUtils {
 	
-	public static boolean logistic = false;	
+	public static boolean logistic = false;
 			
 	// cleaner interface
 	public static ReturnObject buildGWANN( 
@@ -39,7 +39,7 @@ public class GWANNUtils {
 			int[] nrHidden, double[] eta, Optimizer opt, 
 			int batchSize, int maxIt, int patience,  
 			GWKernel kernel, double bw, boolean adaptive, 
-			double[][][] baseWeights, double a,
+			double a,
 			Transform[] expTrans, Transform[] respTrans, int seed ) {
 		
 		Random r = new Random(seed);		
@@ -109,14 +109,7 @@ public class GWANNUtils {
 		layerList.add(output.toArray(new Function[] {} ) );	
 						
 		Function[][] layers = layerList.toArray( new Function[][] {} );
-		double[][][] weights = NNetUtils.getFullyConnectedWeights(layers, NNetUtils.initMode.gorot_unif, seed);
-				
-		if( baseWeights != null ) 			
-			for (int l = 0; l < weights.length-1; l++) // skip last layer
-				for (int i = 0; i < weights[l].length; i++)
-					for( int j = 0; j < weights[l][i].length; j++ )
-						weights[l][i][j] = (1 - a) * weights[l][i][j] + a * baseWeights[l][i][j];
-						
+		double[][][] weights = NNetUtils.getFullyConnectedWeights(layers, NNetUtils.initMode.gorot_unif, seed);						
 		GWANN gwann = new GWANN(layers, weights, eta, opt);
 				
 		List<Double> errors = new ArrayList<>();
@@ -180,7 +173,7 @@ public class GWANNUtils {
 		
 	public static double[] getParamsWithGoldenSection(double minRadius, double maxRadius, 
 			List<double[]> xArray, List<Double> yArray, DoubleMatrix W, List<Entry<List<Integer>, List<Integer>>> innerCvList, 
-			GWKernel kernel, boolean adaptive, double[] eta, int batchSize, Optimizer opt, int[] nrHidden, int iterations, int patience, int threads, double[][][] baseWeights, double a, Transform[] explTrans, Transform[] respTrans ) {
+			GWKernel kernel, boolean adaptive, double[] eta, int batchSize, Optimizer opt, int[] nrHidden, int iterations, int patience, int threads, double a, Transform[] explTrans, Transform[] respTrans ) {
 		double xU = maxRadius;
 		double xL = minRadius;
 		double eps = 1e-04;
@@ -189,8 +182,8 @@ public class GWANNUtils {
 		
 		double x1 = xL + d;
 		double x2 = xU - d;
-		double[] f1 = NNetUtils.getBestErrorParams( getErrors_CV(xArray, yArray, W, innerCvList, kernel, x1, adaptive, eta, batchSize, opt, nrHidden, iterations, patience, threads, baseWeights, a, explTrans, respTrans) );
-		double[] f2 = NNetUtils.getBestErrorParams( getErrors_CV(xArray, yArray, W, innerCvList, kernel, x2, adaptive, eta, batchSize, opt, nrHidden, iterations, patience, threads, baseWeights, a, explTrans, respTrans) );
+		double[] f1 = NNetUtils.getBestErrorParams( getErrors_CV(xArray, yArray, W, innerCvList, kernel, x1, adaptive, eta, batchSize, opt, nrHidden, iterations, patience, threads, a, explTrans, respTrans) );
+		double[] f2 = NNetUtils.getBestErrorParams( getErrors_CV(xArray, yArray, W, innerCvList, kernel, x2, adaptive, eta, batchSize, opt, nrHidden, iterations, patience, threads, a, explTrans, respTrans) );
 		
 		double d1 = f2[0] - f1[0];
 		
@@ -201,13 +194,13 @@ public class GWANNUtils {
 				x2 = x1;
 				x1 = xL + d;
 				f2 = f1;
-				f1 = NNetUtils.getBestErrorParams( getErrors_CV(xArray, yArray, W, innerCvList, kernel, x1, adaptive, eta, batchSize, opt, nrHidden, iterations, patience, threads, baseWeights, a, explTrans, respTrans ) );
+				f1 = NNetUtils.getBestErrorParams( getErrors_CV(xArray, yArray, W, innerCvList, kernel, x1, adaptive, eta, batchSize, opt, nrHidden, iterations, patience, threads, a, explTrans, respTrans ) );
 			} else {
 				xU = x1;
 				x1 = x2;
 				x2 = xU - d;
 				f1 = f2;
-				f2 = NNetUtils.getBestErrorParams( getErrors_CV(xArray, yArray, W, innerCvList, kernel, x2, adaptive, eta, batchSize, opt, nrHidden, iterations, patience, threads, baseWeights, a, explTrans, respTrans ) );
+				f2 = NNetUtils.getBestErrorParams( getErrors_CV(xArray, yArray, W, innerCvList, kernel, x2, adaptive, eta, batchSize, opt, nrHidden, iterations, patience, threads, a, explTrans, respTrans ) );
 			}
 			d1 = f2[0] - f1[0];
 		}
@@ -217,13 +210,14 @@ public class GWANNUtils {
 		else 
 			return new double[] { f2[0], adaptive ? Math.round(x2) : x2, f2[1]};
 	}
-		
+			
 	public static List<List<Double>> getErrors_CV(
 			List<double[]> xArray, List<Double> yArray, DoubleMatrix W, List<Entry<List<Integer>, List<Integer>>> innerCvList, 
-			GWKernel kernel, double bw, boolean adaptive, double[] eta, int batchSize, Optimizer opt, int[] nrHidden, int iterations, int patience, int threads, double[][][] baseWeights, double a, Transform[] explTrans, Transform[] respTrans ) {
-				
+			GWKernel kernel, double bw, boolean adaptive, double[] eta, int batchSize, Optimizer opt, int[] nrHidden, int iterations, int patience, 
+			int threads, double a, Transform[] explTrans, Transform[] respTrans ) {
+						
 		ExecutorService innerEs = Executors.newFixedThreadPool((int) threads);
-		List<Future<List<Double>>> futures = new ArrayList<Future<List<Double>>>();			
+		List<Future<List<Double>>> futures = new ArrayList<Future<List<Double>>>();		
 				
 		for ( Entry<List<Integer>, List<Integer>> innerCvEntry : innerCvList ) {
 			futures.add(innerEs.submit(new Callable<List<Double>>() {
@@ -260,8 +254,8 @@ public class GWANNUtils {
 					for( int i = 0; i < xTest.size(); i++ )
 						xArray_test.add(xTest.get(i));	
 					
-					List<Double> errors = buildGWANN(xArray_train, yTrain, W_train_train, xArray_test, yTest, W_train_test, nrHidden, eta, opt, batchSize, iterations, patience, kernel, bw, adaptive, baseWeights, a, explTrans, respTrans, 0).errors;
-					return errors;
+					List<Double> errors = buildGWANN(xArray_train, yTrain, W_train_train, xArray_test, yTest, W_train_test, nrHidden, eta, opt, batchSize, iterations, patience, kernel, bw, adaptive, a, explTrans, respTrans, 0).errors;
+					return errors;	
 				}
 			}));
 		}
@@ -269,7 +263,7 @@ public class GWANNUtils {
 		
 		List<List<Double>> errors = new ArrayList<>();
 		try {
-			for( Future<List<Double>> f : futures )
+			for( Future<List<Double>> f : futures ) 
 				errors.add( f.get() );
 		} catch (InterruptedException | ExecutionException e) {
 			e.printStackTrace();
@@ -277,10 +271,64 @@ public class GWANNUtils {
 		return errors;
 	}
 	
+	public static double[] getErrors_CV_shortcut(
+			List<double[]> samplesA, DoubleMatrix W, List<Entry<List<Integer>, List<Integer>>> innerCvList, int[] fa, int ta,
+			GWKernel kernel, double bw, boolean adaptive, double[] eta, int batchSize, Optimizer opt, int[] nrHidden, int iterations, int patience, 
+			double a, Transform[] explTrans, Transform[] respTrans ) {
+		
+		List<double[]> xArray = new ArrayList<>();
+		List<Double> yArray = new ArrayList<>();
+		for (double[] d : samplesA ) {
+			xArray.add(DataUtils.strip(d, fa));
+			yArray.add(d[ta]);
+		}
+					
+		int max_its = iterations;
+		List<List<Double>> e = new ArrayList<>();
+		for ( Entry<List<Integer>, List<Integer>> innerCvEntry : innerCvList ) {
+			
+			List<Integer> trainIdx = innerCvEntry.getKey();
+			List<Integer> testIdx = innerCvEntry.getValue();
+			
+			List<double[]> xTrain = new ArrayList<>();
+			List<Double> yTrain = new ArrayList<>();
+			for (int i = 0; i < trainIdx.size(); i++ ) {
+				int idx = trainIdx.get(i);
+				xTrain.add(Arrays.copyOf(xArray.get(idx), xArray.get(idx).length));
+				yTrain.add(yArray.get(idx));
+			}
+			
+			List<double[]> xTest = new ArrayList<>();
+			List<Double> yTest = new ArrayList<>();
+			for (int i = 0; i < testIdx.size(); i++ ) {
+				int idx = testIdx.get(i);
+				xTest.add(Arrays.copyOf(xArray.get(idx), xArray.get(idx).length));
+				yTest.add(yArray.get(idx));
+			}
+						
+			int[] trainIdxA = DataUtils.toIntArray(trainIdx);
+			DoubleMatrix W_train_test = W.get( trainIdxA, DataUtils.toIntArray(testIdx)); // train to test
+			DoubleMatrix W_train_train = W.get(trainIdxA,trainIdxA);
+			
+			List<double[]> xArray_train = new ArrayList<>();
+			for( int i = 0; i < xTrain.size(); i++ )
+				xArray_train.add( xTrain.get(i) );
+			
+			List<double[]> xArray_test = new ArrayList<>();
+			for( int i = 0; i < xTest.size(); i++ )
+				xArray_test.add(xTest.get(i));	
+			
+			List<Double> errors = buildGWANN(xArray_train, yTrain, W_train_train, xArray_test, yTest, W_train_test, nrHidden, eta, opt, batchSize, max_its, patience, kernel, bw, adaptive, a, explTrans, respTrans, 0).errors;
+			max_its = Math.min(max_its,errors.size());
+			e.add(errors);
+		}		
+		return NNetUtils.getBestErrorParams( e );
+	}
+	
 	public static double[] getParamsWithGridSearch(int minRadius, int maxRadius, int steps,
 			List<double[]> xArray, List<Double> yArray, DoubleMatrix W, List<Entry<List<Integer>, List<Integer>>> innerCvList, int[] fa, int ta, GWKernel kernel, boolean adaptive, double[] eta, int batchSize, 
 			Optimizer opt,  
-			int[] nrHidden, int iterations, int patience, int threads, double[][][] weights, double a, Transform[] expTrans, Transform[] respTrans ) {
+			int[] nrHidden, int iterations, int patience, int threads, double a, Transform[] expTrans, Transform[] respTrans ) {
 		
 		if( !adaptive )
 			throw new RuntimeException("Not implemented yet");
@@ -288,7 +336,7 @@ public class GWANNUtils {
 		double[] bestF = null;
 		int bestBw = -1;
 		for( int i = (int)minRadius; i <= maxRadius; i+=(maxRadius-minRadius)/steps ) {
-			double[] f = NNetUtils.getBestErrorParams( getErrors_CV(xArray, yArray, W, innerCvList, kernel, i, adaptive, eta, batchSize, opt, nrHidden, iterations, patience, threads, weights, a, expTrans, respTrans) );
+			double[] f = NNetUtils.getBestErrorParams( getErrors_CV(xArray, yArray, W, innerCvList, kernel, i, adaptive, eta, batchSize, opt, nrHidden, iterations, patience, threads, a, expTrans, respTrans) );
 			if( bestF == null || f[0] < bestF[0] ) { 
 				bestF = f;
 				bestBw = i;
@@ -301,7 +349,7 @@ public class GWANNUtils {
 	public static ReturnObject buildGWANN( 
 			List<double[]> samples, DoubleMatrix W, List<Integer> trainIdx, List<Integer> testIdx, 
 			int[] nrHidden, int[] ga, int[] fa, int ta, double[] eta, Optimizer opt,  
-			int batchSize, int maxIt, int patience, GWKernel kernel, double bw, boolean adaptive, double[][][] baseWeights, double a, Transform[] expTrans, Transform[] respTrans ) {
+			int batchSize, int maxIt, int patience, GWKernel kernel, double bw, boolean adaptive, double a, Transform[] expTrans, Transform[] respTrans ) {
 					
 		List<double[]> xTrain = new ArrayList<>();
 		List<Double> yTrain = new ArrayList<>();
@@ -322,10 +370,10 @@ public class GWANNUtils {
 		DoubleMatrix W_train = W.get( DataUtils.toIntArray(trainIdx), DataUtils.toIntArray(trainIdx));
 		DoubleMatrix W_train_val = W.get( DataUtils.toIntArray(trainIdx), DataUtils.toIntArray(testIdx));
 		
-		return buildGWANN(xTrain, yTrain, W_train, xVal, yVal, W_train_val, nrHidden, eta, opt, batchSize, maxIt, patience, kernel, bw, adaptive, baseWeights, a, expTrans, respTrans, 0);
+		return buildGWANN(xTrain, yTrain, W_train, xVal, yVal, W_train_val, nrHidden, eta, opt, batchSize, maxIt, patience, kernel, bw, adaptive, a, expTrans, respTrans, 0);
 	}
 	
-	public static double[] getErrors_CV(List<double[]> samplesA, DoubleMatrix W, List<Entry<List<Integer>, List<Integer>>> innerCvList, int[] fa, int ta, GWKernel kernel, double bw, boolean adaptive, double[] eta, int batchSize, Optimizer opt, int[] nrHidden, int maxIt, int patience, int threads, double[][][] baseWeights, double a, Transform[] expTrans, Transform[] respTrans ) {
+	public static double[] getErrors_CV(List<double[]> samplesA, DoubleMatrix W, List<Entry<List<Integer>, List<Integer>>> innerCvList, int[] fa, int ta, GWKernel kernel, double bw, boolean adaptive, double[] eta, int batchSize, Optimizer opt, int[] nrHidden, int maxIt, int patience, int threads, double a, Transform[] expTrans, Transform[] respTrans ) {
 		List<double[]> xTrain = new ArrayList<>();
 		List<Double> yTrain = new ArrayList<>();
 		for (double[] d : samplesA ) {
@@ -333,7 +381,7 @@ public class GWANNUtils {
 			yTrain.add(d[ta]);
 		}
 		
-		List<List<Double>> errors = getErrors_CV(xTrain, yTrain, W, innerCvList, kernel, bw, adaptive, eta, batchSize, opt, nrHidden, maxIt, patience, threads, baseWeights, a, expTrans, respTrans);		
+		List<List<Double>> errors = getErrors_CV(xTrain, yTrain, W, innerCvList, kernel, bw, adaptive, eta, batchSize, opt, nrHidden, maxIt, patience, threads, a, expTrans, respTrans);		
 		return NNetUtils.getBestErrorParams( errors );
 	}
 	
@@ -348,13 +396,13 @@ public class GWANNUtils {
 			xTrain.add(DataUtils.strip(d, fa));
 			yTrain.add(d[ta]);
 		}
-		return getParamsWithGoldenSection(minRadius,maxRadius,xTrain, yTrain, W, innerCvList, kernel, adaptive, eta, batchSize, opt, nrHidden, iterations, patience, threads, baseWeights, a, expTrans, respTrans);
+		return getParamsWithGoldenSection(minRadius,maxRadius,xTrain, yTrain, W, innerCvList, kernel, adaptive, eta, batchSize, opt, nrHidden, iterations, patience, threads, a, expTrans, respTrans);
 	}
 	
 	public static double[] getParamsWithGridSearch(int minRadius, int maxRadius, int steps, 
 			List<double[]> samples, DoubleMatrix W, List<Entry<List<Integer>, List<Integer>>> innerCvList, int[] fa, int ta, GWKernel kernel, boolean adaptive, double[] eta, int batchSize, 
 			Optimizer opt, 
-			int[] nrHidden, int iterations, int patience, int threads, double[][][] weights, double a, Transform[] expTrans, Transform[] respTrans ) {
+			int[] nrHidden, int iterations, int patience, int threads, double a, Transform[] expTrans, Transform[] respTrans ) {
 		
 		List<double[]> xTrain = new ArrayList<>();
 		List<Double> yTrain = new ArrayList<>();
@@ -362,6 +410,6 @@ public class GWANNUtils {
 			xTrain.add(DataUtils.strip(d, fa));
 			yTrain.add(d[ta]);
 		}
-		return getParamsWithGridSearch(minRadius, maxRadius, steps, xTrain, yTrain, W, innerCvList, fa, ta, kernel, adaptive, eta, batchSize, opt, nrHidden, iterations, patience, threads, weights, a, expTrans, respTrans);
+		return getParamsWithGridSearch(minRadius, maxRadius, steps, xTrain, yTrain, W, innerCvList, fa, ta, kernel, adaptive, eta, batchSize, opt, nrHidden, iterations, patience, threads, a, expTrans, respTrans);
 	}
 }

@@ -11,7 +11,8 @@ public class TanH implements Function {
 
 	@Override
 	public double fDevFOut(double fOut) {
-		return 1.0 - Math.pow(fOut, 2);
+		//return 1.0 - Math.pow(fOut, 2);
+		return 1.0 - fOut*fOut;
 	}
 	
 	@Override

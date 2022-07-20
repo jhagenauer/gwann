@@ -99,7 +99,7 @@ public class GWANN_RInterface {
 						
 		if( bw_ > 0 && iterations > 0 ) { // bw and its are given
 			System.out.println("Iterations and bandwidth given. cv_max_iterations and cv_patience are ignored.");
-			List<List<Double>> errors = GWANNUtils.getErrors_CV(xTrain_list, yTrain_list, W, innerCvList, kernel, bw_, adaptive, eta, (int)batchSize, opt, new int[] {(int)nrHidden}, (int)iterations, (int)iterations, (int)threads, null, -1, explTrans, respTrans );
+			List<List<Double>> errors = GWANNUtils.getErrors_CV(xTrain_list, yTrain_list, W, innerCvList, kernel, bw_, adaptive, eta, (int)batchSize, opt, new int[] {(int)nrHidden}, (int)iterations, (int)iterations, (int)threads, -1, explTrans, respTrans );
 			double mean = 0;
 			for( List<Double> e : errors )
 				mean += e.get( (int)iterations-1 )/errors.size();			
@@ -108,7 +108,7 @@ public class GWANN_RInterface {
 			bestIts = (int)iterations;			
 		} else if( bw_ > 0 && iterations < 0 ) {
 			System.out.println("Pre-specified bandwidth...");
-			List<List<Double>> errors = GWANNUtils.getErrors_CV(xTrain_list, yTrain_list, W, innerCvList, kernel, bw_, adaptive, eta, (int)batchSize, opt, new int[] {(int)nrHidden}, (int)cv_max_iterations, (int)cv_patience, (int)threads, null, -1, explTrans, respTrans );
+			List<List<Double>> errors = GWANNUtils.getErrors_CV(xTrain_list, yTrain_list, W, innerCvList, kernel, bw_, adaptive, eta, (int)batchSize, opt, new int[] {(int)nrHidden}, (int)cv_max_iterations, (int)cv_patience, (int)threads, -1, explTrans, respTrans );
 			double[] m = NNetUtils.getBestErrorParams(errors);
 			
 			bestValError = m[0];
@@ -116,7 +116,7 @@ public class GWANN_RInterface {
 			bestIts = (int)m[1]+1;
 		} else if( ( bwSearch.equalsIgnoreCase("goldenSection") || bwSearch.equalsIgnoreCase("golden_section") ) && iterations < 0 ) { // determine best bw using golden section search 
 			System.out.println("Golden section search...");
-			double[] m = GWANNUtils.getParamsWithGoldenSection(min, max, xTrain_list, yTrain_list, W, innerCvList, kernel, adaptive, eta, (int)batchSize, opt, new int[] {(int)nrHidden}, (int)cv_max_iterations, (int)cv_patience, (int)threads, null, -1, explTrans, respTrans);
+			double[] m = GWANNUtils.getParamsWithGoldenSection(min, max, xTrain_list, yTrain_list, W, innerCvList, kernel, adaptive, eta, (int)batchSize, opt, new int[] {(int)nrHidden}, (int)cv_max_iterations, (int)cv_patience, (int)threads, -1, explTrans, respTrans);
 						
 			bestValError = m[0];
 			bestValBw = m[1];
@@ -135,7 +135,7 @@ public class GWANN_RInterface {
 			Collections.sort(ll);
 			System.out.println("To test: "+ll);
 			for (double bw : ll) {				
-				List<List<Double>> errors = GWANNUtils.getErrors_CV(xTrain_list, yTrain_list, W, innerCvList, kernel, bw, adaptive, eta, (int)batchSize, opt, new int[] {(int)nrHidden}, (int)cv_max_iterations, (int)cv_patience, (int)threads, null, -1, explTrans, respTrans);
+				List<List<Double>> errors = GWANNUtils.getErrors_CV(xTrain_list, yTrain_list, W, innerCvList, kernel, bw, adaptive, eta, (int)batchSize, opt, new int[] {(int)nrHidden}, (int)cv_max_iterations, (int)cv_patience, (int)threads, -1, explTrans, respTrans);
 				
 				int max_it = 0;
 				for( List<Double> e : errors)
@@ -163,7 +163,7 @@ public class GWANN_RInterface {
 			ReturnObject bg = GWANNUtils.buildGWANN(
 					xTrain_list, yTrain_list, W, 
 					xTrain_list, yTrain_list, W, 
-					new int[] { (int)nrHidden }, eta, opt, (int)batchSize, bestIts, Integer.MAX_VALUE, kernel, bestValBw, adaptive, null, -1, explTrans, respTrans,0);
+					new int[] { (int)nrHidden }, eta, opt, (int)batchSize, bestIts, Integer.MAX_VALUE, kernel, bestValBw, adaptive, -1, explTrans, respTrans,0);
 						
 			double[][] preds = bg.prediction.toArray(new double[][] {});
 									
@@ -197,7 +197,7 @@ public class GWANN_RInterface {
 		ReturnObject tg = GWANNUtils.buildGWANN(
 				xTrain_list, yTrain_list, W, 
 				xPred_list, yPred_list, new DoubleMatrix(W_train_pred), 
-				new int[] { (int)nrHidden }, eta, opt, (int)batchSize, bestIts, Integer.MAX_VALUE, kernel, bestValBw, adaptive, null, -1, explTrans, respTrans,0);
+				new int[] { (int)nrHidden }, eta, opt, (int)batchSize, bestIts, Integer.MAX_VALUE, kernel, bestValBw, adaptive, -1, explTrans, respTrans,0);
 		double secs = (System.currentTimeMillis()-time)/1000;			
 		Return_R ro = new Return_R();
 		
