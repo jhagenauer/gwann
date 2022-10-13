@@ -14,6 +14,7 @@ import supervised.nnet.NNet.Optimizer;
 import supervised.nnet.NNetUtils;
 import supervised.nnet.ReturnObject;
 import utils.GWUtils.GWKernel;
+import utils.ListNormalizer;
 import utils.Normalizer.Transform;
 
 public class GWANN_RInterface {
@@ -166,28 +167,46 @@ public class GWANN_RInterface {
 					new int[] { (int)nrHidden }, eta, opt, (int)batchSize, bestIts, Integer.MAX_VALUE, kernel, bestValBw, adaptive, -1, explTrans, respTrans,0);
 						
 			double[][] preds = bg.prediction.toArray(new double[][] {});
+			
+			List<double[]> xTrain_l = new ArrayList<>();
+			for( double[] d : xTrain_list ) 
+				xTrain_l.add(d);
+			new ListNormalizer(explTrans, xTrain_l);
+			
+			List<double[]> yTrain_l = new ArrayList<>();
+			for( double d : yTrain_list ) {
+				double[] t = new double[yTrain_list.size()];
+				for( int i = 0; i < t.length; i++ )
+					t[i] = d;
+			}
+			ListNormalizer ln = new ListNormalizer(respTrans, yTrain_l);
 									
 			imp = new double[xArray_train[0].length][preds.length][preds[0].length];
 			for( int i = 0; i < xArray_train[0].length; i++ ) { // for each variable
 				System.out.println("Feature "+i);
-				
-				double[][] copy = Arrays.stream(xArray_train).map(double[]::clone).toArray(double[][]::new);
+												
+				double[][] copy = new double[xTrain_l.size()][];
+				for( int k = 0; k < copy.length; k++ )
+					copy[k] = Arrays.copyOf(xTrain_l.get(k), xTrain_l.get(k).length);
+								
 				List<Double> l = new ArrayList<>();
 				for( int k = 0; k < copy.length; k++ )
 					l.add(copy[k][i]);
 				
-				for( int j = 0; j < permutations; j++ ) {					
+				for( int j = 0; j < permutations; j++ ) {	
+					
 					Collections.shuffle(l);
 					for( int k = 0; k < l.size(); k++ )
 						copy[k][i] = l.get(k);
 					
-					double[][] preds_ = new double[copy.length][];
-					for( int k = 0; k < copy.length; k++ )
-						preds_[k] = bg.nnet.present(copy[k]);
+					List<double[]> preds_ = new ArrayList<double[]>();
+					for( double[] d : copy )
+						preds_. add( bg.nnet.present( d ) );
+					ln.denormalize(preds_);
 					
 					for( int k = 0; k < preds.length; k++ )
 						for( int p = 0; p < preds[0].length; p++ )
-							imp[i][k][p] += ( Math.pow(preds_[k][p] - yArray_train[k],2) - Math.pow(preds[k][p] - yArray_train[k],2) )/permutations;
+							imp[i][k][p] += ( Math.pow(preds_.get(k)[p] - yArray_train[k],2) - Math.pow(preds[k][p] - yArray_train[k],2) )/permutations;
 				}			
 			}
 		}

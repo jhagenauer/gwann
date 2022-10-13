@@ -24,23 +24,23 @@ public class NNet implements SupervisedNet {
 		SGD, Momentum, Nesterov, RMSProp, Adam, Adam_ruder
 	};
 
-	protected Optimizer m;
+	protected Optimizer opt;
 
-	public NNet(Function[][] layer, double[][][] weights, double eta, Optimizer m) {
-		this(layer, weights, null, m);
+	public NNet(Function[][] layer, double[][][] weights, double eta, Optimizer opt) {
+		this(layer, weights, null, opt);
 
 		this.eta = new double[layer.length];
 		for (int i = 0; i < this.eta.length; i++)
 			this.eta[i] = eta;
 	}
 
-	public NNet(Function[][] layer, double[][][] weights, double[] eta, Optimizer m) {
+	public NNet(Function[][] layer, double[][][] weights, double[] eta, Optimizer opt) {
 
 		this.layer = layer;
 		this.eta = eta;
 
 		this.weights = weights;
-		this.m = m;
+		this.opt = opt;
 
 		this.v = new double[weights.length][][];
 		this.v_prev = new double[weights.length][][];
@@ -144,40 +144,36 @@ public class NNet implements SupervisedNet {
 	
 	protected void update( Optimizer opt, double[][][] errorGrad, double[] leta ) {
 		if( opt == Optimizer.SGD ) {
-			int lInit = 0;
-			for (int l = lInit; l < weights.length; l++)
+			for (int l = 0; l < weights.length; l++)
 				for (int i = 0; i < weights[l].length; i++)
 					for (int j = 0; j < weights[l][i].length; j++) {
-						//weights[l][i][j] -= leta[l] * errorGrad[l][i][j] - leta[l] * lambda * weights[l][i][j];
-						weights[l][i][j] -= leta[l] * errorGrad[l][i][j] - leta[l];
+						//weights[l][i][j] -= leta[l] * errorGrad[l][i][j] - lambda * weights[l][i][j];
+						weights[l][i][j] -= leta[l] * errorGrad[l][i][j]; // - leta[l];
 					}
 						
 		} else if( opt == Optimizer.Momentum ) {
-			int lInit = 0;
 			double mu = 0.9;
-			for (int l = lInit; l < weights.length; l++)
+			for (int l = 0; l < weights.length; l++)
 				for (int i = 0; i < weights[l].length; i++)
 					for (int j = 0; j < weights[l][i].length; j++) {
 						v[l][i][j] = mu * v[l][i][j] - leta[l] * errorGrad[l][i][j]; 
-						//weights[l][i][j] += v[l][i][j] - leta[l] * lambda * weights[l][i][j]; 
+						//weights[l][i][j] += v[l][i][j] - lambda * weights[l][i][j]; 
 						weights[l][i][j] += v[l][i][j]; 
 					}
 		} else if( opt == Optimizer.Nesterov ) {
-			int lInit = 0;
 			double mu = 0.9;
-			for (int l = lInit; l < weights.length; l++)
+			for (int l = 0; l < weights.length; l++)
 				for (int i = 0; i < weights[l].length; i++)
 					for (int j = 0; j < weights[l][i].length; j++) {
 						v_prev[l][i][j] = v[l][i][j];
-						//v[l][i][j] = mu * v[l][i][j] - leta[l] * errorGrad[l][i][j] - leta[l] * lambda * weights[l][i][j];
+						//v[l][i][j] = mu * v[l][i][j] - leta[l] * errorGrad[l][i][j] - lambda * weights[l][i][j];
 						v[l][i][j] = mu * v[l][i][j] - leta[l] * errorGrad[l][i][j];
 						weights[l][i][j] += -mu * v_prev[l][i][j] + v[l][i][j] + mu * v[l][i][j];
 					}
 		} else if( opt == Optimizer.RMSProp ) {
 			double eps = Math.pow(10, -8);
-			int lInit = 0;
 			double gamma = 0.9;
-			for (int l = lInit; l < weights.length; l++)
+			for (int l = 0; l < weights.length; l++)
 				for (int i = 0; i < weights[l].length; i++)
 					for (int j = 0; j < weights[l][i].length; j++) {
 						v[l][i][j] = gamma * v[l][i][j] + (1 - gamma) * errorGrad[l][i][j] * errorGrad[l][i][j];
@@ -185,11 +181,10 @@ public class NNet implements SupervisedNet {
 					}
 			v_prev = errorGrad;
 		} else if( opt == Optimizer.Adam ) {
-			int lInit = 0;
 			double b1 = 0.9, b2 = 0.999, eps = Math.pow(10, -8);
 			double p1 = (1 - Math.pow(b1, t));
 
-			for (int l = lInit; l < weights.length; l++)
+			for (int l = 0; l < weights.length; l++)
 				for (int i = 0; i < weights[l].length; i++)
 					for (int j = 0; j < weights[l][i].length; j++) {
 
@@ -202,13 +197,12 @@ public class NNet implements SupervisedNet {
 						weights[l][i][j] -= leta[l] * mt_hat / (Math.sqrt(vt_hat) + eps);
 					}
 		} else if( opt == Optimizer.Adam_ruder ) {
-			int lInit = 0;
 			double b1 = 0.9, b2 = 0.999, eps = Math.pow(10, -8);
 
 			double p1 = (1 - Math.pow(b1, t));
 			double p2 = (1 - Math.pow(b2, t));
 
-			for (int l = lInit; l < weights.length; l++)
+			for (int l = 0; l < weights.length; l++)
 				for (int i = 0; i < weights[l].length; i++)
 					for (int j = 0; j < weights[l][i].length; j++) {
 
@@ -231,7 +225,7 @@ public class NNet implements SupervisedNet {
 		double[] leta = new double[eta.length];
 		for (int i = 0; i < leta.length; i++)
 			leta[i] = eta[i] / x.size();
-		update( m, errorGrad, leta );
+		update( opt, errorGrad, leta );
 		t++;
 	}
 

@@ -22,7 +22,7 @@
 #' @param cv_patience After how many iterations with no improvement should training during CV prematurely stop?
 #' @param cv_folds Number of CV folds.
 #' @param cv_repeats Number of repeats of CV.
-#' @param permutations Number of permutations for calculating feature importance (EXPERIMENTAL).
+#' @param permutations Number of permutations for calculating feature importance (EXPERIMENTAL and full of bugs. Do not use yet!).
 #' @param threads Number of threads to use.
 #' @return A list of five elements.
 #' The first element \code{predictions} contains the predictions.

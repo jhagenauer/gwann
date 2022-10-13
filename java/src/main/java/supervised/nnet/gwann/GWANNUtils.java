@@ -138,7 +138,7 @@ public class GWANNUtils {
 			for (int i = 0; i < xVal.size(); i++) {
 				double[] d = gwann.present(xVal.get(i));
 				lnYTrain.denormalize(d, i);
-				res[i] = d[i];
+				res[i] = d[i]; // only diagonal
 			}
 						
 			double valError = SupervisedUtils.getRMSE(res, des);
