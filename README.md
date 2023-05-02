@@ -43,8 +43,8 @@ Java JDK 1.2 or higher (for JRI/REngine JDK 1.4 or higher). If it is not already
 ### Note
 
 - If you get `java.lang.OutOfMemoryError: Java heap space` put `options(java.parameters="-Xmx8g")` before loading the package and adjust it to your available memory. To take effect, you most likely have to restart R/RStudio then.
-- The learning rate (lr) and the number of hidden neurons (nrHidden) have a substantial effect on the performance and therefore should be chosen carefully. (The number of iterations as well as the bandwidth are also important but are by default automatically determined by GWANN using cross-validation.) 
-- Also, transforming the data to make their distributions approximally normal often improves the performance of GWANN.
+- The learning rate (lr), the batch size (batchSize) and the number of hidden neurons (nrHidden) have a substantial effect on the performance and therefore should be chosen carefully. (The number of iterations as well as the bandwidth are also important but are by default automatically determined by GWANN using cross-validation.) 
+- Transforming the data to make their distributions approximally normal often improves the performance of GWANN.
 
 ### References
 
