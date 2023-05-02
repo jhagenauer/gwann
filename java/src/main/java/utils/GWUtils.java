@@ -86,6 +86,7 @@ public class GWUtils {
 		return a;
 	}
 	
+	// Adaptive bw
 	public static DoubleMatrix getKernelWeights(DoubleMatrix Wtrain, DoubleMatrix Wk, GWKernel kernel, int nb ) {
 		DoubleMatrix kW = new DoubleMatrix(Wk.rows,Wk.columns);
 		
@@ -96,6 +97,7 @@ public class GWUtils {
 				w[j] = GWUtils.getKernelValue(kernel, Wk.get(i, j), bw);
 			kW.putRow(i,new DoubleMatrix(w));
 		}
+				
 		return kW;
 	}
 		

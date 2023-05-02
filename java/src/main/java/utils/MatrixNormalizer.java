@@ -7,7 +7,7 @@ public class MatrixNormalizer extends Normalizer {
 	
 	public MatrixNormalizer( Transform[] tt, DoubleMatrix X, boolean lastIc ) {
 		this.tt = tt;
-		
+				
 		this.ds = new SummaryStatistics[tt.length][X.columns - (lastIc ? 1 : 0)];
 		for( int i = 0; i < tt.length; i++ ) {
 			// calculate summary statistics before applying t

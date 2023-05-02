@@ -20,6 +20,7 @@ public class NNet implements SupervisedNet {
 
 	double[][][] v = null, v_prev = null;
 
+	public static double lambda = -1.0;
 	public static enum Optimizer {
 		SGD, Momentum, Nesterov, RMSProp, Adam, Adam_ruder
 	};
@@ -103,26 +104,26 @@ public class NNet implements SupervisedNet {
 
 		int ll = layer.length - 1; // index of last layer
 		double[][][] errorGrad = new double[layer.length - 1][][];
-		double[][] delta = new double[layer.length][];
+		double[][] delta = new double[layer.length - 1][];
+		
+		for( int l = ll; l > 0; l-- ) {
+			delta[l-1] = new double[layer[l].length];
+			errorGrad[l-1] = new double[layer[l - 1].length][layer[l].length];
+		}
+		
 		for (int e = 0; e < x.size(); e++) {
 			double[] desired = y.get(e);
 			double[][] out = presentInt(x.get(e))[0];
 
 			for (int l = ll; l > 0; l--) {
-
-				delta[l] = new double[layer[l].length];
-
-				if (errorGrad[l - 1] == null)
-					errorGrad[l - 1] = new double[layer[l - 1].length][layer[l].length];
-
+					
 				if (l == ll) {
 					for (int i = 0; i < layer[l].length; i++) { // for each neuron of layer l
 
-						double s = (out[l][i] - desired[i]);
-						delta[l][i] = layer[l][i].fDevFOut(out[l][i]) * s;
-
+						double s = (out[l][i] - desired[i]);						
+						delta[l-1][i] = layer[l][i].fDevFOut(out[l][i]) * s;
 						for (int h = 0; h < layer[l - 1].length; h++)
-							errorGrad[l - 1][h][i] += out[l - 1][h] * delta[l][i];
+							errorGrad[l - 1][h][i] += out[l - 1][h] * delta[l-1][i];
 					}
 				} else {
 					for (int i = 0; i < layer[l].length; i++) { // for each neuron of layer l
@@ -130,11 +131,11 @@ public class NNet implements SupervisedNet {
 						double s = 0;
 						for (int j = 0; j < weights[l][i].length; j++)
 							if (!(layer[l + 1][j] instanceof Constant))
-								s += delta[l + 1][j] * weights[l][i][j];
-						delta[l][i] = layer[l][i].fDevFOut(out[l][i]) * s;
+								s += delta[l][j] * weights[l][i][j];
+						delta[l-1][i] = layer[l][i].fDevFOut(out[l][i]) * s;
 
 						for (int h = 0; h < layer[l - 1].length; h++)
-							errorGrad[l - 1][h][i] += out[l - 1][h] * delta[l][i];
+							errorGrad[l - 1][h][i] += out[l - 1][h] * delta[l-1][i];
 					}
 				}
 			}
@@ -142,32 +143,43 @@ public class NNet implements SupervisedNet {
 		return errorGrad;
 	}
 	
+	public static double mu = 0.9;
 	protected void update( Optimizer opt, double[][][] errorGrad, double[] leta ) {
 		if( opt == Optimizer.SGD ) {
 			for (int l = 0; l < weights.length; l++)
 				for (int i = 0; i < weights[l].length; i++)
 					for (int j = 0; j < weights[l][i].length; j++) {
-						//weights[l][i][j] -= leta[l] * errorGrad[l][i][j] - lambda * weights[l][i][j];
-						weights[l][i][j] -= leta[l] * errorGrad[l][i][j]; // - leta[l];
+						if( lambda > 0 )
+							weights[l][i][j] -= leta[l] * errorGrad[l][i][j] - lambda * weights[l][i][j];
+						else
+							weights[l][i][j] -= leta[l] * errorGrad[l][i][j]; 
 					}
 						
 		} else if( opt == Optimizer.Momentum ) {
-			double mu = 0.9;
+			//double mu = 0.9;
 			for (int l = 0; l < weights.length; l++)
 				for (int i = 0; i < weights[l].length; i++)
 					for (int j = 0; j < weights[l][i].length; j++) {
 						v[l][i][j] = mu * v[l][i][j] - leta[l] * errorGrad[l][i][j]; 
-						//weights[l][i][j] += v[l][i][j] - lambda * weights[l][i][j]; 
-						weights[l][i][j] += v[l][i][j]; 
+						
+						if( lambda > 0 )
+							weights[l][i][j] += v[l][i][j] - lambda * weights[l][i][j];
+						else
+							weights[l][i][j] += v[l][i][j];
+						
 					}
 		} else if( opt == Optimizer.Nesterov ) {
-			double mu = 0.9;
+			//double mu = 0.9;
 			for (int l = 0; l < weights.length; l++)
 				for (int i = 0; i < weights[l].length; i++)
 					for (int j = 0; j < weights[l][i].length; j++) {
 						v_prev[l][i][j] = v[l][i][j];
-						//v[l][i][j] = mu * v[l][i][j] - leta[l] * errorGrad[l][i][j] - lambda * weights[l][i][j];
-						v[l][i][j] = mu * v[l][i][j] - leta[l] * errorGrad[l][i][j];
+						
+						if( lambda > 0 )
+							v[l][i][j] = mu * v[l][i][j] - leta[l] * errorGrad[l][i][j] - lambda * weights[l][i][j];
+						else 
+							v[l][i][j] = mu * v[l][i][j] - leta[l] * errorGrad[l][i][j];
+						
 						weights[l][i][j] += -mu * v_prev[l][i][j] + v[l][i][j] + mu * v[l][i][j];
 					}
 		} else if( opt == Optimizer.RMSProp ) {
@@ -210,7 +222,7 @@ public class NNet implements SupervisedNet {
 						v_prev[l][i][j] = b1 * v_prev[l][i][j] + (1 - b1) * g; // mt
 						v[l][i][j] = b2 * v[l][i][j] + (1 - b2) * g * g; // vt
 
-						// https://ruder.io/optimizing-gradient-descent/index.html#adam
+						// https://www.ruder.io/optimizing-gradient-descent/
 						double mt_hat = v_prev[l][i][j] / p1;
 						double vt_hat = v[l][i][j] / p2;
 						weights[l][i][j] -= leta[l] * mt_hat / (Math.sqrt(vt_hat) + eps);

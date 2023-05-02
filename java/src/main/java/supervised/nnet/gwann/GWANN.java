@@ -1,6 +1,7 @@
 package supervised.nnet.gwann;
 
 import java.util.List;
+
 import supervised.nnet.NNet;
 import supervised.nnet.activation.Constant;
 import supervised.nnet.activation.Function;
@@ -18,7 +19,11 @@ public class GWANN extends NNet {
 	private double[][][] getErrorGradient( List<double[]> x, List<double[]> y, List<double[]> sampleWeights ) {
 		int ll = layer.length - 1; // index of last layer
 		double[][] delta = new double[layer.length][];
-		double[][][] errorGrad = new double[layer.length-1][][];
+		double[][][] errorGrad = new double[layer.length-1][][];		
+		for( int l = ll; l > 0; l-- ) {
+			delta[l-1] = new double[layer[l].length];
+			errorGrad[l-1] = new double[layer[l - 1].length][layer[l].length];
+		}
 		
 		for( int e = 0; e < x.size(); e++ ) {
 			double[] desired = y.get(e);
@@ -27,18 +32,16 @@ public class GWANN extends NNet {
 												
 			for (int l = ll; l > 0; l--) {	
 				
-				delta[l] = new double[layer[l].length];
-				if( errorGrad[l-1] == null )
-					errorGrad[l-1] = new double[layer[l-1].length][layer[l].length];
-								
 				if( l == ll ) {
 					for (int i = 0; i < layer[l].length; i++) { 
-																	
+												
 						double s = (out[l][i] - desired[i]) * sw[i];
-						delta[l][i] = layer[l][i].fDevFOut(out[l][i]) * s;
+						delta[l-1][i] = layer[l][i].fDevFOut(out[l][i]) * s;	
 						
-						for( int h = 0; h < layer[l-1].length; h++ ) 
-							errorGrad[l-1][h][i] += out[l-1][h] * delta[l][i];	
+						if( delta[l-1][i] != 0 ) 				
+							for( int h = 0; h < layer[l-1].length; h++ ) 
+								errorGrad[l-1][h][i] += out[l-1][h] * delta[l-1][i];
+					
 					}
 				} else {
 					for (int i = 0; i < layer[l].length; i++) {
@@ -46,12 +49,11 @@ public class GWANN extends NNet {
 						double s = 0;	
 						for (int j = 0; j < weights[l][i].length; j++)
 							if( !( layer[l+1][j] instanceof Constant ) )
-								s += delta[l + 1][j] * weights[l][i][j];
-																																						
-						delta[l][i] = layer[l][i].fDevFOut(out[l][i]) * s;	
+								s += delta[l][j] * weights[l][i][j];												
+						delta[l-1][i] = layer[l][i].fDevFOut(out[l][i]) * s;	
 						
 						for( int h = 0; h < layer[l-1].length; h++ ) 
-							errorGrad[l-1][h][i] += out[l-1][h] * delta[l][i];	
+							errorGrad[l-1][h][i] += out[l-1][h] * delta[l-1][i];	
 					}
 				}
 			}
@@ -67,13 +69,5 @@ public class GWANN extends NNet {
 				
 		update(opt,errorGrad, leta);
 		t++;
-	}
-	
-	public double[] weightsForLocation(int i ) {
-		double[][] w = weights[weights.length-1];
-		double[] d = new double[w.length];
-		for( int j = 0; j < d.length; j++ )
-			d[j] = w[j][i];
-		return d;
 	}
 }

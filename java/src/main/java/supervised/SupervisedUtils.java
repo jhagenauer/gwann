@@ -15,6 +15,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import supervised.nnet.NNet.Optimizer;
+import utils.DataUtils;
 
 public class SupervisedUtils {
 
@@ -31,7 +32,7 @@ public class SupervisedUtils {
 				l.add(i);
 		return l;
 	}
-	
+
 
 	public static List<Entry<List<Integer>, List<Integer>>> getKFoldCVList(int numFolds, int numRepeats, int numSamples, int seed ) {
 		List<Integer> samplesIdx = new ArrayList<>();
@@ -258,7 +259,7 @@ public class SupervisedUtils {
 	public static double getAIC_GWMODEL(double mse, double nrParams, int nrSamples) {
 		return nrSamples * Math.log(mse) + nrSamples * Math.log(2*Math.PI) + nrSamples + nrParams;
 	}
-	
+		
 	// I don't know why, but that's how it is done in the GWMODEL package
 	// ##AICc = 	dev + 2.0 * (double)N * ( (double)MGlobal + 1.0) / ((double)N - (double)MGlobal - 2.0);
 	// lm_AICc= dp.n*log(lm_RSS/dp.n)+dp.n*log(2*pi)+dp.n+2*dp.n*(var.n+1)/(dp.n-var.n-2)
