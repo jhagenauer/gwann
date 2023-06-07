@@ -14,7 +14,7 @@ gwann(
   nrHidden = ncol(x_train) * 2,
   batchSize = 50,
   optimizer = "nesterov",
-  lr = 0.1,
+  lr = 0.05,
   linOut = T,
   kernel = "gaussian",
   bandwidth = NA,
@@ -23,6 +23,7 @@ gwann(
   bwMin = NA,
   bwMax = NA,
   steps = 20,
+  adj = T,
   iterations = NA,
   cv_max_iterations = Inf,
   cv_patience = 999,
@@ -53,7 +54,7 @@ gwann(
 
 \item{lr}{Learning rate.}
 
-\item{kernel}{Kernel.}
+\item{kernel}{Kernel (gaussian, bisquare, boxcar, exponential, tricube).}
 
 \item{bandwidth}{Bandwidth size. If NA, it is determined using CV.}
 
@@ -77,7 +78,7 @@ gwann(
 
 \item{cv_repeats}{Number of repeats of CV.}
 
-\item{permutations}{Number of permutations for calculating feature importance (EXPERIMENTAL).}
+\item{permutations}{Number of permutations for calculating feature importance (EXPERIMENTAL and full of bugs. Do not use yet!).}
 
 \item{threads}{Number of threads to use.}
 }

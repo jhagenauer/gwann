@@ -10,7 +10,7 @@
 #' @param batchSize Batch size.
 #' @param optimizer Optimizer (sgd, momentum, nesterov).
 #' @param lr Learning rate.
-#' @param kernel Kernel.
+#' @param kernel Kernel (gaussian, bisquare, boxcar, exponential, tricube).
 #' @param bandwidth Bandwidth size. If NA, it is determined using CV.
 #' @param adaptive Adaptive instead of fixed bandwidth?
 #' @param bwSearch Method for searching an appropriate bandwidth (goldenSection or grid). Ignored if bandwidth is explicitly given.
@@ -44,9 +44,9 @@
 #' Julian Hagenauer & Marco Helbich (2022) A geographically weighted artificial neural network, International Journal of Geographical Information Science, 36:2, 215-235, DOI: 10.1080/13658816.2021.1871618
 #' @export
 gwann<-function(x_train,y_train,w_train,x_pred,w_pred,norm=T,
-                nrHidden=ncol(x_train)*2,batchSize=50,optimizer="nesterov",lr=0.1,linOut=T,
+                nrHidden=ncol(x_train)*2,batchSize=50,optimizer="nesterov",lr=0.05,linOut=T,
                 kernel="gaussian",bandwidth=NA,adaptive=F,
-                bwSearch="goldenSection", bwMin=NA, bwMax=NA, steps=20,
+                bwSearch="goldenSection", bwMin=NA, bwMax=NA, steps=20,adj=T,
                 iterations=NA,
                 cv_max_iterations=Inf,cv_patience=999,cv_folds=10,cv_repeats=1,
                 permutations=0,
@@ -71,7 +71,10 @@ gwann<-function(x_train,y_train,w_train,x_pred,w_pred,norm=T,
     bwSearch<-"goldenSection"
   }
 
-  r<-.jcall(obj="supervised.nnet.gwann.GWANN_RInterface",method="run",returnSig = "Lsupervised/nnet/gwann/Return_R;",
+  if(!exists(".Random.seed")) set.seed(NULL)
+  seed<-.Random.seed[1]
+
+  r<-rJava::.jcall(obj="supervised.nnet.gwann.GWANN_RInterface",method="run",returnSig = "Lsupervised/nnet/gwann/Return_R;",
             .jarray(x_train,dispatch=T),
             y_train,
             .jarray(w_train,dispatch=T),
@@ -85,7 +88,8 @@ gwann<-function(x_train,y_train,w_train,x_pred,w_pred,norm=T,
             iterations,
             cv_max_iterations,cv_patience,cv_folds,cv_repeats,
             permutations,
-            threads)
+            threads,
+            seed)
 
   return(
     list(
@@ -94,7 +98,7 @@ gwann<-function(x_train,y_train,w_train,x_pred,w_pred,norm=T,
       weights=r$weights,
       bandwidth=r$bw,
       iterations=r$its,
-	    seconds=as.difftime(r$secs,units="secs")
+	  seconds=as.difftime(r$secs,units="secs")
     )
   )
 }
