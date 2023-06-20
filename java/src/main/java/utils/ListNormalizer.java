@@ -47,8 +47,8 @@ public class ListNormalizer extends Normalizer {
 	}
 	
 	// denormalize column fa[j] of sample d
-	public void denormalize(double[] d, int j ) {
+	public void denormalize(double[] d, int col ) {
 		for( int i = tt.length-1; i >= 0 ; i-- ) 
-			d[j] = normalize(d[j], i, j, true);
+			d[col] = normalize(d[col], i, col, true);
 	}
 }

@@ -50,7 +50,7 @@ gwann(
 
 \item{batchSize}{Batch size.}
 
-\item{optimizer}{Optimizer (sgd, momentum, nesterov).}
+\item{optimizer}{Optimizer (sgd, momentum, nesterov, adam).}
 
 \item{lr}{Learning rate.}
 

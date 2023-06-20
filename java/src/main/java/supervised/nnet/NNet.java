@@ -118,7 +118,7 @@ public class NNet implements SupervisedNet {
 			for (int l = ll; l > 0; l--) {
 					
 				if (l == ll) {
-					for (int i = 0; i < layer[l].length; i++) { // for each neuron of layer l
+					for (int i = 0; i < layer[l].length; i++) { // for each neuron of output layer 
 
 						double s = (out[l][i] - desired[i]);						
 						delta[l-1][i] = layer[l][i].fDevFOut(out[l][i]) * s;

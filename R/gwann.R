@@ -8,7 +8,7 @@
 #' @param norm Center and scale variables before training? This affects the final model and the CV-procedure.
 #' @param nrHidden Number of hidden neurons.
 #' @param batchSize Batch size.
-#' @param optimizer Optimizer (sgd, momentum, nesterov).
+#' @param optimizer Optimizer (sgd, momentum, nesterov, adam).
 #' @param lr Learning rate.
 #' @param kernel Kernel (gaussian, bisquare, boxcar, exponential, tricube).
 #' @param bandwidth Bandwidth size. If NA, it is determined using CV.
