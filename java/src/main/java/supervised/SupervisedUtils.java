@@ -105,6 +105,24 @@ public class SupervisedUtils {
 		return cvList;
 	}
 	
+	public static List<Entry<List<Integer>, List<Integer>>> getSplitCVList_sep(List<Integer> samples, List<Integer> subsamples_test, int size_test, int num_repeats, int seed ) {
+		Random r = new Random(seed);				
+		List<Entry<List<Integer>, List<Integer>>> cvList = new ArrayList<Entry<List<Integer>, List<Integer>>>();
+		for (int repeat = 0; repeat < num_repeats; repeat++) {			
+			List<Integer> train = new ArrayList<>(samples);			
+			Collections.shuffle(train,r);
+			
+			List<Integer> test = new ArrayList<>(subsamples_test);
+			Collections.shuffle(test,r);
+			
+			test = test.subList(0, size_test);
+						
+			train.removeAll(test);
+			cvList.add(new AbstractMap.SimpleEntry<List<Integer>, List<Integer>>(train, test));
+		}		
+		return cvList;
+	}
+	
 	public static double getRMSE(List<double[]> response, List<double[]> desired) {
 		return Math.sqrt(getMSE(response, desired));
 	}

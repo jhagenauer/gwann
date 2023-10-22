@@ -1,3 +1,5 @@
+# For internal testing. Do not run!!!
+
 library(rJava)
 .jinit()
 .jaddClassPath("inst/java/commons-math3-3.6.1.jar")
