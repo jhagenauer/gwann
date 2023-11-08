@@ -83,12 +83,13 @@ gwann(
 \item{threads}{Number of threads to use.}
 }
 \value{
-A list of five elements.
+A list of several elements.
 The first element \code{predictions} contains the predictions.
-The second elemnt \code{weights} contains the connection weights of the hidden neurons to the output neurons.
-The fourth element \code{bandwidth} is the bandwidth that is used to train the final model.
-The fifth element \code{iterations} is the numer of training iterations for the final model.
-The sixth element \code{seconds} is the numer of seconds it took to build the final model.
+The second element \code{weights} contains the connection weights of the hidden neurons to the output neurons.
+The third element \code{bandwidth} is the bandwidth that is used to train the final model.
+The fourth element \code{iterations} is the number of training iterations for the final model.
+The fifth element \code{seconds} is the number of seconds it took to build the final model.
+The sixth element \code{gwann} is the trained GWANN model as Java object.
 }
 \description{
 Build a Geographically Weighted Artificial Neural Network.

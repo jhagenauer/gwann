@@ -24,12 +24,13 @@
 #' @param cv_repeats Number of repeats of CV.
 #' @param permutations Number of permutations for calculating feature importance (EXPERIMENTAL and full of bugs. Do not use yet!).
 #' @param threads Number of threads to use.
-#' @return A list of five elements.
+#' @return A list of several elements.
 #' The first element \code{predictions} contains the predictions.
-#' The second elemnt \code{weights} contains the connection weights of the hidden neurons to the output neurons.
-#' The fourth element \code{bandwidth} is the bandwidth that is used to train the final model.
-#' The fifth element \code{iterations} is the numer of training iterations for the final model.
-#' The sixth element \code{seconds} is the numer of seconds it took to build the final model.
+#' The second element \code{weights} contains the connection weights of the hidden neurons to the output neurons.
+#' The third element \code{bandwidth} is the bandwidth that is used to train the final model.
+#' The fourth element \code{iterations} is the number of training iterations for the final model.
+#' The fifth element \code{seconds} is the number of seconds it took to build the final model.
+#' The sixth element \code{gwann} is the trained GWANN model as Java object.
 #' @examples
 #' \dontrun{
 #' #' data(toy4)
@@ -82,14 +83,17 @@ gwann<-function(x_train,y_train,w_train,x_pred,w_pred,norm=T,
             .jarray(x_pred,dispatch=T),
             .jarray(w_pred,dispatch=T),
 
-            norm,nrHidden,batchSize,optimizer,lr,linOut,
-            kernel,bandwidth,adaptive,
-            bwSearch,bwMin,bwMax,steps,
-            iterations,
-            cv_max_iterations,cv_patience,cv_folds,cv_repeats,
-            permutations,
-            threads,
-            seed)
+            norm,
+            nrHidden,batchSize,
+            optimizer,
+            lr,
+            linOut,
+            kernel,bandwidth,
+            adaptive,
+            bwSearch,
+            bwMin,bwMax,steps,iterations,cv_max_iterations,cv_patience,cv_folds,cv_repeats,permutations,threads,
+            seed
+          )
 
   return(
     list(
@@ -98,7 +102,21 @@ gwann<-function(x_train,y_train,w_train,x_pred,w_pred,norm=T,
       weights=r$weights,
       bandwidth=r$bw,
       iterations=r$its,
-	  seconds=as.difftime(r$secs,units="secs")
+	    seconds=as.difftime(r$secs,units="secs"),
+      gwann_o=r$gwann
     )
   )
+}
+#' Predict values for a trained GWANN model.
+#'
+#' Locations of observations must match with locations of the prediction data when the model was built.
+#' @param gwann_o GWANN model as Java object.
+#' @param x_pred Matrix of prediction data. Rows are observations, columns are independent variables.
+#' @export
+predict<-function(gwann_o,x_pred) {
+  r<-rJava::.jcall(obj="supervised.nnet.gwann.GWANN_RInterface",method="predict",returnSig = "[[D",
+                   gwann_o,
+                   .jarray(x_pred,dispatch=T)
+  )
+  return(sapply(r,.jevalArray))
 }

@@ -20,16 +20,20 @@ import utils.Normalizer.Transform;
 public class GWANN_RInterface {
 		
 	public static Return_R run(
-			double[][] xArray_train, double[] yArray_train, double[][] W_train,
-			double[][] xArray_pred, double[][] W_train_pred,
+			double[][] xArray_train, 
+			double[] yArray_train, 
+			double[][] W_train, double[][] xArray_pred, double[][] W_train_pred,
 			boolean norm,
-			double nr_hidden, double batchSize, String optim, double eta_, boolean linOut, 
-			String krnl, double bw_, boolean adaptive, 
-			String bwSearch, double bwMin, double bwMax, double steps_,
-			double iterations_, 
-			double cv_max_iterations,double cv_patience, double cv_folds_, double cv_repeats_,
-			double permutations_,
-			double threads, int seed) {
+			double nr_hidden, double batchSize, 
+			String optim, 
+			double eta_, 
+			boolean linOut, 
+			String krnl, 
+			double bw_, 
+			boolean adaptive, 
+			String bwSearch, 
+			double bwMin, double bwMax, double steps_,double iterations_,double cv_max_iterations,double cv_patience, double cv_folds_, double cv_repeats_,double permutations_,double threads, 
+			int seed) {
 				
 		assert 
 			xArray_train.length == W_train.length &  
@@ -233,10 +237,20 @@ public class GWANN_RInterface {
 		ro.predictions = tg.prediction.toArray( new double[][] {} );
 		ro.importance = imp;
 		ro.weights = tg.nnet.weights;
-		//ro.rmse = bestValError;
 		ro.its = best_its;
 		ro.bw = bestValBw;
 		ro.secs = secs;
+		ro.gwann = tg;
 		return ro;			
+	}
+	
+	public static double[][] predict( ReturnObject ro, double[][] xArray_pred ) {
+		List<double[]> xPred_list = Arrays.asList(xArray_pred);
+		List<double[]> l = ro.predict(xPred_list);
+		
+		double[][] d = new double[l.size()][];
+		for( int i = 0; i < l.size(); i++ )
+			d[i] = l.get(i);
+		return d;
 	}
 }

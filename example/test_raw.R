@@ -3,7 +3,7 @@
 library(rJava)
 .jinit()
 .jaddClassPath("inst/java/commons-math3-3.6.1.jar")
-.jaddClassPath("inst/java/gwann-0.0.5-SNAPSHOT.jar")
+.jaddClassPath("inst/java/gwann-0.6-SNAPSHOT.jar")
 .jaddClassPath("inst/java/jblas-1.2.4.jar")
 .jaddClassPath("inst/java/log4j-api-2.17.1.jar")
 .jaddClassPath("inst/java/log4j-core-2.17.1.jar")
@@ -21,42 +21,82 @@ y_train<-y
 w_train<-dm
 
 x_pred<-x
-y_pred<-y
 w_train_pred<-dm
 
-nrHidden<-5
 norm<-T
-bandwidth<-10
-opt="Nesterov"
-threads<-8
-batchSize<-50
-lr<-0.01
+nrHidden<-4
+batchSize<-40
+optimizer<-"adam"
+lr<-0.1
 linOut<-T
 kernel<-"gaussian"
+bandwidth<-5
 adaptive<-T
-iterations<-(-1)
-folds<-10
-repeats<-1
-patience<-1000
-bwSearch="goldenSection"
-bwMin<-1
-bwMax<-4
-steps=1
+bwSearch<-"goldenSection"
+bwMin<-4
+bwMax<-20
+steps<-4
+iterations<-100
+cv_max_iterations<-100
+cv_patience<-99
+cv_folds<-10
+cv_repeats<-1
 permutations<-0
+threads<-14
+
+if(!exists(".Random.seed")) set.seed(NULL)
+seed<-.Random.seed[1]
 
 r<-.jcall(obj="supervised.nnet.gwann.GWANN_RInterface",method="run",returnSig = "Lsupervised/nnet/gwann/Return_R;",
 
+          # [[D
           .jarray(x_train,dispatch=T),
+          # [D
           y_train,
-          .jarray(w_train,dispatch=T),
+          # [[D
+          .jarray(w_train,dispatch=T),.jarray(x_pred,dispatch=T),.jarray(w_train_pred,dispatch=T),
 
-          .jarray(x_pred,dispatch=T),
-          y_pred,
-          .jarray(w_train_pred,dispatch=T),
+          #Z
+          norm,
 
-          norm,nrHidden,batchSize,opt,lr,linOut,
-          kernel,bandwidth,adaptive,
+          #D
+          nrHidden,batchSize,
+
+          #S
+          optimizer,
+
+          #D
+          lr,
+
+          #Z
+          linOut,
+
+          #S
+          kernel,
+
+          #D
+          bandwidth,
+
+          #Z
+          adaptive,
+
+          #S
           bwSearch,
 
-          bwMin,bwMax,steps,iterations,patience,folds,repeats,permutations,threads
-          )
+          #D
+          bwMin,bwMax,steps,iterations,cv_max_iterations,cv_patience,cv_folds,cv_repeats,permutations,threads,
+
+          #I
+          seed
+)
+
+head( diag(r$predictions) )
+
+p<-.jcall(obj="supervised.nnet.gwann.GWANN_RInterface",method="predict",returnSig = "[[D",
+          r$gwann,
+          .jarray(x_pred,dispatch=T)
+)
+p2<-sapply(p,.jevalArray)
+
+head( diag(p2) )
+
