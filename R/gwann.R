@@ -114,6 +114,9 @@ gwann<-function(x_train,y_train,w_train,x_pred,w_pred,norm=T,
 #' @param x_pred Matrix of prediction data. Rows are observations, columns are independent variables.
 #' @export
 predict<-function(gwann_o,x_pred) {
+  if( nrow(x_pred) != gwann_o$nnet$weights[[2]] %>% ncol()) # assume 2 layers for now
+    warning("Number of locations for predictions to not match!")
+
   r<-rJava::.jcall(obj="supervised.nnet.gwann.GWANN_RInterface",method="predict",returnSig = "[[D",
                    gwann_o,
                    .jarray(x_pred,dispatch=T)
