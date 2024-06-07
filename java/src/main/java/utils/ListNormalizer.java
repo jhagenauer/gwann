@@ -20,9 +20,8 @@ public class ListNormalizer extends Normalizer {
 				ds[i][j] = new SummaryStatistics();
 				for( double[] d : samples )
 					ds[i][j].addValue(d[j]);
-				
-				assert !Double.isNaN( ds[i][j].getMean() );
-				
+								
+				assert !Double.isNaN( ds[i][j].getMean() ) : "NaN. Transform index: " + i + ", var index :" + j;				
 			}
 			
 			// normalize

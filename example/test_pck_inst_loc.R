@@ -22,17 +22,32 @@ set.seed(1)
 x_pred1 <- x[s_test,]
 w_pred1 <- dm[-s_test, s_test]
 
-r1<-gwann(x_train=x[-s_test,],y_train=y[-s_test],w_train=dm[-s_test,-s_test],
+g<-gwann(x_train=x[-s_test,],y_train=y[-s_test],w_train=dm[-s_test,-s_test],
          x_pred=x_pred1,w_pred=w_pred1,
          nrHidden=4,batchSize=100,lr=0.1,
          optimizer="adam",kernel="gaussian",
          adaptive=F,
-         #bandwidth=99999999,
+         bandwidth=99,
          cv_patience=99,
          threads=15
 )
-p1<-diag(r1$predictions)
+p1<-diag(g$predictions)
 print(p1[1:5])
 
-p2<-diag(predict(r1$gwann_o,x_pred1))
+p2<-diag(predict(g,x_pred1))
 print(p2[1:5])
+
+#################################################################
+
+n<-nnet(x_train=x[-s_test,],y_train=y[-s_test],
+         x_pred=x_pred1,
+         nrHidden=4,batchSize=100,lr=0.1,
+         optimizer="adam",
+         cv_patience=99,
+         threads=15
+)
+p1<-n$predictions[,1]
+print(p1[1:5])
+
+predict(n,x_pred1)
+

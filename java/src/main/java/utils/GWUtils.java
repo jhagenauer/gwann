@@ -7,12 +7,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jblas.DoubleMatrix;
 
 import dist.Dist;
 
 public class GWUtils {
-
+	
+	private static Logger log = LogManager.getLogger(GWUtils.class);
+	
 	public static Map<double[], Double> getBandwidth(List<double[]> samples, Dist<double[]> dist, double bw, boolean adaptive) {
 		Map<double[], Double> bandwidth = new HashMap<>();
 		for (double[] a : samples) {
@@ -87,17 +91,26 @@ public class GWUtils {
 	}
 	
 	// Adaptive bw
-	public static DoubleMatrix getKernelWeights(DoubleMatrix Wtrain, DoubleMatrix Wk, GWKernel kernel, int nb ) {
+	public static DoubleMatrix getKernelWeightsAdaptive(DoubleMatrix Wtrain, DoubleMatrix Wk, GWKernel kernel, int nb ) {
 		DoubleMatrix kW = new DoubleMatrix(Wk.rows,Wk.columns);
 		
+		if( nb >= Wtrain.columns ) {
+			//log.warn("nb to large ("+nb+">="+Wtrain.columns+")... setting nb temporally to "+(Wtrain.columns-1) );
+			nb = Wtrain.columns-1;
+		}			
+		
 		for (int i = 0; i < Wk.rows; i++) {
+			//double bw = Double.POSITIVE_INFINITY;
 			double bw = Wtrain.getRow(i).sort().get(nb);
 			double[] w = new double[Wk.columns];
 			for (int j = 0; j < w.length; j++)
 				w[j] = GWUtils.getKernelValue(kernel, Wk.get(i, j), bw);
 			kW.putRow(i,new DoubleMatrix(w));
 		}
-				
+		
+		// debug only
+		//for( int i = 0; i < kW.data.length; i++ ) kW.data[i] = 1.0;
+		
 		return kW;
 	}
 		

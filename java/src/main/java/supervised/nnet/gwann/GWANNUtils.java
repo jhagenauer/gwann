@@ -44,7 +44,7 @@ public class GWANNUtils {
 			Transform[] expTrans, Transform[] respTrans, int seed ) {
 		
 		Random r = new Random(seed);		
-		double[][] kW = adaptive ? GWUtils.getKernelWeights(W_train_train, W_train_test, kernel, (int) bw).toArray2() : GWUtils.getKernelWeights(W_train_test, kernel, bw).toArray2();
+		double[][] kW = adaptive ? GWUtils.getKernelWeightsAdaptive(W_train_train, W_train_test, kernel, (int) bw).toArray2() : GWUtils.getKernelWeights(W_train_test, kernel, bw).toArray2();
 			
 		List<double[]> x_train = new ArrayList<>();
 		for( double[] d : x_train_ )
@@ -248,7 +248,7 @@ public class GWANNUtils {
 					List<Double> yTrain = new ArrayList<>();
 					for (int i = 0; i < trainIdx.size(); i++ ) {
 						int idx = trainIdx.get(i);
-						xTrain.add(Arrays.copyOf(xArray.get(idx), xArray.get(idx).length));
+						xTrain.add(xArray.get(idx));
 						yTrain.add(yArray.get(idx));
 					}
 					
@@ -256,28 +256,20 @@ public class GWANNUtils {
 					List<Double> yTest = new ArrayList<>();
 					for (int i = 0; i < testIdx.size(); i++ ) {
 						int idx = testIdx.get(i);
-						xTest.add(Arrays.copyOf(xArray.get(idx), xArray.get(idx).length));
+						xTest.add(xArray.get(idx));
 						yTest.add(yArray.get(idx));
 					}
 								
 					int[] trainIdxA = DataUtils.toIntArray(trainIdx);
 					DoubleMatrix W_train_test = W.get( trainIdxA, DataUtils.toIntArray(testIdx)); // train to test
 					DoubleMatrix W_train_train = W.get(trainIdxA,trainIdxA);
-					
-					List<double[]> xArray_train = new ArrayList<>();
-					for( int i = 0; i < xTrain.size(); i++ )
-						xArray_train.add( xTrain.get(i) );
-					
-					List<double[]> xArray_test = new ArrayList<>();
-					for( int i = 0; i < xTest.size(); i++ )
-						xArray_test.add(xTest.get(i));	
-					
+										
 					if( fast_cv ) {
-						List<Double> errors = buildGWANN(xArray_train, yTrain, W_train_train, xArray_test, yTest, W_train_test, nrHidden, eta, opt, batchSize, max_its, patience, kernel, bw, adaptive, lambda, explTrans, respTrans, seed).errors;
+						List<Double> errors = buildGWANN(xTrain, yTrain, W_train_train, xTest, yTest, W_train_test, nrHidden, eta, opt, batchSize, max_its, patience, kernel, bw, adaptive, lambda, explTrans, respTrans, seed).errors;
 						max_its = Math.min(max_its,errors.size());
 						return errors;	
 					} else {
-						List<Double> errors = buildGWANN(xArray_train, yTrain, W_train_train, xArray_test, yTest, W_train_test, nrHidden, eta, opt, batchSize, iterations, patience, kernel, bw, adaptive, lambda, explTrans, respTrans, seed).errors;
+						List<Double> errors = buildGWANN(xTrain, yTrain, W_train_train, xTest, yTest, W_train_test, nrHidden, eta, opt, batchSize, iterations, patience, kernel, bw, adaptive, lambda, explTrans, respTrans, seed).errors;
 						return errors;	
 					}
 				}
@@ -311,7 +303,7 @@ public class GWANNUtils {
 		double[] desired_orig_diag;
 		int idx = 0;
 		
-		public GWANN_CV( List<double[]> xArray, List<Double> yArray, DoubleMatrix W, List<Integer> trainIdx, List<Integer> testIdx, int[] fa, int ta,
+		public GWANN_CV( List<double[]> xArray, List<Double> yArray, DoubleMatrix W, List<Integer> trainIdx, List<Integer> testIdx, 
 				GWKernel kernel, double bw, boolean adaptive, double[] eta, int batchSize, Optimizer opt, int[] nrHidden, 
 				double a, Transform[] explTrans, Transform[] respTrans, int seed ) {
 				
@@ -349,7 +341,7 @@ public class GWANNUtils {
 			DoubleMatrix W_train_test = W.get( trainIdxA, DataUtils.toIntArray(testIdx)); // train to test
 			DoubleMatrix W_train_train = W.get(trainIdxA,trainIdxA);
 							
-			kW = adaptive ? GWUtils.getKernelWeights(W_train_train, W_train_test, kernel, (int) bw).toArray2() : GWUtils.getKernelWeights(W_train_test, kernel, bw).toArray2();
+			kW = adaptive ? GWUtils.getKernelWeightsAdaptive(W_train_train, W_train_test, kernel, (int) bw).toArray2() : GWUtils.getKernelWeights(W_train_test, kernel, bw).toArray2();
 								
 			desired_orig_diag = new double[testIdx.size()];
 			for( int i = 0; i < y_test.size(); i++ ) {
@@ -447,7 +439,7 @@ public class GWANNUtils {
 		for ( Entry<List<Integer>, List<Integer>> innerCvEntry : innerCvList ) {
 			List<Integer> trainIdx = innerCvEntry.getKey();
 			List<Integer> testIdx = innerCvEntry.getValue();			
-			ml.add( new GWANN_CV(xArray,yArray,W,trainIdx,testIdx,fa,ta,kernel,bw,adaptive,eta,batchSize,opt,nrHidden,a,explTrans,respTrans,seed ) );
+			ml.add( new GWANN_CV(xArray,yArray,W,trainIdx,testIdx,kernel,bw,adaptive,eta,batchSize,opt,nrHidden,a,explTrans,respTrans,seed ) );
 			e.add( new ArrayList<>());
 		}		
 		

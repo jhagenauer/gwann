@@ -2,14 +2,14 @@
 % Please edit documentation in R/gwann.R
 \name{predict}
 \alias{predict}
-\title{Predict values for a trained GWANN model.}
+\title{Predict values for a trained GWANN/NNet model (experimental).}
 \usage{
-predict(gwann_o, x_pred)
+predict(model, x_pred)
 }
 \arguments{
-\item{gwann_o}{GWANN model as Java object.}
-
 \item{x_pred}{Matrix of prediction data. Rows are observations, columns are independent variables.}
+
+\item{ro}{GWANN model as Java object.}
 }
 \description{
 Locations of observations must match with locations of the prediction data when the model was built.

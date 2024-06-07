@@ -1,6 +1,4 @@
-package supervised.nnet.gwann;
-
-import supervised.nnet.ReturnObject;
+package supervised.nnet;
 
 public class Return_R {
 	public double[][] predictions;
@@ -10,5 +8,5 @@ public class Return_R {
 	public double bw;
 	public double its;
 	public double secs;
-	public ReturnObject gwann;
+	public ReturnObject ro;
 }

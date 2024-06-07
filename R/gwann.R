@@ -75,7 +75,7 @@ gwann<-function(x_train,y_train,w_train,x_pred,w_pred,norm=T,
   if(!exists(".Random.seed")) set.seed(NULL)
   seed<-.Random.seed[1]
 
-  r<-rJava::.jcall(obj="supervised.nnet.gwann.GWANN_RInterface",method="run",returnSig = "Lsupervised/nnet/gwann/Return_R;",
+  r<-rJava::.jcall(obj="supervised.nnet.gwann.GWANN_RInterface",method="run",returnSig = "Lsupervised/nnet/Return_R;",
             .jarray(x_train,dispatch=T),
             y_train,
             .jarray(w_train,dispatch=T),
@@ -103,23 +103,84 @@ gwann<-function(x_train,y_train,w_train,x_pred,w_pred,norm=T,
       bandwidth=r$bw,
       iterations=r$its,
 	    seconds=as.difftime(r$secs,units="secs"),
-      gwann_o=r$gwann
+      ro=r$ro
     )
   )
 }
-#' Predict values for a trained GWANN model.
+#' Build a basic artifical neural network (experimental).
+#'
+#' @export
+nnet<-function(x_train,y_train,x_pred,
+                norm=T,
+                nrHidden=ncol(x_train)*2,batchSize=50,optimizer="nesterov",lr=0.05,linOut=T,
+                iterations=NA,
+                cv_max_iterations=Inf,cv_patience=999,cv_folds=10,cv_repeats=1,
+                permutations=0,
+                threads=4) {
+
+  if( is.na(iterations) )
+    iterations<-(-1)
+
+  if( any( apply(x_train,2,sd) == 0 ) ) warning("Zero variance column found in training data!")
+  if( nrow(x_train) != length(y_train) ) stop("Number of rows of x_train does not match length of y_train")
+
+  if(!exists(".Random.seed")) set.seed(NULL)
+  seed<-.Random.seed[1]
+
+  r<-rJava::.jcall(obj="supervised.nnet.NNet_RInterface",method="run",returnSig = "Lsupervised/nnet/Return_R;",
+            .jarray(x_train,dispatch=T),
+            y_train,
+
+            .jarray(x_pred,dispatch=T),
+
+            norm,
+            nrHidden,batchSize,
+            optimizer,
+            lr,
+            linOut,
+            iterations,cv_max_iterations,cv_patience,cv_folds,cv_repeats,permutations,threads,
+            seed
+          )
+
+  return(
+    list(
+      predictions=r$predictions,
+      importance=r$importance,
+      weights=r$weights,
+      bandwidth=NA,
+      iterations=r$its,
+	    seconds=as.difftime(r$secs,units="secs"),
+      ro=r$ro
+    )
+  )
+}
+#' Predict values for a trained GWANN/NNet model (experimental).
 #'
 #' Locations of observations must match with locations of the prediction data when the model was built.
-#' @param gwann_o GWANN model as Java object.
+#' @param ro GWANN model as Java object.
 #' @param x_pred Matrix of prediction data. Rows are observations, columns are independent variables.
 #' @export
-predict<-function(gwann_o,x_pred) {
-  if( nrow(x_pred) != gwann_o$nnet$weights[[2]] %>% ncol()) # assume 2 layers for now
-    warning("Number of locations for predictions to not match!")
+predict<-function(model,x_pred) {
+  ro<-model$ro
+  if( rJava::`%instanceof%`(ro$nnet,"supervised.nnet.gwann.GWANN") ) {
+    #print("GWANN")
 
-  r<-rJava::.jcall(obj="supervised.nnet.gwann.GWANN_RInterface",method="predict",returnSig = "[[D",
-                   gwann_o,
-                   .jarray(x_pred,dispatch=T)
-  )
-  return(sapply(r,.jevalArray))
+    if( nrow(x_pred) != ro$nnet$weights[[2]] %>% ncol()) # assume 2 layers for now
+      warning("Number of locations for predictions to not match!")
+
+    r<-rJava::.jcall(obj="supervised.nnet.gwann.GWANN_RInterface",method="predict",returnSig = "[[D",
+                     ro,
+                     .jarray(x_pred,dispatch=T)
+    )
+    return(sapply(r,.jevalArray))
+
+  } else {
+    #print("NNet")
+
+    r<-rJava::.jcall(obj="supervised.nnet.NNet_RInterface",method="predict",returnSig = "[[D",
+                     ro,
+                     .jarray(x_pred,dispatch=T)
+    )
+    return(sapply(r,.jevalArray))
+  }
 }

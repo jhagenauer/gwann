@@ -15,6 +15,7 @@ public class TanH implements Function {
 	
 	@Override
 	public double fDev(double f) {
-		return 1 - Math.pow( FastMath.tanh(f), 2);
+		double g = FastMath.tanh(f);
+		return 1 - g*g;
 	}
 }

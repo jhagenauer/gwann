@@ -2,6 +2,7 @@ package supervised;
 
 import java.util.AbstractMap;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -11,11 +12,16 @@ import java.util.Random;
 import java.util.Set;
 
 import org.apache.commons.math3.stat.correlation.PearsonsCorrelation;
+import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jblas.DoubleMatrix;
+import org.jblas.Solve;
+import org.jblas.exceptions.LapackException;
 
 import supervised.nnet.NNet.Optimizer;
 import utils.DataUtils;
+import utils.MatrixNormalizer;
 
 public class SupervisedUtils {
 
@@ -45,62 +51,51 @@ public class SupervisedUtils {
 		return getKFoldCVList(numFolds, numRepeats, samplesIdx,0);
 	}
 	
-	public static List<Entry<List<Integer>, List<Integer>>> getKFoldCVList(int numFolds, int numRepeats, List<Integer> samplesIdx, int seed ) {
+	public static <T> List<Entry<List<T>, List<T>>> getKFoldCVList(int numFolds, int numRepeats, List<T> samples, int seed ) {
 		Random r = new Random(seed);		
-		List<Entry<List<Integer>, List<Integer>>> cvList = new ArrayList<Entry<List<Integer>, List<Integer>>>();
+		List<Entry<List<T>, List<T>>> cvList = new ArrayList<Entry<List<T>, List<T>>>();
 		for (int repeat = 0; repeat < numRepeats; repeat++) {
 			
-			List<Integer> l = new ArrayList<Integer>(samplesIdx);
+			List<T> l = new ArrayList<T>(samples);
 			Collections.shuffle(l,r);
 			
-			double foldSize = (double)samplesIdx.size() / numFolds;
+			double foldSize = (double)samples.size() / numFolds;
 			for (int fold = 0; fold < numFolds; fold++) {
 				int valStart = (int)Math.round(fold * foldSize);
 				int valEnd = (int)Math.round( (fold + 1) * foldSize );
 								
-				List<Integer> val = new ArrayList<Integer>(l.subList( valStart, valEnd));
-				List<Integer> train = new ArrayList<Integer>( l.subList(0, valStart ) );
-				train.addAll( l.subList( valEnd, samplesIdx.size() ) );
+				List<T> val = new ArrayList<T>(l.subList( valStart, valEnd));
+				List<T> train = new ArrayList<T>( l.subList(0, valStart ) );
+				train.addAll( l.subList( valEnd, samples.size() ) );
 				
-				cvList.add(new AbstractMap.SimpleEntry<List<Integer>, List<Integer>>(train, val));
-			}			
-		}		
-		return cvList;
-	}
-	
-	public static List<Entry<List<Integer>, List<Integer>>> getBootstrapList(int numRepeats, List<Integer> samplesIdx, int seed ) {
-		Random r = new Random(seed);		
-		List<Entry<List<Integer>, List<Integer>>> cvList = new ArrayList<Entry<List<Integer>, List<Integer>>>();
-		for (int repeat = 0; repeat < numRepeats; repeat++) {
-			List<Integer> train = new ArrayList<>();
-			while( train.size() != samplesIdx.size() ) {
-				int idx = r.nextInt(samplesIdx.size());
-				train.add( samplesIdx.get(idx) );
+				List<T> lt = new ArrayList<>(val);
+				lt.retainAll(train);
+				assert lt.isEmpty();
+				
+				cvList.add(new AbstractMap.SimpleEntry<List<T>, List<T>>(train, val));
 			}
-			List<Integer> val = new ArrayList<>(samplesIdx);
-			val.removeAll(train);
-			cvList.add(new AbstractMap.SimpleEntry<List<Integer>, List<Integer>>(train, val));			
 		}		
 		return cvList;
 	}
 	
-	public static List<Entry<List<Integer>, List<Integer>>> getSplitCVList(int numTrainSamples, int numRepeats, int numSamples, int seed ) {
+	@Deprecated
+	public static List<Entry<List<Integer>, List<Integer>>> getCVList(int numTrainSamples, int numRepeats, int numSamples, int seed ) {
 		List<Integer> samplesIdx = new ArrayList<>();
 		for (int i = 0; i < numSamples; i++)
 			samplesIdx.add(i);
-		return getSplitCVList(numTrainSamples, numRepeats, samplesIdx, seed);		
+		return getCVList(numTrainSamples, numRepeats, samplesIdx, seed);		
 	}
 	
-	public static List<Entry<List<Integer>, List<Integer>>> getSplitCVList(int numTrainSamples, int numRepeats, List<Integer> samplesIdx, int seed ) {
+	public static <T> List<Entry<List<T>, List<T>>> getCVList(int numTrainSamples, int numRepeats, List<T> samples, int seed ) {
 		Random r = new Random(seed);				
-		List<Entry<List<Integer>, List<Integer>>> cvList = new ArrayList<Entry<List<Integer>, List<Integer>>>();
+		List<Entry<List<T>, List<T>>> cvList = new ArrayList<Entry<List<T>, List<T>>>();
 		for (int repeat = 0; repeat < numRepeats; repeat++) {			
-			List<Integer> train = new ArrayList<>(samplesIdx);			
+			List<T> train = new ArrayList<>(samples);			
 			Collections.shuffle(train,r);
 						
-			List<Integer> val = new ArrayList<Integer>(train.subList(0, samplesIdx.size()-numTrainSamples));
+			List<T> val = new ArrayList<T>(train.subList(0, samples.size()-numTrainSamples));
 			train.removeAll(val);
-			cvList.add(new AbstractMap.SimpleEntry<List<Integer>, List<Integer>>(train, val));
+			cvList.add(new AbstractMap.SimpleEntry<List<T>, List<T>>(train, val));
 		}		
 		return cvList;
 	}
@@ -191,6 +186,12 @@ public class SupervisedUtils {
 			varY += Math.pow(y[i] - mean, 2);
 		return 1.0 - ssr / varY;
 	}
+	
+	public static double getAdjustedR2(double[] response, double[] y, int k ) {
+		double r2 = getR2(response,y);
+		int n = y.length;				
+		return 1 - (1 - r2) * (n-1 ) / (n-k-1);
+	}	
 	
 	public static double getR2_pearson(double[] response, double[] y ) {
 		return Math.pow(getPearson(response, y), 2);
@@ -351,5 +352,72 @@ public class SupervisedUtils {
 		for (double l : c)
 			j[i++] = l;
 		return j;
+	}
+	
+	public static double getCost_CV(DoubleMatrix X, DoubleMatrix Y, List<Entry<List<Integer>, List<Integer>>> cv_list, double lambda ) {
+		DescriptiveStatistics ds = new DescriptiveStatistics();		
+		for (Entry<List<Integer>, List<Integer>> cv_entry : cv_list ) {
+									
+			List<Integer> outerTrainFinal = new ArrayList<>(cv_entry.getKey());
+			List<Integer> outerTestFinal = new ArrayList<>(cv_entry.getValue());
+							
+			try {				
+				int[] trainIdx = SupervisedUtils.toIntArray(outerTrainFinal);
+				int[] testIdx = SupervisedUtils.toIntArray(outerTestFinal);
+				
+				DoubleMatrix XTrain = X.getRows(trainIdx);
+				DoubleMatrix YTrain = Y.getRows(trainIdx);
+				
+				DoubleMatrix XTest = X.getRows(testIdx);
+				DoubleMatrix YTest = Y.getRows(testIdx);
+				double[] des = Arrays.copyOf( YTest.data, YTest.data.length);
+				
+				/*if( expTrans != null && expTrans.length > 0 ) {
+					MatrixNormalizer mnx = new MatrixNormalizer(expTrans, XTrain, true);
+					mnx.normalize(XTest);
+				}*/
+				
+				MatrixNormalizer mny = null;
+				/*if( respTrans != null && respTrans.length > 0 ) {
+					mny = new MatrixNormalizer(respTrans, YTrain, false);
+					mny.normalize(YTest);
+				}*/
+									
+				DoubleMatrix Xt = XTrain.transpose();
+				DoubleMatrix XtX = Xt.mmul(XTrain);
+				DoubleMatrix beta;
+				
+				if( lambda > 0 ) { // ridge regression
+					DoubleMatrix id = DoubleMatrix.eye(XtX.rows);			
+					beta = Solve.solve(XtX.add(id.mul(lambda)), Xt.mmul(YTrain));
+				} else 
+					beta = Solve.solve(XtX, Xt.mmul(YTrain));
+				
+				
+				DoubleMatrix P =  XTest.mmul(beta);
+				if( mny != null )
+					mny.denormalize(P);
+				
+				double rmse = SupervisedUtils.getRMSE(P.data, des);
+				
+				if( Double.isNaN(rmse) ) {
+
+					synchronized (SupervisedUtils.class) {
+						
+						log.debug(X.rows+","+X.columns);
+						log.debug("X: "+X);
+						log.debug("beta: "+beta);
+						log.debug( "p: "+Arrays.toString(P.data) );
+						log.debug( "des: "+Arrays.toString(des) );
+
+						System.exit(1);
+					};					
+				}
+				ds.addValue(rmse);					
+			} catch( LapackException e ) {		
+				throw new RuntimeException(e.getMessage());
+			}
+		}					
+		return ds.getMean();
 	}
 }

@@ -1,6 +1,13 @@
 package utils;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
+
+import org.jblas.DoubleMatrix;
+
+import dist.Dist;
+import dist.EuclideanDist;
 
 public class DataUtils {
 
@@ -17,5 +24,45 @@ public class DataUtils {
 		for (int l : c)
 			j[i++] = l;
 		return j;
+	}
+	
+	public static DoubleMatrix getY(List<double[]> samples, int ta) {
+		double[] y = new double[samples.size()];
+		for (int i = 0; i < samples.size(); i++)
+			y[i] = samples.get(i)[ta];
+		return new DoubleMatrix(y);
+	}	
+	
+	public static DoubleMatrix getX(List<double[]> samples, int[] fa, boolean addIntercept) {		
+		double[][] x = new double[samples.size()][];
+		for (int i = 0; i < samples.size(); i++) {
+			double[] d = samples.get(i);
+			
+			x[i] = new double[fa.length + (addIntercept ? 1 : 0) ];
+			x[i][x[i].length - 1] = 1.0; // gets overwritten if !addIntercept
+			for (int j = 0; j < fa.length; j++) {
+				x[i][j] = d[fa[j]];
+			}
+		}
+		return new DoubleMatrix(x);
+	}
+	
+	public static List<double[]> getStripped(List<double[]> a, int[] fa) {
+		List<double[]> l = new ArrayList<>();
+		for( double[] d : a )
+			l.add( DataUtils.strip(d, fa) );
+		return l;
+	}
+	
+	public static DoubleMatrix getW(List<double[]> a, List<double[]> b, int[] ga ) {
+		Dist<double[]> eDist = new EuclideanDist();
+		DoubleMatrix W = new DoubleMatrix(a.size(), b.size());
+		for (int i = 0; i < a.size(); i++)
+			for (int j = 0; j < b.size(); j++)
+				W.put(i, j, eDist.dist(
+						new double[] { a.get(i)[ga[0]], a.get(i)[ga[1]] }, 
+						new double[] { b.get(j)[ga[0]], b.get(j)[ga[1]] }
+					));		
+		return W;
 	}
 }

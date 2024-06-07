@@ -19,7 +19,6 @@ import supervised.nnet.activation.Constant;
 import supervised.nnet.activation.Function;
 import supervised.nnet.activation.Linear;
 import supervised.nnet.activation.TanH;
-import utils.DataUtils;
 import utils.ListNormalizer;
 import utils.Normalizer.Transform;
 
@@ -31,7 +30,7 @@ public class NNetUtils {
 		gorot_unif, norm05
 	}
 
-	public static List<List<Double>> getErrors_CV(List<double[]> samplesA, List<Entry<List<Integer>, List<Integer>>> innerCvList, int[] fa, int ta, double[] eta, int batchSize, NNet.Optimizer opt, double lambda, int[] nrHidden, int maxIt, int patience, int threads, Transform[] expTrans, Transform[] respTrans ) {
+	public static List<List<Double>> getErrors_CV(List<double[]> xArray, List<Double> yArray, List<Entry<List<Integer>, List<Integer>>> innerCvList, double[] eta, int batchSize, NNet.Optimizer opt, double lambda, int[] nrHidden, int maxIt, int patience, int threads, Transform[] expTrans, Transform[] respTrans ) {
 		ExecutorService innerEs = Executors.newFixedThreadPool(threads);
 		List<Future<List<Double>>> futures = new ArrayList<Future<List<Double>>>();
 		
@@ -48,17 +47,15 @@ public class NNetUtils {
 					List<double[]> xTrain = new ArrayList<>();
 					List<Double> yTrain = new ArrayList<>();
 					for (int i : trainIdx) {
-						double[] d = samplesA.get(i);
-						xTrain.add(DataUtils.strip(d, fa));
-						yTrain.add(d[ta]);
+						xTrain.add(xArray.get(i));
+						yTrain.add(yArray.get(i));
 					}
 				
 					List<double[]> xVal = new ArrayList<>();
 					List<Double> yVal = new ArrayList<>();
 					for (int i : testIdx) {
-						double[] d = samplesA.get(i);
-						xVal.add(DataUtils.strip(d, fa));
-						yVal.add(d[ta]);
+						xVal.add(xArray.get(i));
+						yVal.add(yArray.get(i));
 					}
 				
 					ReturnObject ro = NNetUtils.buildNNet(xTrain, yTrain, xVal, yVal, nrHidden, eta, opt, lambda, batchSize, maxIt, patience, expTrans, respTrans );
@@ -78,7 +75,9 @@ public class NNetUtils {
 	}
 
 	// cleaner interface
-	public static ReturnObject buildNNet(List<double[]> xTrain_, List<Double> yTrain_, List<double[]> xVal_, List<Double> yVal_, int[] nrHidden, double[] eta, NNet.Optimizer opt, double lambda, int batchSize, int maxIt, int patience, Transform[] expTrans, Transform[] respTrans) {
+	public static ReturnObject buildNNet(List<double[]> xTrain_, List<Double> yTrain_, List<double[]> xVal_, List<Double> yVal_, 
+			int[] nrHidden, double[] eta, NNet.Optimizer opt, 
+			double lambda, int batchSize, int maxIt, int patience, Transform[] expTrans, Transform[] respTrans) {
 		Random r = new Random(0);
 	
 		List<double[]> xTrain = new ArrayList<>();
@@ -104,11 +103,11 @@ public class NNetUtils {
 			yVal.add( new double[] {d});
 		}
 			
-		ListNormalizer lnXTrain = new ListNormalizer(expTrans, xTrain);
-		lnXTrain.normalize(xVal);
+		ListNormalizer ln_x = new ListNormalizer(expTrans, xTrain);
+		ln_x.normalize(xVal);
 		
-		ListNormalizer lnYTrain = new ListNormalizer(respTrans, yTrain);	
-		lnYTrain.normalize(yVal);
+		ListNormalizer ln_y = new ListNormalizer(respTrans, yTrain);	
+		ln_y.normalize(yVal);
 	
 		List<Function[]> layerList = new ArrayList<>();
 		List<Function> input = new ArrayList<>();
@@ -160,7 +159,7 @@ public class NNetUtils {
 			double[] res= new double[xVal.size()];
 			for (int i = 0; i < xVal.size(); i++) {
 				double[] d = nnet.present(xVal.get(i));
-				lnYTrain.denormalize(d, 0);
+				ln_y.denormalize(d, 0);
 				res[i] = d[0];
 			}
 	
@@ -178,7 +177,7 @@ public class NNetUtils {
 		List<double[]> response= new ArrayList<>();
 		for (int i = 0; i < xVal.size(); i++)
 			response.add(nnet.present(xVal.get(i)));
-		lnYTrain.denormalize(response);
+		ln_y.denormalize(response);
 				
 		// response, only first
 		double[] res = new double[response.size()];
@@ -191,6 +190,8 @@ public class NNetUtils {
 		ro.r2 = SupervisedUtils.getR2(res, des );
 		ro.nnet = nnet;
 		ro.prediction = response;	
+		ro.ln_x = ln_x;
+		ro.ln_y = ln_y;
 		return ro;
 	}
 

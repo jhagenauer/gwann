@@ -47,7 +47,7 @@ threads<-14
 if(!exists(".Random.seed")) set.seed(NULL)
 seed<-.Random.seed[1]
 
-r<-.jcall(obj="supervised.nnet.gwann.GWANN_RInterface",method="run",returnSig = "Lsupervised/nnet/gwann/Return_R;",
+r<-.jcall(obj="supervised.nnet.gwann.GWANN_RInterface",method="run",returnSig = "Lsupervised/nnet/Return_R;",
 
           # [[D
           .jarray(x_train,dispatch=T),
