@@ -1,5 +1,6 @@
 gwann_nnet <- list(
                 library = "gwann",
+                label ="Basic aritficial neural network",
                 loop = NULL,
                 type = "Regression",
                 parameters = data.frame( parameter = c("n","bs","lr","norm"),
@@ -30,8 +31,7 @@ gwann_nnet <- list(
                 },
 
                 predict = function(modelFit, newdata, preProc = NULL, submodels = NULL) {
-
-                  out <- gwann::predict(modelFit$finalModel,newdata)
+                  out <- gwann::predict_gwann(modelFit,newdata)
                   out
                 },
 
@@ -42,6 +42,11 @@ gwann_nnet <- list(
 )
 
 if( F ) {
+
+  roxygen2::roxygenise()
+  detach("package:gwann", unload=TRUE)
+  remove.packages("gwann")
+  devtools::install_local(".")
 
   library(gwann)
   library(caret)

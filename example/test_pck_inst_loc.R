@@ -34,7 +34,7 @@ g<-gwann(x_train=x[-s_test,],y_train=y[-s_test],w_train=dm[-s_test,-s_test],
 p1<-diag(g$predictions)
 print(p1[1:5])
 
-p2<-diag(predict(g,x_pred1))
+p2<-diag(predict_gwann(g,x_pred1))
 print(p2[1:5])
 
 #################################################################
@@ -49,5 +49,5 @@ n<-nnet(x_train=x[-s_test,],y_train=y[-s_test],
 p1<-n$predictions[,1]
 print(p1[1:5])
 
-predict(n,x_pred1)
+predict_gwann(n,x_pred1)
 

@@ -160,7 +160,7 @@ nnet<-function(x_train,y_train,x_pred,
 #' @param ro GWANN model as Java object.
 #' @param x_pred Matrix of prediction data. Rows are observations, columns are independent variables.
 #' @export
-predict<-function(model,x_pred) {
+predict_gwann<-function(model,x_pred) {
   ro<-model$ro
   if( rJava::`%instanceof%`(ro$nnet,"supervised.nnet.gwann.GWANN") ) {
     #print("GWANN")

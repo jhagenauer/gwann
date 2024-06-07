@@ -2,4 +2,4 @@
 
 export(gwann)
 export(nnet)
-export(predict)
+export(predict_gwann)
