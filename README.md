@@ -22,10 +22,10 @@ Java JDK 1.2 or higher (for JRI/REngine JDK 1.4 or higher). If it is not already
     x<-as.matrix(toy4[,c("x1","x2")])
     y<-as.numeric(toy4[,c("y")] )
     dm<-as.matrix(dist(toy4[,c("lon","lat")])  )
-    s_test<-sample(nrow(x),0.3*nrow(x)) # indices of test samples
+    idx_pred<-sample(nrow(x),0.3*nrow(x)) # indices of prediction samples
     
-    r<-gwann(x_train=x[-s_test,],y_train=y[-s_test],w_train=dm[-s_test,-s_test],
-         x_pred=x[s_test,],w_pred=dm[-s_test,s_test],
+    r<-gwann(x_train=x[-idx_pred,],y_train=y[-idx_pred],w_train=dm[-idx_pred,-idx_pred],
+         x_pred=x[idx_pred,],w_pred=dm[-idx_pred,idx_pred],
          nrHidden=4,batchSize=50,lr=0.1,optimizer="adam",cv_patience=9999,
          adaptive=F,
          bwSearch="goldenSection",bwMin=min(dm)/4, bwMax=max(dm)/4,
@@ -43,9 +43,10 @@ Java JDK 1.2 or higher (for JRI/REngine JDK 1.4 or higher). If it is not already
 ### Note
 
 - If you get `java.lang.OutOfMemoryError: Java heap space` put `options(java.parameters="-Xmx8g")` before loading the package and adjust it to your available memory. To take effect, you most likely have to restart R/RStudio then.
-- The learning rate (lr), the batch size (batchSize) and the number of hidden neurons (nrHidden) have a substantial effect on the performance and therefore should be chosen carefully. (The number of iterations as well as the bandwidth are also important but are by default automatically determined by GWANN using cross-validation.) 
+- The learning rate (lr), the batch size (batchSize) and the number of hidden neurons (nrHidden) have a substantial effect on the performance and therefore should be chosen carefully. (The number of iterations as well as the bandwidth are also important but are by default automatically determined by GWANN using cross-validation.)
+- In particular large values of batchSize (50% of total data size) have often shown to be useful.
 - Transforming the data to make their distributions approximally normal often improves the performance of GWANN.
-- Test different optimizers.
+- Test different optimizers, i.e. 'nesterov' and 'adam'.
 
 ### References
 
