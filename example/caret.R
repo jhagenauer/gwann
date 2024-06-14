@@ -25,7 +25,7 @@ gwann_nnet <- list(
                           norm=param$norm,
                           nrHidden=param$n,batchSize=param$bs,lr=param$lr,
                           optimizer="nesterov",
-                          cv_patience=99,
+                          cv_patience=200,
                           threads=15
                   )
                 },
