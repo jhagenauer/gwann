@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.Random;
 
 import org.jblas.DoubleMatrix;
 
@@ -78,7 +79,7 @@ public class GWANN_RInterface {
 		Transform[] explTrans = norm ? new Transform[] {Transform.zScore} : new Transform[] {};
 				
 		DoubleMatrix W = new DoubleMatrix(W_train);
-		List<Entry<List<Integer>, List<Integer>>> innerCvList = SupervisedUtils.getKFoldCVList( (int)cv_folds, (int)cv_repeats, xArray_train.length, seed);
+		List<Entry<List<Integer>, List<Integer>>> innerCvList = SupervisedUtils.getKFoldCVList( (int)cv_folds, (int)cv_repeats, xArray_train.length, new Random(seed));
 		
 		List<double[]> xTrain_list = Arrays.asList(xArray_train);
 		List<Double> yTrain_list = new ArrayList<>();

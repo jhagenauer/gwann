@@ -10,6 +10,8 @@ library(rJava)
 
 .jmethods("supervised.nnet.gwann.GWANN_RInterface")
 
+.jmethods("supervised.nnet.NNet_RInterface")
+
 data(toy4)
 
 dm<-as.matrix( dist(toy4[,c("lon","lat")])  )
@@ -93,7 +95,7 @@ r<-.jcall(obj="supervised.nnet.gwann.GWANN_RInterface",method="run",returnSig = 
 head( diag(r$predictions) )
 
 p<-.jcall(obj="supervised.nnet.gwann.GWANN_RInterface",method="predict",returnSig = "[[D",
-          r$gwann,
+          r$ro,
           .jarray(x_pred,dispatch=T)
 )
 p2<-sapply(p,.jevalArray)

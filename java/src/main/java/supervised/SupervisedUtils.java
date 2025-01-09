@@ -9,7 +9,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Random;
-import java.util.Set;
 
 import org.apache.commons.math3.stat.correlation.PearsonsCorrelation;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
@@ -19,8 +18,6 @@ import org.jblas.DoubleMatrix;
 import org.jblas.Solve;
 import org.jblas.exceptions.LapackException;
 
-import supervised.nnet.NNet.Optimizer;
-import utils.DataUtils;
 import utils.MatrixNormalizer;
 
 public class SupervisedUtils {
@@ -28,7 +25,7 @@ public class SupervisedUtils {
 	private static Logger log = LogManager.getLogger(SupervisedUtils.class);
 	
 	public static List<Entry<List<Integer>, List<Integer>>> getKFoldCVList(int numFolds, int numRepeats, int numSamples ) {
-		return getKFoldCVList(numFolds, numRepeats, numSamples, 0);
+		return getKFoldCVList(numFolds, numRepeats, numSamples, new Random() );
 	}
 		
 	public static List<Integer> getIndicesWithNoNaN( List<double[]> samples, int ta ) {
@@ -40,19 +37,18 @@ public class SupervisedUtils {
 	}
 
 
-	public static List<Entry<List<Integer>, List<Integer>>> getKFoldCVList(int numFolds, int numRepeats, int numSamples, int seed ) {
+	public static List<Entry<List<Integer>, List<Integer>>> getKFoldCVList(int numFolds, int numRepeats, int numSamples, Random r ) {
 		List<Integer> samplesIdx = new ArrayList<>();
 		for (int i = 0; i < numSamples; i++)
 			samplesIdx.add(i);
-		return getKFoldCVList(numFolds, numRepeats, samplesIdx, seed);
+		return getKFoldCVList(numFolds, numRepeats, samplesIdx, r);
 	}
 	
 	public static List<Entry<List<Integer>, List<Integer>>> getKFoldCVList(int numFolds, int numRepeats, List<Integer> samplesIdx ) {
-		return getKFoldCVList(numFolds, numRepeats, samplesIdx,0);
+		return getKFoldCVList(numFolds, numRepeats, samplesIdx, new Random() );
 	}
 	
-	public static <T> List<Entry<List<T>, List<T>>> getKFoldCVList(int numFolds, int numRepeats, List<T> samples, int seed ) {
-		Random r = new Random(seed);		
+	public static <T> List<Entry<List<T>, List<T>>> getKFoldCVList(int numFolds, int numRepeats, List<T> samples, Random r ) {
 		List<Entry<List<T>, List<T>>> cvList = new ArrayList<Entry<List<T>, List<T>>>();
 		for (int repeat = 0; repeat < numRepeats; repeat++) {
 			
@@ -79,15 +75,14 @@ public class SupervisedUtils {
 	}
 	
 	@Deprecated
-	public static List<Entry<List<Integer>, List<Integer>>> getCVList(int numTrainSamples, int numRepeats, int numSamples, int seed ) {
+	public static List<Entry<List<Integer>, List<Integer>>> getCVList(int numTrainSamples, int numRepeats, int numSamples, Random r ) {
 		List<Integer> samplesIdx = new ArrayList<>();
 		for (int i = 0; i < numSamples; i++)
 			samplesIdx.add(i);
-		return getCVList(numTrainSamples, numRepeats, samplesIdx, seed);		
+		return getCVList(numTrainSamples, numRepeats, samplesIdx, r);		
 	}
 	
-	public static <T> List<Entry<List<T>, List<T>>> getCVList(int numTrainSamples, int numRepeats, List<T> samples, int seed ) {
-		Random r = new Random(seed);				
+	public static <T> List<Entry<List<T>, List<T>>> getCVList(int numTrainSamples, int numRepeats, List<T> samples, Random r ) {
 		List<Entry<List<T>, List<T>>> cvList = new ArrayList<Entry<List<T>, List<T>>>();
 		for (int repeat = 0; repeat < numRepeats; repeat++) {			
 			List<T> train = new ArrayList<>(samples);			
@@ -324,7 +319,7 @@ public class SupervisedUtils {
 	}
 	
 	public static void main(String[] args) {
-		List<Entry<List<Integer>, List<Integer>>> cvList = getKFoldCVList(2,1,10,0);
+		List<Entry<List<Integer>, List<Integer>>> cvList = getKFoldCVList(2,1,10, new Random() );
 		System.out.println(cvList);;
 	}
 
@@ -365,6 +360,9 @@ public class SupervisedUtils {
 				int[] trainIdx = SupervisedUtils.toIntArray(outerTrainFinal);
 				int[] testIdx = SupervisedUtils.toIntArray(outerTestFinal);
 				
+				assert trainIdx.length > 0 : trainIdx.length;
+				assert testIdx.length > 0 : testIdx.length;
+				
 				DoubleMatrix XTrain = X.getRows(trainIdx);
 				DoubleMatrix YTrain = Y.getRows(trainIdx);
 				
@@ -382,7 +380,7 @@ public class SupervisedUtils {
 					mny = new MatrixNormalizer(respTrans, YTrain, false);
 					mny.normalize(YTest);
 				}*/
-									
+													
 				DoubleMatrix Xt = XTrain.transpose();
 				DoubleMatrix XtX = Xt.mmul(XTrain);
 				DoubleMatrix beta;

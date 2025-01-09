@@ -35,8 +35,10 @@ public class GWANNUtils {
 			
 	// cleaner interface
 	public static ReturnObject buildGWANN( 
-			List<double[]> x_train_, List<Double> y_train_, DoubleMatrix W_train_train, 
-			List<double[]> x_test_, List<Double> y_test_, DoubleMatrix W_train_test, 
+			List<double[]> x_train_, List<Double> y_train_, 
+			DoubleMatrix W_train_train, // only needed for adaptive
+			List<double[]> x_test_, List<Double> y_test_, // only needed for error calculation etc
+			DoubleMatrix W_train_test, 
 			int[] nrHidden, double[] eta, Optimizer opt, 
 			int batchSize, int maxIt, int patience,  
 			GWKernel kernel, double bw, boolean adaptive, 
@@ -44,7 +46,7 @@ public class GWANNUtils {
 			Transform[] expTrans, Transform[] respTrans, int seed ) {
 		
 		Random r = new Random(seed);		
-		double[][] kW = adaptive ? GWUtils.getKernelWeightsAdaptive(W_train_train, W_train_test, kernel, (int) bw).toArray2() : GWUtils.getKernelWeights(W_train_test, kernel, bw).toArray2();
+		double[][] kW = adaptive ? GWUtils.getKernelWeightsAdaptive(W_train_test, kernel, (int) bw).toArray2() : GWUtils.getKernelWeights(W_train_test, kernel, bw).toArray2();
 			
 		List<double[]> x_train = new ArrayList<>();
 		for( double[] d : x_train_ )
@@ -111,7 +113,7 @@ public class GWANNUtils {
 						
 		Function[][] layers = layerList.toArray( new Function[][] {} );
 		double[][][] weights = NNetUtils.getFullyConnectedWeights(layers, NNetUtils.initMode.gorot_unif, seed);						
-		GWANN gwann = new GWANN(layers, weights, eta, opt);
+		GWANN gwann = new GWANN(layers, weights, eta, opt,lambda);
 				
 		List<Double> errors = new ArrayList<>();	
 		int noImp = 0;
@@ -224,7 +226,7 @@ public class GWANNUtils {
 			List<double[]> xArray, List<Double> yArray, DoubleMatrix W, List<Entry<List<Integer>, List<Integer>>> innerCvList, 
 			GWKernel kernel, double bw, boolean adaptive, double[] eta, int batchSize, Optimizer opt, int[] nrHidden, int iterations, int patience, 
 			int threads, double lambda, Transform[] explTrans, Transform[] respTrans, int seed ) {
-		return getErrors_CV(xArray,yArray,W,innerCvList,kernel,bw,adaptive,eta,batchSize,opt,nrHidden,iterations,patience,threads,lambda, explTrans, respTrans, seed);		
+		return getErrors_CV(xArray,yArray,W,innerCvList,kernel,bw,adaptive,eta,batchSize,opt,nrHidden,iterations,patience,threads,lambda, explTrans, respTrans, seed, false);		
 	}
 	
 	private static int max_its;
@@ -305,7 +307,7 @@ public class GWANNUtils {
 		
 		public GWANN_CV( List<double[]> xArray, List<Double> yArray, DoubleMatrix W, List<Integer> trainIdx, List<Integer> testIdx, 
 				GWKernel kernel, double bw, boolean adaptive, double[] eta, int batchSize, Optimizer opt, int[] nrHidden, 
-				double a, Transform[] explTrans, Transform[] respTrans, int seed ) {
+				double lambda, Transform[] explTrans, Transform[] respTrans, int seed ) {
 				
 			this.r = new Random(seed);
 			this.batchSize = batchSize;
@@ -341,7 +343,7 @@ public class GWANNUtils {
 			DoubleMatrix W_train_test = W.get( trainIdxA, DataUtils.toIntArray(testIdx)); // train to test
 			DoubleMatrix W_train_train = W.get(trainIdxA,trainIdxA);
 							
-			kW = adaptive ? GWUtils.getKernelWeightsAdaptive(W_train_train, W_train_test, kernel, (int) bw).toArray2() : GWUtils.getKernelWeights(W_train_test, kernel, bw).toArray2();
+			kW = adaptive ? GWUtils.getKernelWeightsAdaptive(W_train_test, kernel, (int) bw).toArray2() : GWUtils.getKernelWeights(W_train_test, kernel, bw).toArray2();
 								
 			desired_orig_diag = new double[testIdx.size()];
 			for( int i = 0; i < y_test.size(); i++ ) {
@@ -383,7 +385,7 @@ public class GWANNUtils {
 								
 			Function[][] layers = layerList.toArray( new Function[][] {} );
 			double[][][] weights = NNetUtils.getFullyConnectedWeights(layers, NNetUtils.initMode.gorot_unif, seed);						
-			gwann = new GWANN(layers, weights, eta, opt);
+			gwann = new GWANN(layers, weights, eta, opt,lambda);
 			
 			batchReservoir = new ArrayList<>();
 			for (int k = 0; k < x_train.size(); k++)

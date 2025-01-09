@@ -4,8 +4,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -55,8 +57,9 @@ public class GWUtils {
 			w = Math.exp(-dist / bw);
 		else
 			throw new RuntimeException("No valid kernel given");
-		if (Double.isNaN(w))
-			throw new RuntimeException("NaN kernel value " + dist + ", " + bw + ", " + w);
+		
+		if (Double.isNaN(w)) 
+			throw new RuntimeException("NaN kernel value! Kernel: "+k+", dist: " + dist + ", bw: " + bw + ", w: " + w);					
 		return w;
 	}
 	
@@ -90,30 +93,21 @@ public class GWUtils {
 		return a;
 	}
 	
-	// Adaptive bw
-	public static DoubleMatrix getKernelWeightsAdaptive(DoubleMatrix Wtrain, DoubleMatrix Wk, GWKernel kernel, int nb ) {
-		DoubleMatrix kW = new DoubleMatrix(Wk.rows,Wk.columns);
-		
-		if( nb >= Wtrain.columns ) {
-			//log.warn("nb to large ("+nb+">="+Wtrain.columns+")... setting nb temporally to "+(Wtrain.columns-1) );
-			nb = Wtrain.columns-1;
-		}			
-		
-		for (int i = 0; i < Wk.rows; i++) {
-			//double bw = Double.POSITIVE_INFINITY;
-			double bw = Wtrain.getRow(i).sort().get(nb);
-			double[] w = new double[Wk.columns];
-			for (int j = 0; j < w.length; j++)
-				w[j] = GWUtils.getKernelValue(kernel, Wk.get(i, j), bw);
-			kW.putRow(i,new DoubleMatrix(w));
+	public static DoubleMatrix getKernelWeightsAdaptive(DoubleMatrix Wtest, GWKernel kernel, int nb ) {			
+		DoubleMatrix kW = new DoubleMatrix(Wtest.rows,Wtest.columns);
+				
+		for (int i = 0; i < Wtest.columns; i++) {		
+			
+			double bw = Wtest.getColumn(i).sort().get(nb);
+			double[] w = new double[Wtest.rows];
+			for (int j = 0; j < Wtest.rows; j++) 
+				w[j] = GWUtils.getKernelValue(kernel, Wtest.get(j, i), bw);			
+			kW.putColumn(i,new DoubleMatrix(w));
 		}
-		
-		// debug only
-		//for( int i = 0; i < kW.data.length; i++ ) kW.data[i] = 1.0;
 		
 		return kW;
 	}
-		
+			
 	public static DoubleMatrix getKernelWeights( DoubleMatrix W, GWKernel kernel, double bw ) {
 		DoubleMatrix kW = new DoubleMatrix(W.rows,W.columns);
 		for (int i = 0; i < W.rows; i++) {

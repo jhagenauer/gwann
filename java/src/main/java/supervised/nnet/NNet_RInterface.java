@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.Random;
 
 import supervised.SupervisedUtils;
 import supervised.nnet.NNet.Optimizer;
@@ -16,15 +17,17 @@ public class NNet_RInterface {
 	public static Return_R run(
 			double[][] xArray_train, 
 			double[] yArray_train, 
-			double[][] xArray_pred, 
+			
+			double[][] xArray_pred,
+			
 			boolean norm,
 			double nr_hidden, double batchSize, 
 			String optim, 
 			double eta_, 
-			boolean linOut, 
-						
+			boolean linOut,						
 			double iterations_,double cv_max_iterations,double cv_patience, double cv_folds_, double cv_repeats_,double permutations_,double threads, 
-			int seed) {
+			int seed
+		) {
 				
 		Optimizer opt;
 		if( optim.equalsIgnoreCase("nesterov") )
@@ -46,7 +49,7 @@ public class NNet_RInterface {
 		Transform[] respTrans = norm ? new Transform[] {Transform.zScore} : new Transform[] {};
 		Transform[] explTrans = norm ? new Transform[] {Transform.zScore} : new Transform[] {};
 				
-		List<Entry<List<Integer>, List<Integer>>> innerCvList = SupervisedUtils.getKFoldCVList( (int)cv_folds, (int)cv_repeats, xArray_train.length, seed);
+		List<Entry<List<Integer>, List<Integer>>> innerCvList = SupervisedUtils.getKFoldCVList( (int)cv_folds, (int)cv_repeats, xArray_train.length, new Random(seed) );
 		
 		List<double[]> xTrain_list = Arrays.asList(xArray_train);
 		List<Double> yTrain_list = new ArrayList<>();
