@@ -24,8 +24,8 @@ w_pred1 <- dm[-s_test, s_test]
 
 g<-gwann(x_train=x[-s_test,],y_train=y[-s_test],w_train=dm[-s_test,-s_test],
          x_pred=x_pred1,w_pred=w_pred1,
-         nrHidden=4,batchSize=100,lr=0.1,
-         optimizer="adam",kernel="gaussian",
+         nrHidden=4,batchSize=50,lr=0.01,
+         optimizer="nesterov",kernel="gaussian",
          adaptive=F,
          bandwidth=99,
          cv_patience=99,
@@ -41,8 +41,8 @@ print(p2[1:5])
 
 n<-nnet(x_train=x[-s_test,],y_train=y[-s_test],
          x_pred=x_pred1,
-         nrHidden=4,batchSize=100,lr=0.1,
-         optimizer="adam",
+         nrHidden=4,batchSize=50,lr=0.01,
+         optimizer="nesterov",
          cv_patience=99,
          threads=15
 )

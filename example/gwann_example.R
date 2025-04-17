@@ -11,11 +11,11 @@ s_test<-sample(nrow(x),0.3*nrow(x)) # indices of test samples
 
 r<-gwann(x_train=x[-s_test,],y_train=y[-s_test],w_train=dm[-s_test,-s_test],
          x_pred=x[s_test,],w_pred=dm[-s_test,s_test],
-         nrHidden=4,batchSize=50,lr=0.1,cv_patience=9999,
+         nrHidden=4,batchSize=50,lr=0.1,cv_patience=99,
          adaptive=F,
          bwSearch="goldenSection",
          bwMin=min(dm)/4, bwMax=max(dm)/4,
-         threads=1
+         threads=4
 )
 p<-diag(r$predictions)
 print(paste("RMSE: ",sqrt(mean((p-y[s_test])^2))))

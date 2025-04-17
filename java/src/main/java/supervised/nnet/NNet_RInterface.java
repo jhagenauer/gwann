@@ -68,7 +68,7 @@ public class NNet_RInterface {
 		double lambda = 0.0;
 						
 		if( iterations > 0 ) { // bw given
-			System.out.println("Iterations and bandwidth given. cv_max_iterations and cv_patience are ignored.");
+			System.out.println("Iterations given. cv_max_iterations and cv_patience are ignored.");
 			List<List<Double>> errors = NNetUtils.getErrors_CV(xTrain_list, yTrain_list, innerCvList, eta, (int)batchSize, opt, lambda, new int[] {(int)nr_hidden}, (int)iterations, (int)iterations, (int)threads, explTrans, respTrans);
 						
 			double mean = 0;
@@ -78,7 +78,7 @@ public class NNet_RInterface {
 			best_its = (int)iterations;				
 		
 		} else {
-			System.out.println("Pre-specified bandwidth...");
+			System.out.println("Pre-specified iterations...");
 			List<List<Double>> errors = NNetUtils.getErrors_CV(xTrain_list, yTrain_list, innerCvList, eta, (int)batchSize, opt, lambda, new int[] {(int)nr_hidden}, (int)cv_max_iterations, (int)cv_patience, (int)threads, explTrans, respTrans);
 			double[] m = NNetUtils.getBestErrorParams(errors);
 			
@@ -176,5 +176,22 @@ public class NNet_RInterface {
 		for( int i = 0; i < l.size(); i++ )
 			d[i] = l.get(i);
 		return d;
+	}
+	
+	public static void main(String[] args ) {
+		Random r = new Random();
+		double[][] xArray = new double[1000][];
+		double[] yArray = new double[xArray.length];
+		double[][] xArray_pred = xArray;
+		
+		for( int i = 0; i < xArray.length; i++ ) {
+			double x1 = r.nextGaussian();
+			double x2 = r.nextGaussian();
+			double y = 2*x1 + Math.pow(x2,2) + r.nextGaussian();
+			xArray[i] = new double[] {x1,x2};
+			yArray[i] = y;
+		}
+				
+		Return_R rr = NNet_RInterface.run(xArray, yArray, xArray_pred, true, 4, 10, "nesterov", 0.01, true, -1, 999999, 100, 10, 1, -1, 4, 999);
 	}
 }

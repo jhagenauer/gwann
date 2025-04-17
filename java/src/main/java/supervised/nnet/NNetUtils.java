@@ -181,7 +181,8 @@ public class NNetUtils {
 				no_imp++;
 		}
 		
-		nnet.setWeights(weights_best);
+		if( weights_best != null)
+			nnet.setWeights(weights_best);
 	
 		// get test response and denormalize
 		List<double[]> test_response = new ArrayList<>();

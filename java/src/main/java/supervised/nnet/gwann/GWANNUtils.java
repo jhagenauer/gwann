@@ -2,7 +2,6 @@ package supervised.nnet.gwann;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Random;
@@ -115,17 +114,15 @@ public class GWANNUtils {
 		Function[][] layers = layerList.toArray( new Function[][] {} );
 		double[][][] weights = NNetUtils.getFullyConnectedWeights(layers, NNetUtils.initMode.gorot_unif, seed);						
 		GWANN gwann = new GWANN(layers, weights, eta, opt,lambda);
-				
+						
+		List<Integer> batchReservoir = new ArrayList<>();		
+		int idx = 0;		
 		List<Double> errors = new ArrayList<>();	
-		int noImp = 0;
-		double loc_best_test_error = Double.POSITIVE_INFINITY;	
-		
-		List<Integer> batchReservoir = new ArrayList<>();
-		for (int k = 0; k < x_train.size(); k++)
-			batchReservoir.add(k);
-		int idx = 0;
-			
-		for (int it = 0; it < maxIt && noImp < patience; it++) {
+		int no_imp = 0;
+		double test_error_best = Double.POSITIVE_INFINITY;
+		double[][][] weights_best = null;
+		int it_best = 0;
+		for (int it = 0; it < maxIt && no_imp < patience; it++) {
 			
 			List<double[]> x = new ArrayList<>();
 			List<double[]> y = new ArrayList<>();
@@ -139,13 +136,10 @@ public class GWANNUtils {
 				}
 			} else {						
 				while (x.size() < batchSize) {
-					
-					if( idx == batchReservoir.size() ) {
-						Collections.shuffle(batchReservoir,r);
-						idx = 0;
-					}
-					
-					int k = batchReservoir.get(idx++);
+					if (batchReservoir.isEmpty())
+						for (int j = 0; j < x_train.size(); j++)
+							batchReservoir.add(j);
+					int k = batchReservoir.remove(r.nextInt(batchReservoir.size()));
 					x.add(x_train.get(k));
 					y.add(y_train.get(k));	
 					gwWeights.add(kW[k]); 
@@ -159,16 +153,22 @@ public class GWANNUtils {
 				double[] d = gwann.present(x_test.get(i));
 				ln_y.denormalize(d, i);
 				response_diag_denormalized[i] = d[i]; // only diagonal
-			}						
+			}		
+			
 			double test_error = SupervisedUtils.getRMSE(response_diag_denormalized, desired_orig_diag);
 			errors.add(test_error);
 			
-			if (test_error < loc_best_test_error) {
-				loc_best_test_error = test_error;
-				noImp = 0;
+			if (test_error < test_error_best) {
+				test_error_best = test_error;
+				weights_best = gwann.getCopyOfWeights();
+				it_best = it;
+				no_imp = 0;
 			} else
-				noImp++;				
+				no_imp++;			
 		}
+		
+		if( weights_best != null)
+			gwann.setWeights(weights_best);
 							
 		// get full response and denormalize
 		List<double[]> response_denormalized= new ArrayList<>();
