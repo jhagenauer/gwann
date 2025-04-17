@@ -139,11 +139,9 @@ public class NNetUtils {
 	
 		List<Integer> batchReservoir = new ArrayList<>();
 		List<Double> errors = new ArrayList<>();
-		int no_imp = 0;
-		
+		int no_imp = 0;		
 		double test_error_best = Double.POSITIVE_INFINITY;
-		double[][][] weights_best = null;
-		int it_best = 0;
+		int it_best = -1;
 		for (int it = 0; it < maxIt && no_imp < patience; it++) {
 	
 			if( batchSize > 0 ) {
@@ -174,16 +172,11 @@ public class NNetUtils {
 	
 			if (test_error < test_error_best) {
 				test_error_best = test_error;
-				weights_best = nnet.getCopyOfWeights();
-				it_best = it;
 				no_imp = 0;
 			} else
 				no_imp++;
 		}
 		
-		if( weights_best != null)
-			nnet.setWeights(weights_best);
-	
 		// get test response and denormalize
 		List<double[]> test_response = new ArrayList<>();
 		for (int i = 0; i < x_test.size(); i++)
@@ -196,7 +189,7 @@ public class NNetUtils {
 			response[i] = test_response.get(i)[0];
 												
 		ReturnObject ro = new ReturnObject();
-		ro.errors = errors.subList(0, it_best+1); // last error is cur error
+		ro.errors = errors;
 		ro.rmse = SupervisedUtils.getRMSE(response, test_desired_not_normalized);
 		ro.r2 = SupervisedUtils.getR2(response, test_desired_not_normalized );
 		ro.nnet = nnet;

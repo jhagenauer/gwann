@@ -115,13 +115,10 @@ public class GWANNUtils {
 		double[][][] weights = NNetUtils.getFullyConnectedWeights(layers, NNetUtils.initMode.gorot_unif, seed);						
 		GWANN gwann = new GWANN(layers, weights, eta, opt,lambda);
 						
-		List<Integer> batchReservoir = new ArrayList<>();		
-		int idx = 0;		
+		List<Integer> batchReservoir = new ArrayList<>();			
 		List<Double> errors = new ArrayList<>();	
 		int no_imp = 0;
 		double test_error_best = Double.POSITIVE_INFINITY;
-		double[][][] weights_best = null;
-		int it_best = 0;
 		for (int it = 0; it < maxIt && no_imp < patience; it++) {
 			
 			List<double[]> x = new ArrayList<>();
@@ -160,15 +157,10 @@ public class GWANNUtils {
 			
 			if (test_error < test_error_best) {
 				test_error_best = test_error;
-				weights_best = gwann.getCopyOfWeights();
-				it_best = it;
 				no_imp = 0;
 			} else
 				no_imp++;			
 		}
-		
-		if( weights_best != null)
-			gwann.setWeights(weights_best);
 							
 		// get full response and denormalize
 		List<double[]> response_denormalized= new ArrayList<>();
@@ -182,7 +174,7 @@ public class GWANNUtils {
 			response_denormalized_diag[i] = response_denormalized.get(i)[i];
 														
 		ReturnObject ro = new ReturnObject();
-		ro.errors = errors;
+		ro.errors = errors; 
 		ro.rmse = SupervisedUtils.getRMSE(response_denormalized_diag, desired_orig_diag);
 		ro.r2 = SupervisedUtils.getR2(response_denormalized_diag, desired_orig_diag );
 		ro.nnet = gwann;
