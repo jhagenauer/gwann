@@ -9,6 +9,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import javax.management.RuntimeErrorException;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jblas.DoubleMatrix;
@@ -93,15 +95,34 @@ public class GWUtils {
 		return a;
 	}
 	
-	public static DoubleMatrix getKernelWeightsAdaptive(DoubleMatrix Wtest, GWKernel kernel, int nb ) {			
-		DoubleMatrix kW = new DoubleMatrix(Wtest.rows,Wtest.columns);
+	@Deprecated
+	public static DoubleMatrix getKernelWeightsAdaptive(DoubleMatrix Wtrain, DoubleMatrix W_test_test, GWKernel kernel, int nb ) {
+ 		DoubleMatrix kW = new DoubleMatrix(W_test_test.rows,W_test_test.columns);	
+ 		for (int i = 0; i < W_test_test.rows; i++) {
+ 			double bw = Wtrain.getRow(i).sort().get(nb);
+ 			double[] w = new double[W_test_test.columns];
+ 			for (int j = 0; j < W_test_test.columns; j++)
+ 				w[j] = GWUtils.getKernelValue(kernel, W_test_test.get(i, j), bw);
+ 			kW.putRow(i,new DoubleMatrix(w));
+ 		}
+ 		return kW;
+ 	}
+	
+	public static DoubleMatrix getKernelWeightsAdaptive(DoubleMatrix W_train_test, GWKernel kernel, int nb ) {			
+		DoubleMatrix kW = new DoubleMatrix(W_train_test.rows,W_train_test.columns);
+		
+		if( W_train_test.rows < nb ) {
+			//log.error(W_train_test.rows + "x" + W_train_test.columns + ", nb:" + nb);
+			throw new RuntimeException(W_train_test.rows + "x" + W_train_test.columns + ", nb:" + nb);
+			//System.exit(1);
+		}
+		assert W_train_test.rows >= nb : W_train_test.rows + "x" + W_train_test.columns + ", nb:" + nb; 
 				
-		for (int i = 0; i < Wtest.columns; i++) {		
-			
-			double bw = Wtest.getColumn(i).sort().get(nb);
-			double[] w = new double[Wtest.rows];
-			for (int j = 0; j < Wtest.rows; j++) 
-				w[j] = GWUtils.getKernelValue(kernel, Wtest.get(j, i), bw);			
+		for (int i = 0; i < W_train_test.columns; i++) {					
+			double bw = W_train_test.getColumn(i).sort().get(nb);
+			double[] w = new double[W_train_test.rows];
+			for (int j = 0; j < W_train_test.rows; j++) 
+				w[j] = GWUtils.getKernelValue(kernel, W_train_test.get(j, i), bw);			
 			kW.putColumn(i,new DoubleMatrix(w));
 		}
 		

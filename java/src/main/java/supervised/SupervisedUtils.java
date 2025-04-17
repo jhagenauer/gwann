@@ -333,6 +333,7 @@ public class SupervisedUtils {
 		return rss;
 	}
 
+	@Deprecated
 	public static int[] toIntArray(Collection<Integer> c) {
 		int[] j = new int[c.size()];
 		int i = 0;
@@ -341,6 +342,7 @@ public class SupervisedUtils {
 		return j;
 	}
 	
+	@Deprecated
 	public static double[] toDoubleArray(Collection<Double> c) {
 		double[] j = new double[c.size()];
 		int i = 0;
@@ -412,8 +414,10 @@ public class SupervisedUtils {
 					};					
 				}
 				ds.addValue(rmse);					
-			} catch( LapackException e ) {		
-				throw new RuntimeException(e.getMessage());
+			} catch( LapackException e ) {
+				log.warn(e.getMessage()+" (SupervisedUtils)");
+				return Double.MAX_VALUE;
+				//throw new RuntimeException(e.getMessage());
 			}
 		}					
 		return ds.getMean();

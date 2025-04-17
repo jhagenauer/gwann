@@ -1,7 +1,6 @@
 package utils;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
@@ -66,5 +65,23 @@ public class DataUtils {
 						new double[] { b.get(j)[ga[0]], b.get(j)[ga[1]] }
 					));		
 		return W;
+	}
+	
+	public static <T> List<T> subset_row( List<T> l, int[] idx ) {
+		List<T> r = new ArrayList<>();
+		for( int i : idx )
+			r.add(l.get(i));
+		return r;
+	}
+	
+	public static List<double[]> subset_row( List<double[]> l, List<Integer> li ) {
+		return subset_row(l, toIntArray(li) );
+	}
+	
+	public static List<double[]> subset_columns( List<double[]> x, int[] fa ) {
+		List<double[]> r = new ArrayList<>();
+		for( double[] d : x )
+			r.add( DataUtils.strip(d, fa) );
+		return r;
 	}
 }

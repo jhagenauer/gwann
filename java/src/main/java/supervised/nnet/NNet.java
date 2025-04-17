@@ -5,23 +5,29 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 
 import org.apache.commons.math3.linear.Array2DRowRealMatrix;
 import org.apache.commons.math3.linear.ArrayRealVector;
+import org.apache.commons.math3.linear.CholeskyDecomposition;
 import org.apache.commons.math3.linear.DecompositionSolver;
+import org.apache.commons.math3.linear.MatrixUtils;
+import org.apache.commons.math3.linear.NonPositiveDefiniteMatrixException;
 import org.apache.commons.math3.linear.QRDecomposition;
 import org.apache.commons.math3.linear.RealMatrix;
 import org.apache.commons.math3.linear.RealVector;
+import org.apache.commons.math3.linear.SingularValueDecomposition;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jblas.DoubleMatrix;
 
 import supervised.SupervisedNet;
-import supervised.SupervisedUtils;
 import supervised.nnet.activation.Constant;
 import supervised.nnet.activation.Function;
 
 public class NNet implements SupervisedNet {
+	
+	private static Logger log = LogManager.getLogger(NNet.class);
 	
 	public Function[][] layer;
 	public double[][][] weights;
@@ -30,8 +36,9 @@ public class NNet implements SupervisedNet {
 	double[][][] v = null, v_prev = null;
 
 	public double lambda = Double.NaN;
+	
 	public static enum Optimizer {
-		SGD, Momentum, Nesterov, RMSProp, Adam, Adam_ruder, LM, LBFGS
+		SGD, Momentum, Nesterov, RMSProp, Adam, Adam_ruder, LM, LM_ANA, LBFGS
 	};
 
 	protected Optimizer opt;
@@ -50,7 +57,6 @@ public class NNet implements SupervisedNet {
 		this.lambda = lambda;
 		this.layer = layer;
 		this.eta = eta;
-
 		this.weights = weights;
 		this.opt = opt;
 
@@ -88,10 +94,7 @@ public class NNet implements SupervisedNet {
 	        // Apply activation to net input
 	        if (l == 0) 
 	            for (int i = 0; i < ll_l; i++) 
-	                if (layer[l][i] instanceof Constant) 
-	                    out[l][i] = layer[l][i].f(Double.NaN);
-	                else 
-	                    out[l][i] = layer[l][i].f(in[i]);	            
+	            	out[l][i] = (layer[l][i] instanceof Constant) ? layer[l][i].f(Double.NaN) : layer[l][i].f(in[i]);          
 	        else 
 	            for (int i = 0; i < ll_l; i++) 
 	                out[l][i] = layer[l][i].f(in[i]);
@@ -122,9 +125,8 @@ public class NNet implements SupervisedNet {
 		
 		throw new RuntimeException("Dont use!");
 	}
-
-	protected double[][][] getErrorGradient(List<double[]> batch, List<double[]> y) {
-
+		
+	protected double[][][] getErrorGradient( double[] x, double[] y ) {
 		int ll = layer.length - 1; // index of last layer
 		double[][][] error_grad = new double[layer.length - 1][][];
 		double[][] delta = new double[layer.length - 1][];
@@ -134,46 +136,34 @@ public class NNet implements SupervisedNet {
 			error_grad[l-1] = new double[layer[l - 1].length][layer[l].length];
 		}
 		
-		for (int e = 0; e < batch.size(); e++) {
-			double[] desired = y.get(e);
-			double[][] out = presentInt(batch.get(e),weights)[0];
+		double[][] out = presentInt(x,weights)[0];
 
-			for (int l = ll; l > 0; l--) {
+		for (int l = ll; l > 0; l--) {
 				
-				for (int i = 0; i < layer[l].length; i++) { // for each neuron i of layer l
+			for (int i = 0; i < layer[l].length; i++) { // for each neuron i of layer l
 
-					double error_signal = 0;
-					if( l == ll )
-						error_signal = (out[l][i] - desired[i]);
-					else 
-						for (int j = 0; j < weights[l][i].length; j++)
-							if (!(layer[l + 1][j] instanceof Constant) ) // ignore useless weight to constant neurons
-								error_signal += delta[l][j] * weights[l][i][j];
+				double error_signal = 0;
+				if( l == ll )
+					error_signal = (out[l][i] - y[i]);
+				else 
+					for (int j = 0; j < weights[l][i].length; j++)
+						if (!(layer[l + 1][j] instanceof Constant) ) // ignore useless weight to constant neurons
+							error_signal += delta[l][j] * weights[l][i][j];
 										
-					delta[l-1][i] = layer[l][i].fDevFOut(out[l][i]) * error_signal;
-					for (int h = 0; h < layer[l - 1].length; h++)
-						error_grad[l - 1][h][i] += out[l - 1][h] * delta[l-1][i];
-				}
+				delta[l-1][i] = layer[l][i].fDevFOut(out[l][i]) * error_signal;
+				for (int h = 0; h < layer[l - 1].length; h++)
+					error_grad[l - 1][h][i] += out[l - 1][h] * delta[l-1][i];
 			}
-		}
-		
-		for (int l = 0; l < error_grad.length; l++) 
-		    for (int h = 0; h < error_grad[l].length; h++) 
-		        for (int i = 0; i < error_grad[l][h].length; i++) 
-		            error_grad[l][h][i] /= batch.size();
-			
+		}			
 		return error_grad;
 	}
 	
 	public static double mu = 0.9;
-	public static double decay = -1;
-	protected void update( Optimizer opt, double[][][] errorGrad, double[] leta ) {
-		double[] eta = new double[leta.length];
-		if( decay > 0 ) 
-			for( int i = 0; i < leta.length; i++ )
-				eta[i] = leta[i] * Math.pow(decay,t);
-		else
-			eta = leta;
+	public static double fac = 1.5;
+    public static double epsilon = 1e-8;
+	public static boolean center = false; 
+	
+	protected void update( Optimizer opt, double[][][] errorGrad, double[] eta ) {
 				
 		if( opt == Optimizer.SGD ) {
 			for (int l = 0; l < weights.length; l++)
@@ -213,7 +203,7 @@ public class NNet implements SupervisedNet {
 						weights[l][i][j] += -mu * v_prev[l][i][j] + v[l][i][j] + mu * v[l][i][j];
 					}
 		} else if( opt == Optimizer.RMSProp ) {
-			double eps = Math.pow(10, -8);
+			double eps = 1e-8;
 			double gamma = 0.9;
 			for (int l = 0; l < weights.length; l++)
 				for (int i = 0; i < weights[l].length; i++)
@@ -221,7 +211,6 @@ public class NNet implements SupervisedNet {
 						v[l][i][j] = gamma * v[l][i][j] + (1 - gamma) * errorGrad[l][i][j] * errorGrad[l][i][j];
 						weights[l][i][j] -= eta[l] * errorGrad[l][i][j] / Math.sqrt(v[l][i][j] + eps);
 					}
-			v_prev = errorGrad;
 		} else if( opt == Optimizer.Adam ) {
 			double b1 = 0.9, b2 = 0.999, eps = Math.pow(10, -8);
 			double p1 = (1 - Math.pow(b1, t));
@@ -264,12 +253,12 @@ public class NNet implements SupervisedNet {
 	private double error_prev = Double.MAX_VALUE;
 	
 	public double[] toDouble1D( double[][][] w) {				
-		List<Double> l = new ArrayList<>();
-		for( int a = 0; a < w.length; a++ )
-			for( int b = 0; b < w[a].length; b++ )
-				for( int c = 0; c < w[a][b].length; c++ ) 
-					l.add( w[a][b][c] );
-		return SupervisedUtils.toDoubleArray(l);				
+		List<Double> flat = new ArrayList<>();
+		for (double[][] mat : w)
+			for (double[] row : mat)
+				for (double val : row)
+					flat.add(val);
+		return flat.stream().mapToDouble(Double::doubleValue).toArray();			
 	}
 	
 	public void setWeights1D( double[] w) {
@@ -281,66 +270,82 @@ public class NNet implements SupervisedNet {
 	}
 	
 	public void train(List<double[]> x, List<double[]> y) {
-		
+						
 		if( opt == Optimizer.LM ) {
 						
-		    double epsilon = 1e-4; 
 			double[] residuals = computeResiduals(x, y);
 
-			RealMatrix jacobian = new Array2DRowRealMatrix( computeJacobian(x, epsilon).toArray2() ); 
+			RealMatrix jacobian = new Array2DRowRealMatrix( computeJacobian_chatgpt(x, epsilon, center).toArray2() );
+			
 			RealMatrix jacobianT = jacobian.transpose();           
 			RealMatrix hessianApprox = jacobianT.multiply(jacobian);
 			RealVector gradient = jacobianT.operate(new ArrayRealVector(residuals));
 
 			// Apply damping (Levenberg–Marquardt adjustment)
-			for (int i = 0; i < hessianApprox.getRowDimension(); i++) 
-				hessianApprox.addToEntry(i, i, lambda+0.0000000001 );
-
-			// Solve for weight updates
-			//DecompositionSolver solver = new LUDecomposition(hessianApprox).getSolver();            
-			DecompositionSolver solver = new QRDecomposition(hessianApprox).getSolver();
-			RealVector deltaWeights = solver.solve(gradient.mapMultiply(-1));
+			RealMatrix identity = MatrixUtils.createRealIdentityMatrix(hessianApprox.getRowDimension());
+			//hessianApprox = hessianApprox.add(identity.scalarMultiply(lambda));
+			hessianApprox = hessianApprox.add(identity.scalarMultiply(lambda * hessianApprox.getNorm()));
 			
-			// Update weights            
+			// Solve for weight updates
+			RealVector deltaWeights;
+			try {
+				DecompositionSolver solver = new CholeskyDecomposition(hessianApprox).getSolver();
+				deltaWeights = solver.solve(gradient.mapMultiply(-1));
+			} catch(NonPositiveDefiniteMatrixException e) {
+				try {
+					DecompositionSolver solver = new QRDecomposition(hessianApprox).getSolver();
+					deltaWeights = solver.solve(gradient.mapMultiply(-1));
+				} catch (Exception e2) {
+					DecompositionSolver solver = new SingularValueDecomposition(hessianApprox).getSolver();
+					deltaWeights = solver.solve(gradient.mapMultiply(-1));
+				}
+			}							
+			
+			// Update weights			
+			double alpha = eta[0];
+			//double alpha = Math.max(eta[0], Math.min(1.0, 1.0 / (1.0 + lambda))); // not that useful
 			int k = 0;
 			for( int a = 0; a < weights.length; a++ )
 				for( int b = 0; b < weights[a].length; b++ )
 					for( int c = 0; c < weights[a][b].length; c++ ) 
-						weights[a][b][c] += eta[a] * deltaWeights.getEntry(k++);
-						
-			double error = computeError(x, y);     
-            lambda = (error > error_prev) ? lambda * 1.25 : lambda / 1.25;            
-            error_prev = error;
-				            
-		} else if( opt == Optimizer.LBFGS ) {
+						weights[a][b][c] += alpha * deltaWeights.getEntry(k++);
 			
-			/*ObjectiveFunction objective = new ObjectiveFunction(point -> {
-				setWeights1D(point);
-				return computeError(x, y);
-	       });
-
-	        ObjectiveFunctionGradient gradient = new ObjectiveFunctionGradient(point -> {
-	        	setWeights1D(point);
-	        	return toDouble1D( getErrorGradient(x, y) );
-	        });
-	        
-	        // Optimize with L-BFGS
-	        LBFGS optimizer = new LBFGS();
-	        PointValuePair result = optimizer.optimize(
-	            new MaxEval(1000),
-	            objective,
-	            gradient,
-	            GoalType.MINIMIZE,
-	            new InitialGuess( toDouble1D(weights) )
-	        );
-	        
-	        setWeights1D(result.getPoint() );*/
-	        
-		} else {
-			double[][][] errorGrad = getErrorGradient(x, y);
+			double error = 0;
+			for( double r : computeResiduals(x, y) )
+				error += Math.pow(r,2);     
+            
+			lambda = (error > error_prev) ? lambda * fac : lambda / fac;       
+			//lambda = Math.min(Math.max(lambda, 1e-6), 1e6);     
+            error_prev = error;
+                        				            
+		} else {						
+			List<double[][][]> l = new ArrayList<>();
+			for( int i = 0; i < x.size(); i++ ) 
+				l.add( getErrorGradient( x.get(i), y.get(i) ) );
+			double[][][] errorGrad = calculateMeanOf3DList(l);							
 			update( opt, errorGrad, eta );
 		}
 		t++;
+	}
+	
+	protected static double[][][] calculateMeanOf3DList(List<double[][][]> arrays) {
+		
+		double[][][] first = arrays.get(0);
+		
+		double[][][] mean = new double[first.length][][];		
+		for( int i = 0; i < first.length; i++ ) {
+			mean[i] = new double[first[i].length][];
+			for( int j = 0; j < first[i].length; j++ )
+				mean[i][j] = new double[first[i][j].length];
+		}
+		
+		for( double[][][] array : arrays ) 
+			for( int i = 0; i < first.length; i++ ) 
+				for( int j = 0; j < first[i].length; j++ )
+					for( int k = 0; k < first[i][j].length; k++ )
+						mean[i][j][k] += array[i][j][k]/arrays.size();	
+		    
+	    return mean;
 	}
 
 	@Override
@@ -402,7 +407,7 @@ public class NNet implements SupervisedNet {
 		}
 	}
 
-	public int getNumParameters() {
+	public int getNumWeights() {
 		int sum = 0;
 		for (int i = 0; i < weights.length; i++)
 			for (int j = 0; j < weights[i].length; j++)
@@ -428,91 +433,67 @@ public class NNet implements SupervisedNet {
 		double[][] out = presentInt(x, w)[0];
 		return out[out.length - 1]; // output of last layer
 	}
-	
-	public DoubleMatrix computeJacobian(List<double[]> inputs, double epsilon) {
 		
-        int nWeights = 0;
-        for( double[][] from : weights )
-        	for( double[] to : from )
-        		nWeights += to.length;
-        
-        double[][] originalOutputs = new double[inputs.size()][];
-        for (int i = 0; i < inputs.size(); i++) 
-            originalOutputs[i] = forward(inputs.get(i), weights);
-               
-        // rows: outputs/activation functions, columns: weights
-        DoubleMatrix jacobian = new DoubleMatrix(inputs.size(), nWeights);
-                      
-    	int k = 0;
-    	for( int a = 0; a < weights.length; a++ )
-    		for( int b = 0; b < weights[a].length; b++ )
-    			for( int c = 0; c < weights[a][b].length; c++ ) {
-
-    				double[][] perturbed_out_plus = new double[inputs.size()][];
-    				weights[a][b][c] += epsilon;  
-    		        for (int i = 0; i < inputs.size(); i++) 
-    		        	perturbed_out_plus[i] = forward(inputs.get(i), weights);        		            
-    		        weights[a][b][c] -= epsilon; // Reset weight
-    		            		            		            
-    		         // Compute partial derivatives
-    		         for (int i = 0; i < inputs.size(); i++) 	               		                		             
-    		             for (int j = 0; j < originalOutputs[i].length; j++)     
-    		                jacobian.put(i, k, (perturbed_out_plus[i][j] - originalOutputs[i][j]) / epsilon);    		                 		             		             		           
-    		         k++;
-    			}    
-        return jacobian;
-    }
-	
-	public DoubleMatrix computeJacobianLowRank(List<double[]> inputs, double epsilon, int rank) {
-	    // Anzahl der Gewichte bestimmen
+	// chatgpt
+	public DoubleMatrix computeJacobian_chatgpt(List<double[]> inputs, double epsilon, boolean central) {
+	    // Calculate total number of weights
 	    int nWeights = 0;
 	    for (double[][] from : weights)
 	        for (double[] to : from)
 	            nWeights += to.length;
-
-	    // Original-Outputs berechnen
+	    
+	    // Store original outputs for all inputs
 	    double[][] originalOutputs = new double[inputs.size()][];
-	    for (int i = 0; i < inputs.size(); i++)
+	    for (int i = 0; i < inputs.size(); i++) 
 	        originalOutputs[i] = forward(inputs.get(i), weights);
+	    
+	    // Initialize Jacobian matrix (rows: inputs, columns: weights * output_dims)
+	    int outputDims = originalOutputs[0].length;
+	    DoubleMatrix jacobian = new DoubleMatrix(inputs.size(), nWeights * outputDims);
 
-	    // Anzahl der Outputs
-	    int nOutputs = originalOutputs[0].length;
-
-	    // Zufällige Vektoren für die Low-Rank-Approximation generieren
-	    DoubleMatrix randomVectors = DoubleMatrix.randn(nWeights, rank); // Zufällige Projektionen
-	    DoubleMatrix lowRankOutputs = new DoubleMatrix(inputs.size(), rank); // Für gestörte Outputs
-
-	    // Perturbationen anwenden
-	    int k = 0;
+	    int weightIndex = 0; 
+	    
 	    for (int a = 0; a < weights.length; a++) {
 	        for (int b = 0; b < weights[a].length; b++) {
 	            for (int c = 0; c < weights[a][b].length; c++) {
-	                // Zufällige Projektionen auf das Gewicht anwenden
-	                for (int r = 0; r < rank; r++) {
-	                    double perturbation = epsilon * randomVectors.get(k, r);
-	                    weights[a][b][c] += perturbation;
 
-	                    // Gestörte Outputs berechnen
-	                    for (int i = 0; i < inputs.size(); i++) {
-	                        double[] perturbedOutput = forward(inputs.get(i), weights);
-	                        for (int j = 0; j < nOutputs; j++) {
-	                            lowRankOutputs.put(i, r, lowRankOutputs.get(i, r) +
-	                                    (perturbedOutput[j] - originalOutputs[i][j]) / perturbation);
+	                         	 
+	                double[][] perturbedOutPlus = new double[inputs.size()][];
+	                double[][] perturbedOutMinus = new double[inputs.size()][];
+	                double originalWeight = weights[a][b][c]; 
+	                
+	                // Perturb positively
+	                weights[a][b][c] = originalWeight + epsilon;
+	                for (int i = 0; i < inputs.size(); i++) 
+	                	perturbedOutPlus[i] = forward(inputs.get(i), weights);
+	                	                
+	                if (central) {
+	                	// Perturb negatively
+	                	weights[a][b][c] = originalWeight - epsilon;
+	                	for (int i = 0; i < inputs.size(); i++) 
+	                		perturbedOutMinus[i] = forward(inputs.get(i), weights);	                	
+	                }	                
+	                weights[a][b][c] = originalWeight;
+	                
+	                // Compute finite differences for each input and output dimension
+	                for (int i = 0; i < inputs.size(); i++) {
+	                    for (int j = 0; j < outputDims; j++) {
+	                        double derivative;
+	                        if (central) {
+	                            derivative = (perturbedOutPlus[i][j] - perturbedOutMinus[i][j]) / (2 * epsilon);
+	                        } else {
+	                            derivative = (perturbedOutPlus[i][j] - originalOutputs[i][j]) / epsilon;
 	                        }
+	                        jacobian.put(i, weightIndex * outputDims + j, derivative);
 	                    }
-
-	                    // Gewicht zurücksetzen
-	                    weights[a][b][c] -= perturbation;
 	                }
-	                k++;
+	                weightIndex++;
 	            }
 	        }
 	    }
-
-	    // Jacobi-Matrix als Low-Rank-Approximation (U * V^T)
-	    return lowRankOutputs.mmul(randomVectors.transpose());
+	    return jacobian;
 	}
-	    
+
     // Compute residuals (errors) for all samples
     private double[] computeResiduals(List<double[]> inputs, List<double[]> targets) {
     	int output_size = targets.get(0).length;
@@ -526,21 +507,8 @@ public class NNet implements SupervisedNet {
         }
         return residuals;
     }
-
-    // Compute total mean squared error
-    private double computeError(List<double[]> inputs, List<double[]> targets) {
-    	int outputSize = targets.get(0).length;
-        double error = 0;
-        for (int i = 0; i < inputs.size(); i++) {
-            double[] output = forward(inputs.get(i), weights);
-            for (int j = 0; j < outputSize; j++) 
-                error += Math.pow( output[j] - targets.get(i)[j], 2);
-        }
-        return error / inputs.size();
-    }
-            
-    public double getENP(List<double[]> inputs) {
-    	DoubleMatrix jacobian = computeJacobian(inputs, 0.0001);
+    
+    public double getENP(DoubleMatrix jacobian) {
         
         int nRows = jacobian.getRows();
         int nCols = jacobian.getColumns();
@@ -554,5 +522,43 @@ public class NNet implements SupervisedNet {
         
         fisherInformation.muli( 1.0/nRows );
         return fisherInformation.diag().sum();
+    }
+    
+    public double getENP_2(List<double[]> x, List<double[]> y) {    	
+    	List<double[][][]> grads = new ArrayList<>();
+    	for( int i = 0; i < x.size(); i++ )
+    		grads.add( getErrorGradient(x.get(i), y.get(i) ));
+
+    	double trace = 0;
+    	for (double[][][] grad : grads) {
+    		double[] flat = toDouble1D(grad);
+    		for (double v : flat)
+    			trace += v * v;
+    	}
+
+    	return trace / grads.size(); // average over samples
+    }
+    
+    public static double[][][] deepCopy3DArray(double[][][] original) {
+        if (original == null) {
+            return null;
+        }
+
+        int dim1 = original.length;
+        double[][][] copy = new double[dim1][][];
+
+        for (int i = 0; i < dim1; i++) {
+            if (original[i] != null) {
+                int dim2 = original[i].length;
+                copy[i] = new double[dim2][];
+                for (int j = 0; j < dim2; j++) {
+                    if (original[i][j] != null) {
+                        copy[i][j] = original[i][j].clone(); // clone innermost 1D arrays
+                    }
+                }
+            }
+        }
+
+        return copy;
     }
 }

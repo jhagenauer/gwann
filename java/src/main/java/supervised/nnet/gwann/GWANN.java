@@ -1,5 +1,6 @@
 package supervised.nnet.gwann;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import supervised.nnet.NNet;
@@ -17,7 +18,7 @@ public class GWANN extends NNet {
 		super(l,weights,eta,m,lambda); 
 	}
 		
-	private double[][][] getErrorGradient( List<double[]> x, List<double[]> y, List<double[]> sampleWeights ) {
+	private double[][][] getErrorGradient( double[] x, double[] desired, double[] sw ) {
 		int ll = layer.length - 1; // index of last layer
 		double[][] error_signal = new double[layer.length][];
 		double[][][] error_grad = new double[layer.length-1][][];		
@@ -26,44 +27,37 @@ public class GWANN extends NNet {
 			error_grad[l-1] = new double[layer[l - 1].length][layer[l].length];
 		}
 		
-		for( int e = 0; e < x.size(); e++ ) {
-			double[] desired = y.get(e);
-			double[][] out = presentInt( x.get(e), weights )[0];
-			double[] sw = sampleWeights.get( e );
-												
-			for (int l = ll; l > 0; l--) {	
+		double[][] out = presentInt( x, weights )[0];											
+		for (int l = ll; l > 0; l--) {	
+			
+			for (int i = 0; i < layer[l].length; i++) { 
 				
-				for (int i = 0; i < layer[l].length; i++) { 
-					
-					double s = 0;
-					
-					if( l == ll ) {
-						s = (out[l][i] - desired[i]) * sw[i];
-						error_signal[l-1][i] = layer[l][i].fDevFOut(out[l][i]) * s;
-					} else {
-						for (int j = 0; j < weights[l][i].length; j++)
-							if( !( layer[l+1][j] instanceof Constant ) )
-								s += error_signal[l][j] * weights[l][i][j];		
-					}
-	
-					error_signal[l-1][i] = layer[l][i].fDevFOut(out[l][i]) * s;						
-					for( int h = 0; h < layer[l-1].length; h++ ) 
-						error_grad[l-1][h][i] += out[l-1][h] * error_signal[l-1][i];	
+				double s = 0;
 				
-				}				
-			}
-		}
-		
-		for (int l = 0; l < error_grad.length; l++) 
-		    for (int h = 0; h < error_grad[l].length; h++) 
-		        for (int i = 0; i < error_grad[l][h].length; i++) 
-		            error_grad[l][h][i] /= x.size();
+				if( l == ll ) {
+					s = (out[l][i] - desired[i]) * sw[i];
+					error_signal[l-1][i] = layer[l][i].fDevFOut(out[l][i]) * s;
+				} else {
+					for (int j = 0; j < weights[l][i].length; j++)
+						if( !( layer[l+1][j] instanceof Constant ) )
+							s += error_signal[l][j] * weights[l][i][j];		
+				}
+
+				error_signal[l-1][i] = layer[l][i].fDevFOut(out[l][i]) * s;						
+				for( int h = 0; h < layer[l-1].length; h++ ) 
+					error_grad[l-1][h][i] += out[l-1][h] * error_signal[l-1][i];	
+			
+			}				
+		}		
 		
 		return error_grad;
 	}
 		
 	public void train( List<double[]> x, List<double[]> y, List<double[]>  gwWeights) {
-		double[][][] errorGrad = getErrorGradient(x,y,gwWeights);				
+		List<double[][][]> l = new ArrayList<>();
+		for( int i = 0; i < x.size(); i++ ) 
+			l.add( getErrorGradient( x.get(i), y.get(i), gwWeights.get(i) ) );
+		double[][][] errorGrad = calculateMeanOf3DList(l);		
 		update(opt,errorGrad, eta);
 		t++;
 	}

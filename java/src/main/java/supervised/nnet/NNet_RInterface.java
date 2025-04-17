@@ -52,16 +52,16 @@ public class NNet_RInterface {
 		List<Entry<List<Integer>, List<Integer>>> innerCvList = SupervisedUtils.getKFoldCVList( (int)cv_folds, (int)cv_repeats, xArray_train.length, new Random(seed) );
 		
 		List<double[]> xTrain_list = Arrays.asList(xArray_train);
-		List<Double> yTrain_list = new ArrayList<>();
+		List<double[]> yTrain_list = new ArrayList<>();
 		for( double d : yArray_train )
-			yTrain_list.add(d);	
+			yTrain_list.add( new double[] { d } );	
 		
 		List<double[]> xPred_list = Arrays.asList(xArray_pred);
-		List<Double> yPred_list = new ArrayList<>();
+		List<double[]> yPred_list = new ArrayList<>();
 		/*for( double d : yArray_pred )
 			yPred_list.add(d);*/
 		for( int i = 0; i < xArray_pred.length; i++ )
-			yPred_list.add( Double.NaN );
+			yPred_list.add( new double[] { Double.NaN } );
 						
 		int best_its = -1;			
 		double bestValError = Double.POSITIVE_INFINITY;
@@ -109,10 +109,10 @@ public class NNet_RInterface {
 			new ListNormalizer(explTrans, xTrain_l);
 			
 			List<double[]> yTrain_l = new ArrayList<>();
-			for( double d : yTrain_list ) {
+			for( double[] d : yTrain_list ) {
 				double[] t = new double[yTrain_list.size()];
 				for( int i = 0; i < t.length; i++ )
-					t[i] = d;
+					t[i] = d[0];
 			}
 			ListNormalizer ln = new ListNormalizer(respTrans, yTrain_l);
 									

@@ -82,16 +82,16 @@ public class GWANN_RInterface {
 		List<Entry<List<Integer>, List<Integer>>> innerCvList = SupervisedUtils.getKFoldCVList( (int)cv_folds, (int)cv_repeats, xArray_train.length, new Random(seed));
 		
 		List<double[]> xTrain_list = Arrays.asList(xArray_train);
-		List<Double> yTrain_list = new ArrayList<>();
+		List<double[]> yTrain_list = new ArrayList<>();
 		for( double d : yArray_train )
-			yTrain_list.add(d);	
+			yTrain_list.add( new double[] {d});	
 		
 		List<double[]> xPred_list = Arrays.asList(xArray_pred);
-		List<Double> yPred_list = new ArrayList<>();
+		List<double[]> yPred_list = new ArrayList<>();
 		/*for( double d : yArray_pred )
 			yPred_list.add(d);*/
 		for( int i = 0; i < xArray_pred.length; i++ )
-			yPred_list.add( Double.NaN );
+			yPred_list.add( new double[] { Double.NaN } );
 						
 		List<Double> v = new ArrayList<>();
 		for (double w : W.data)
@@ -179,7 +179,7 @@ public class GWANN_RInterface {
 		if( permutations > 0 ) { // importance
 			System.out.println("Calculating feature importance...");
 			ReturnObject bg = GWANNUtils.buildGWANN(
-					xTrain_list, yTrain_list, W, 
+					xTrain_list, yTrain_list,
 					xTrain_list, yTrain_list, W, 
 					new int[] { (int)nr_hidden }, eta, opt, (int)batchSize, best_its, Integer.MAX_VALUE, kernel, adaptive && bw_ < 0 ?  Math.round(bestValBw*100/90) : bestValBw, adaptive, lambda, explTrans, respTrans,seed);
 						
@@ -191,10 +191,10 @@ public class GWANN_RInterface {
 			new ListNormalizer(explTrans, xTrain_l);
 			
 			List<double[]> yTrain_l = new ArrayList<>();
-			for( double d : yTrain_list ) {
+			for( double[] d : yTrain_list ) {
 				double[] t = new double[yTrain_list.size()];
 				for( int i = 0; i < t.length; i++ )
-					t[i] = d;
+					t[i] = d[0];
 			}
 			ListNormalizer ln = new ListNormalizer(respTrans, yTrain_l);
 									
@@ -231,7 +231,7 @@ public class GWANN_RInterface {
 		System.out.println("Building final model with"+(adaptive && bw_ < 0 ? " (adjusted) " : " ")+"bandwidth "+(adaptive && bw_ < 0 ?  Math.round(bestValBw*100/90) : bestValBw )+" and "+best_its+" iterations...");	
 		long time = System.currentTimeMillis();
 		ReturnObject tg = GWANNUtils.buildGWANN(
-				xTrain_list, yTrain_list, W, 
+				xTrain_list, yTrain_list,
 				xPred_list, yPred_list, new DoubleMatrix(W_train_pred), 
 				new int[] { (int)nr_hidden }, eta, opt, (int)batchSize, best_its, Integer.MAX_VALUE, kernel, bestValBw, adaptive, lambda, explTrans, respTrans,seed);
 		double secs = (System.currentTimeMillis()-time)/1000;			
