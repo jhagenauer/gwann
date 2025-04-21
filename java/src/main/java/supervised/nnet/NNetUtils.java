@@ -19,6 +19,7 @@ import supervised.nnet.activation.Constant;
 import supervised.nnet.activation.Function;
 import supervised.nnet.activation.Linear;
 import supervised.nnet.activation.TanH;
+import utils.DataUtils;
 import utils.ListNormalizer;
 import utils.Normalizer.Transform;
 
@@ -44,20 +45,11 @@ public class NNetUtils {
 					List<Integer> trainIdx = innerCvEntry.getKey();
 					List<Integer> testIdx = innerCvEntry.getValue(); 
 										
-					List<double[]> xTrain = new ArrayList<>();
-					List<double[]> yTrain = new ArrayList<>();
-					for (int i : trainIdx) {
-						xTrain.add(xArray.get(i));
-						yTrain.add(yArray.get(i));
-					}
-				
-					List<double[]> xVal = new ArrayList<>();
-					List<double[]> yVal = new ArrayList<>();
-					for (int i : testIdx) {
-						xVal.add(xArray.get(i));
-						yVal.add(yArray.get(i));
-					}
-				
+					List<double[]> xTrain = DataUtils.subset_row(xArray, trainIdx);
+					List<double[]> yTrain = DataUtils.subset_row(yArray, trainIdx);				
+					List<double[]> xVal = DataUtils.subset_row(xArray, testIdx);
+					List<double[]> yVal = DataUtils.subset_row(yArray, testIdx);
+									
 					ReturnObject ro = NNetUtils.buildNNet(xTrain, yTrain, xVal, yVal, nrHidden, eta, opt, lambda, batchSize, maxIt, patience, expTrans, respTrans );
 					return ro.errors;
 				}
@@ -101,7 +93,7 @@ public class NNetUtils {
 		for( int i = 0; i < yTest_.size(); i++ ) {
 			double[] d = yTest_.get(i);
 			test_desired_not_normalized[i] = d[0];
-			y_test.add( d );
+			y_test.add( Arrays.copyOf(d, d.length) );
 		}
 			
 		ListNormalizer ln_x = new ListNormalizer(expTrans, x_train);
@@ -141,7 +133,6 @@ public class NNetUtils {
 		List<Double> errors = new ArrayList<>();
 		int no_imp = 0;		
 		double test_error_best = Double.POSITIVE_INFINITY;
-		int it_best = -1;
 		for (int it = 0; it < maxIt && no_imp < patience; it++) {
 	
 			if( batchSize > 0 ) {

@@ -1,5 +1,6 @@
 package utils;
 
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
@@ -20,8 +21,16 @@ public class ListNormalizer extends Normalizer {
 				ds[i][j] = new SummaryStatistics();
 				for( double[] d : samples )
 					ds[i][j].addValue(d[j]);
-								
-				assert !Double.isNaN( ds[i][j].getMean() ) : "NaN. Transform index: " + i + ", var index :" + j;				
+				
+				/*if( Double.isNaN(ds[i][j].getMean())) {
+					System.out.println(Arrays.toString(ttt)+","+i+","+j+","+samples.get(0).length);
+					for( int k = 0; k < samples.size(); k++ ) {
+						double[] d = samples.get(k);
+						System.out.println(k+":"+d[j]);
+					}
+					System.exit(1);
+				}*/							
+				assert !Double.isNaN( ds[i][j].getMean() ) : "NaN. Transform index: " + i + ", var index :" + j+", size: "+ds[i][j].getN()+", var: "+ds[i][j].getVariance();				
 			}
 			
 			// normalize

@@ -18,6 +18,7 @@ import org.jblas.DoubleMatrix;
 import org.jblas.Solve;
 import org.jblas.exceptions.LapackException;
 
+import utils.DataUtils;
 import utils.MatrixNormalizer;
 
 public class SupervisedUtils {
@@ -332,24 +333,6 @@ public class SupervisedUtils {
 			rss += Math.pow(response.get(i) - samples.get(i)[ta], 2);
 		return rss;
 	}
-
-	@Deprecated
-	public static int[] toIntArray(Collection<Integer> c) {
-		int[] j = new int[c.size()];
-		int i = 0;
-		for (int l : c)
-			j[i++] = l;
-		return j;
-	}
-	
-	@Deprecated
-	public static double[] toDoubleArray(Collection<Double> c) {
-		double[] j = new double[c.size()];
-		int i = 0;
-		for (double l : c)
-			j[i++] = l;
-		return j;
-	}
 	
 	public static double getCost_CV(DoubleMatrix X, DoubleMatrix Y, List<Entry<List<Integer>, List<Integer>>> cv_list, double lambda ) {
 		DescriptiveStatistics ds = new DescriptiveStatistics();		
@@ -359,8 +342,8 @@ public class SupervisedUtils {
 			List<Integer> outerTestFinal = new ArrayList<>(cv_entry.getValue());
 							
 			try {				
-				int[] trainIdx = SupervisedUtils.toIntArray(outerTrainFinal);
-				int[] testIdx = SupervisedUtils.toIntArray(outerTestFinal);
+				int[] trainIdx = DataUtils.toIntArray(outerTrainFinal);
+				int[] testIdx = DataUtils.toIntArray(outerTestFinal);
 				
 				assert trainIdx.length > 0 : trainIdx.length;
 				assert testIdx.length > 0 : testIdx.length;

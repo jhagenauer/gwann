@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 import org.apache.commons.math3.linear.Array2DRowRealMatrix;
 import org.apache.commons.math3.linear.ArrayRealVector;
@@ -252,7 +253,7 @@ public class NNet implements SupervisedNet {
 	protected int t = 1;
 	private double error_prev = Double.MAX_VALUE;
 	
-	public double[] toDouble1D( double[][][] w) {				
+	public static double[] toDouble1D( double[][][] w) {				
 		List<Double> flat = new ArrayList<>();
 		for (double[][] mat : w)
 			for (double[] row : mat)
@@ -273,7 +274,7 @@ public class NNet implements SupervisedNet {
 						
 		if( opt == Optimizer.LM ) {
 						
-			double[] residuals = computeResiduals(x, y);
+			double[] residuals = getResiduals(x, y);
 
 			RealMatrix jacobian = new Array2DRowRealMatrix( computeJacobian_chatgpt(x, epsilon, center).toArray2() );
 			
@@ -311,7 +312,7 @@ public class NNet implements SupervisedNet {
 						weights[a][b][c] += alpha * deltaWeights.getEntry(k++);
 			
 			double error = 0;
-			for( double r : computeResiduals(x, y) )
+			for( double r : getResiduals(x, y) )
 				error += Math.pow(r,2);     
             
 			lambda = (error > error_prev) ? lambda * fac : lambda / fac;       
@@ -494,8 +495,7 @@ public class NNet implements SupervisedNet {
 	    return jacobian;
 	}
 
-    // Compute residuals (errors) for all samples
-    private double[] computeResiduals(List<double[]> inputs, List<double[]> targets) {
+    public double[] getResiduals(List<double[]> inputs, List<double[]> targets) {
     	int output_size = targets.get(0).length;
     	    	
         double[] residuals = new double[inputs.size() * output_size];
@@ -560,5 +560,32 @@ public class NNet implements SupervisedNet {
         }
 
         return copy;
+    }
+    
+    public double getSharpness(List<double[]> x, List<double[]> y, double epsilon, int seed) {
+    	Random rr = new Random(seed);
+    	
+    	 double loss = 0;
+  		for( double r : getResiduals(x, y) )
+  			loss += Math.pow(r,2);    
+        
+        double[][][] originalWeights = getCopyOfWeights();
+
+        double l2norm_perturbation = 0;
+        for( int l = 0; l < weights.length; l++ )
+        	for( int i = 0; i < weights[l].length; i++ )
+        		for( int j = 0; j < weights[l][i].length; j++ ) {
+        			double w = rr.nextGaussian()*epsilon;
+        			l2norm_perturbation += w*w;
+        			weights[l][i][j] += w;
+        		}
+        l2norm_perturbation = Math.sqrt(l2norm_perturbation);
+        
+        double perturbed_loss = 0;
+		for( double r : getResiduals(x, y) )
+			perturbed_loss += Math.pow(r,2);    
+		
+		setWeights(originalWeights);
+		return (perturbed_loss - loss) / (l2norm_perturbation + 10e-10);
     }
 }
