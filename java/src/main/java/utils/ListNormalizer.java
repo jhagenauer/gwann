@@ -20,16 +20,7 @@ public class ListNormalizer extends Normalizer {
 			for( int j = 0; j < length; j++ ) {
 				ds[i][j] = new SummaryStatistics();
 				for( double[] d : samples )
-					ds[i][j].addValue(d[j]);
-				
-				/*if( Double.isNaN(ds[i][j].getMean())) {
-					System.out.println(Arrays.toString(ttt)+","+i+","+j+","+samples.get(0).length);
-					for( int k = 0; k < samples.size(); k++ ) {
-						double[] d = samples.get(k);
-						System.out.println(k+":"+d[j]);
-					}
-					System.exit(1);
-				}*/							
+					ds[i][j].addValue(d[j]);				
 				assert !Double.isNaN( ds[i][j].getMean() ) : "NaN. Transform index: " + i + ", var index :" + j+", size: "+ds[i][j].getN()+", var: "+ds[i][j].getVariance();				
 			}
 			
@@ -41,6 +32,8 @@ public class ListNormalizer extends Normalizer {
 	}
 			
 	public void normalize(List<double[]> samples ) {	
+		assert !samples.isEmpty();
+		
 		for( int i = 0; i < tt.length; i++ ) 
 			for( int j = 0; j < length; j++ )
 				for (int k = 0; k < samples.size(); k++ )

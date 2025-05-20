@@ -2,18 +2,14 @@ package supervised.nnet.gwann;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 import supervised.nnet.NNet;
 import supervised.nnet.activation.Constant;
 import supervised.nnet.activation.Function;
 
 public class GWANN extends NNet {
-	
-	@Deprecated
-	public GWANN(Function[][] l, double[][][] weights, double eta, Optimizer m ) {
-		super(l,weights,eta,m); 
-	}
-	
+		
 	public GWANN(Function[][] l, double[][][] weights, double[] eta, Optimizer m, double lambda ) {
 		super(l,weights,eta,m,lambda); 
 	}
@@ -53,12 +49,25 @@ public class GWANN extends NNet {
 		return error_grad;
 	}
 		
-	public void train( List<double[]> x, List<double[]> y, List<double[]>  gwWeights) {
+	void train( List<double[]> x, List<double[]> y, List<double[]>  gwWeights) {
 		List<double[][][]> l = new ArrayList<>();
 		for( int i = 0; i < x.size(); i++ ) 
 			l.add( getErrorGradient( x.get(i), y.get(i), gwWeights.get(i) ) );
 		double[][][] errorGrad = calculateMeanOf3DList(l);		
-		update(opt,errorGrad, eta);
+		update(opt, errorGrad, eta);
 		t++;
+	}
+	
+	@Override
+	public double[] getResiduals(List<double[]> inputs, List<double[]> targets) {
+	    int output_size = targets.get(0).length;
+	    assert output_size == 1;
+
+	    double[] residuals = new double[inputs.size()];
+	    for (int i = 0; i < inputs.size(); i++) {	    	
+	        double[] output = present(inputs.get(i));
+	        residuals[i] = output[i] - targets.get(i)[0];	        
+	    }
+	    return residuals;
 	}
 }

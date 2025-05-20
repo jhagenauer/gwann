@@ -21,7 +21,7 @@ public class NNet_RInterface {
 			double[][] xArray_pred,
 			
 			boolean norm,
-			double nr_hidden, double batchSize, 
+			double nr_hidden, double batch_size, 
 			String optim, 
 			double eta_, 
 			boolean linOut,						
@@ -67,21 +67,16 @@ public class NNet_RInterface {
 		double bestValError = Double.POSITIVE_INFINITY;
 		double lambda = 0.0;
 						
-		if( iterations > 0 ) { // bw given
+		if( iterations > 0 ) { // iterations given
 			System.out.println("Iterations given. cv_max_iterations and cv_patience are ignored.");
-			List<List<Double>> errors = NNetUtils.getErrors_CV(xTrain_list, yTrain_list, innerCvList, eta, (int)batchSize, opt, lambda, new int[] {(int)nr_hidden}, (int)iterations, (int)iterations, (int)threads, explTrans, respTrans);
-						
-			double mean = 0;
-			for( List<Double> e : errors )
-				mean += e.get( (int)iterations-1 )/errors.size();			
-			bestValError = mean;
-			best_its = (int)iterations;				
-		
+			List<List<Double>> errors = NNetUtils.getErrors_CV(xTrain_list, yTrain_list, innerCvList, eta, (int)batch_size, opt, lambda, new int[] {(int)nr_hidden}, (int)iterations, Integer.MAX_VALUE, (int)threads, explTrans, respTrans);
+			double[] m = NNetUtils.getErrorParameters(errors,false);
+			bestValError = m[0];
+			best_its = (int)m[1]+1;
 		} else {
-			System.out.println("Pre-specified iterations...");
-			List<List<Double>> errors = NNetUtils.getErrors_CV(xTrain_list, yTrain_list, innerCvList, eta, (int)batchSize, opt, lambda, new int[] {(int)nr_hidden}, (int)cv_max_iterations, (int)cv_patience, (int)threads, explTrans, respTrans);
-			double[] m = NNetUtils.getBestErrorParams(errors);
-			
+			System.out.println("Estimate iterations...");
+			List<List<Double>> errors = NNetUtils.getErrors_CV(xTrain_list, yTrain_list, innerCvList, eta, (int)batch_size, opt, lambda, new int[] {(int)nr_hidden}, (int)cv_max_iterations, (int)cv_patience, (int)threads, explTrans, respTrans);
+			double[] m = NNetUtils.getErrorParameters(errors,true);
 			bestValError = m[0];
 			best_its = (int)m[1]+1;
 		} 
@@ -98,7 +93,7 @@ public class NNet_RInterface {
 					xTrain_list, yTrain_list,  
 					xTrain_list, yTrain_list,  
 					new int[] { (int)nr_hidden }, eta, opt, 
-					lambda, (int)batchSize, best_its, Integer.MAX_VALUE, 
+					lambda, (int)batch_size, best_its, Integer.MAX_VALUE, 
 					explTrans, respTrans);
 						
 			double[][] preds = bg.prediction.toArray(new double[][] {});
@@ -152,7 +147,7 @@ public class NNet_RInterface {
 				xTrain_list, yTrain_list,  
 				xPred_list, yPred_list,
 				new int[] { (int)nr_hidden }, eta, opt, 
-				lambda, (int)batchSize, best_its, Integer.MAX_VALUE, 
+				lambda, (int)batch_size, best_its, Integer.MAX_VALUE, 
 				explTrans, respTrans);
 		
 		double secs = (System.currentTimeMillis()-time)/1000;			

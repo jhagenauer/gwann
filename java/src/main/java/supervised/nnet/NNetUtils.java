@@ -18,6 +18,8 @@ import supervised.SupervisedUtils;
 import supervised.nnet.activation.Constant;
 import supervised.nnet.activation.Function;
 import supervised.nnet.activation.Linear;
+import supervised.nnet.activation.Logistic;
+import supervised.nnet.activation.ReLu;
 import supervised.nnet.activation.TanH;
 import utils.DataUtils;
 import utils.ListNormalizer;
@@ -30,7 +32,13 @@ public class NNetUtils {
 	public static enum initMode {
 		gorot_unif, norm05
 	}
-
+	
+	public static enum Neuron_type {
+		Constant, TanH, Logistic, ReLu
+	}
+	
+	public static Neuron_type hidden_neuron_type = Neuron_type.TanH;
+	
 	public static List<List<Double>> getErrors_CV(List<double[]> xArray, List<double[]> yArray, List<Entry<List<Integer>, List<Integer>>> innerCvList, double[] eta, int batchSize, NNet.Optimizer opt, double lambda, int[] nrHidden, int maxIt, int patience, int threads, Transform[] expTrans, Transform[] respTrans ) {
 		ExecutorService innerEs = Executors.newFixedThreadPool(threads);
 		List<Future<List<Double>>> futures = new ArrayList<Future<List<Double>>>();
@@ -45,10 +53,10 @@ public class NNetUtils {
 					List<Integer> trainIdx = innerCvEntry.getKey();
 					List<Integer> testIdx = innerCvEntry.getValue(); 
 										
-					List<double[]> xTrain = DataUtils.subset_row(xArray, trainIdx);
-					List<double[]> yTrain = DataUtils.subset_row(yArray, trainIdx);				
-					List<double[]> xVal = DataUtils.subset_row(xArray, testIdx);
-					List<double[]> yVal = DataUtils.subset_row(yArray, testIdx);
+					List<double[]> xTrain = DataUtils.subset_rows(xArray, trainIdx);
+					List<double[]> yTrain = DataUtils.subset_rows(yArray, trainIdx);				
+					List<double[]> xVal = DataUtils.subset_rows(xArray, testIdx);
+					List<double[]> yVal = DataUtils.subset_rows(yArray, testIdx);
 									
 					ReturnObject ro = NNetUtils.buildNNet(xTrain, yTrain, xVal, yVal, nrHidden, eta, opt, lambda, batchSize, maxIt, patience, expTrans, respTrans );
 					return ro.errors;
@@ -70,23 +78,18 @@ public class NNetUtils {
 	public static ReturnObject buildNNet(
 			List<double[]> xTrain_, List<double[]> yTrain_, 
 			List<double[]> xTest_, List<double[]> yTest_, 
-			int[] nrHidden, double[] eta, NNet.Optimizer opt, 
+			int[] nr_hidden, double[] eta, NNet.Optimizer opt, 
 			double lambda, int batchSize, 
-			int maxIt, int patience, 
+			int max_its, int patience, 
 			Transform[] expTrans, Transform[] respTrans
 			) {
 		Random r = new Random(0);
-	
-		List<double[]> x_train = new ArrayList<>();
-		for (double[] d : xTrain_)
-			x_train.add(Arrays.copyOf(d, d.length));	
-		List<double[]> y_train = new ArrayList<>();
-		for (double[] d : yTrain_) 
-			y_train.add(Arrays.copyOf(d, d.length));
+		
+		assert nr_hidden.length+1 == eta.length :nr_hidden.length+"<->"+eta.length;
 			
-		List<double[]> x_test = new ArrayList<>();
-		for (double[] d : xTest_)
-			x_test.add(Arrays.copyOf(d, d.length));
+		List<double[]> x_train = xTrain_.stream().map(arr -> arr.clone()).toList();		
+		List<double[]> y_train = yTrain_.stream().map(arr -> arr.clone()).toList();	
+		List<double[]> x_test = xTest_.stream().map(arr -> arr.clone()).toList();	
 	
 		double[] test_desired_not_normalized = new double[yTest_.size()];
 		List<double[]> y_test = new ArrayList<>();
@@ -109,12 +112,26 @@ public class NNetUtils {
 		input.add(new Constant(1.0));
 		layerList.add(input.toArray(new Function[] {}));
 	
-		for (int nh : nrHidden) {
-			if (nh == 0)
-				continue;
+		for (int nh : nr_hidden) {
 			List<Function> hidden0 = new ArrayList<>();
-			while (hidden0.size() < nh)
-				hidden0.add(new TanH());
+			while (hidden0.size() < nh) {
+				switch(hidden_neuron_type) {
+				case Constant:
+					hidden0.add(new Constant(1.0));
+					break;
+				case Logistic:
+					hidden0.add(new Logistic());
+					break;
+				case ReLu:
+					hidden0.add(new ReLu());
+					break;
+				case TanH:
+					hidden0.add(new TanH());
+					break;
+				default:
+					throw new RuntimeException(hidden_neuron_type+" not supported");						
+				}					
+			}
 			hidden0.add(new Constant(1.0));
 			layerList.add(hidden0.toArray(new Function[] {}));
 		}
@@ -133,7 +150,7 @@ public class NNetUtils {
 		List<Double> errors = new ArrayList<>();
 		int no_imp = 0;		
 		double test_error_best = Double.POSITIVE_INFINITY;
-		for (int it = 0; it < maxIt && no_imp < patience; it++) {
+		for (int it = 0; it < max_its && no_imp < patience; it++) {
 	
 			if( batchSize > 0 ) {
 				List<double[]> x = new ArrayList<>();
@@ -219,24 +236,61 @@ public class NNetUtils {
 		return weights;
 	}
 	
-	public static double[] getBestErrorParams( List<List<Double>> errors ) {
-		int minSize = Integer.MAX_VALUE;
-		for( List<Double> f : errors )	
-			minSize = Math.min(f.size(), minSize);
-		assert minSize > 0;
-		
-		double[] mean = new double[minSize];
-		for( List<Double> f : errors )
-			for( int i = 0; i < mean.length; i++ )
-				mean[i] += f.get(i)/errors.size();
-		
-		double minMean = mean[0];
-		int minMeanIdx = 0;
-		for( int i = 1; i < mean.length; i++ )
-			if (mean[i] < minMean ) {
-				minMean = mean[i];
-				minMeanIdx = i;
-			}	
-		return new double[] { minMean, minMeanIdx };
+	// min = min or last?
+	public static double[] getErrorParameters(List<List<Double>> errors, boolean min ) {
+	    int smalles_common_length = Integer.MAX_VALUE;
+	    for (List<Double> foldErrors : errors)
+	        smalles_common_length = Math.min(foldErrors.size(), smalles_common_length);
+	    assert smalles_common_length > 0;
+	    
+	    for( List<Double> foldErrors : errors )
+	    	if( !min && foldErrors.size() != smalles_common_length )
+	    		throw new RuntimeException("Error lists have different length! "+smalles_common_length+" != "+foldErrors.size());
+
+	    double[] errors_mean = new double[smalles_common_length];
+	    double[] errors_sd = new double[smalles_common_length];
+
+	    // Compute mean errors
+	    for (int paramIdx = 0; paramIdx < smalles_common_length; paramIdx++) {
+	        double sum = 0;
+	        for (List<Double> foldErrors : errors)
+	            sum += foldErrors.get(paramIdx);
+	        errors_mean[paramIdx] = sum / errors.size();
+	    }
+
+	    // Compute standard deviations
+	    for (int paramIdx = 0; paramIdx < smalles_common_length; paramIdx++) {
+	        double sumSq = 0;
+	        for (List<Double> foldErrors : errors)
+	            sumSq += Math.pow(foldErrors.get(paramIdx) - errors_mean[paramIdx], 2);
+	        errors_sd[paramIdx] = Math.sqrt(sumSq / errors.size());
+	    }
+
+	    int idx = -1;
+	    if( !min ) 
+	    	idx = smalles_common_length - 1;
+	    else {
+	    	double min_mean = Double.POSITIVE_INFINITY;
+	    	 for (int i = 0; i < smalles_common_length; i++) {
+	 	        if ( errors_mean[i] < min_mean) {
+	 	            min_mean = errors_mean[i];
+	 	            idx = i;
+	 	        }
+	 	    }
+	    }
+	    
+	    return new double[] {
+	        errors_mean[idx],
+	        idx,
+	        errors_sd[idx]
+	    };
+	}
+
+
+	public static double[] getArray(double value, int length) {
+		double[] r = new double[length];
+		for( int i = 0; i < r.length; i++ )
+			r[i] = value;
+		return r;
 	}
 }

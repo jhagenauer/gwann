@@ -17,7 +17,7 @@ public abstract class Normalizer {
 		double nd;
 		if (t == Transform.zScore) {
 			double sd = ds[i][col].getStandardDeviation();
-			assert !Double.isNaN(sd);
+			assert !Double.isNaN(sd) && sd > 0 : sd;
 			
 			if (!inv)
 				nd = (d - ds[i][col].getMean()) / sd;

@@ -95,27 +95,11 @@ public class GWUtils {
 		return a;
 	}
 	
-	@Deprecated
-	public static DoubleMatrix getKernelWeightsAdaptive(DoubleMatrix Wtrain, DoubleMatrix W_test_test, GWKernel kernel, int nb ) {
- 		DoubleMatrix kW = new DoubleMatrix(W_test_test.rows,W_test_test.columns);	
- 		for (int i = 0; i < W_test_test.rows; i++) {
- 			double bw = Wtrain.getRow(i).sort().get(nb);
- 			double[] w = new double[W_test_test.columns];
- 			for (int j = 0; j < W_test_test.columns; j++)
- 				w[j] = GWUtils.getKernelValue(kernel, W_test_test.get(i, j), bw);
- 			kW.putRow(i,new DoubleMatrix(w));
- 		}
- 		return kW;
- 	}
-	
 	public static DoubleMatrix getKernelWeightsAdaptive(DoubleMatrix W_train_test, GWKernel kernel, int nb ) {			
 		DoubleMatrix kW = new DoubleMatrix(W_train_test.rows,W_train_test.columns);
 		
-		if( W_train_test.rows < nb ) {
-			//log.error(W_train_test.rows + "x" + W_train_test.columns + ", nb:" + nb);
+		if( nb > W_train_test.rows ) 
 			throw new RuntimeException(W_train_test.rows + "x" + W_train_test.columns + ", nb:" + nb);
-			//System.exit(1);
-		}
 		assert W_train_test.rows >= nb : W_train_test.rows + "x" + W_train_test.columns + ", nb:" + nb; 
 				
 		for (int i = 0; i < W_train_test.columns; i++) {					

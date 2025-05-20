@@ -74,7 +74,7 @@ public class DataUtils {
 		return r;
 	}
 	
-	public static List<double[]> subset_row( List<double[]> l, List<Integer> li ) {
+	public static List<double[]> subset_rows( List<double[]> l, List<Integer> li ) {
 		return subset_row(l, toIntArray(li) );
 	}
 	

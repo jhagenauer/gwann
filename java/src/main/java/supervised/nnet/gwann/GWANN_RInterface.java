@@ -22,11 +22,12 @@ import utils.Normalizer.Transform;
 public class GWANN_RInterface {
 		
 	public static Return_R run(
-			double[][] xArray_train, 
-			double[] yArray_train, 
-			double[][] W_train, double[][] xArray_pred, double[][] W_train_pred,
+			double[][] xArray_train, double[] yArray_train, 
+			double[][] W_train, // for CV/parameter estimation
+			double[][] xArray_pred, 
+			double[][] W_train_pred, // for prediction
 			boolean norm,
-			double nr_hidden, double batchSize, 
+			double nr_hidden, double batch_size, 
 			String optim, 
 			double eta_, 
 			boolean linOut, 
@@ -39,9 +40,7 @@ public class GWANN_RInterface {
 				
 		assert 
 			xArray_train.length == W_train.length &  
-			W_train.length == W_train[0].length & // quadratic
-			W_train_pred.length == xArray_train.length & 
-			W_train_pred[0].length == xArray_pred.length; 
+			W_train.length == W_train[0].length; // quadratic
 		
 		GWKernel kernel;
 		if (krnl.equalsIgnoreCase("gaussian"))
@@ -84,12 +83,10 @@ public class GWANN_RInterface {
 		List<double[]> xTrain_list = Arrays.asList(xArray_train);
 		List<double[]> yTrain_list = new ArrayList<>();
 		for( double d : yArray_train )
-			yTrain_list.add( new double[] {d});	
+			yTrain_list.add( new double[] {d} );	
 		
 		List<double[]> xPred_list = Arrays.asList(xArray_pred);
 		List<double[]> yPred_list = new ArrayList<>();
-		/*for( double d : yArray_pred )
-			yPred_list.add(d);*/
 		for( int i = 0; i < xArray_pred.length; i++ )
 			yPred_list.add( new double[] { Double.NaN } );
 						
@@ -112,26 +109,24 @@ public class GWANN_RInterface {
 						
 		if( bw_ > 0 && iterations > 0 ) { // bw and its are given
 			System.out.println("Iterations and bandwidth given. cv_max_iterations and cv_patience are ignored.");
-			List<List<Double>> errors = GWANNUtils.getErrors_CV(xTrain_list, yTrain_list, W, innerCvList, kernel, bw_, adaptive, eta, (int)batchSize, opt, new int[] {(int)nr_hidden}, (int)iterations, (int)iterations, (int)threads, lambda, explTrans, respTrans, seed, fast_cv );
-						
-			double mean = 0;
-			for( List<Double> e : errors )
-				mean += e.get( (int)iterations-1 )/errors.size();			
-			bestValError = mean;
+			List<List<Double>> errors = GWANNUtils.getErrors_CV(xTrain_list, yTrain_list, W, innerCvList, kernel, bw_, adaptive, eta, (int)batch_size, opt, new int[] {(int)nr_hidden}, (int)iterations, Integer.MAX_VALUE, (int)threads, lambda, explTrans, respTrans, seed, fast_cv );
+			double[] m = NNetUtils.getErrorParameters(errors,false);
+			
+			bestValError = m[0];
 			bestValBw = bw_;
-			best_its = (int)iterations;				
+			best_its = (int)m[1]+1;			
 		
 		} else if( bw_ > 0 && iterations < 0 ) {
 			System.out.println("Pre-specified bandwidth...");
-			List<List<Double>> errors = GWANNUtils.getErrors_CV(xTrain_list, yTrain_list, W, innerCvList, kernel, bw_, adaptive, eta, (int)batchSize, opt, new int[] {(int)nr_hidden}, (int)cv_max_iterations, (int)cv_patience, (int)threads, lambda, explTrans, respTrans, seed, fast_cv );
-			double[] m = NNetUtils.getBestErrorParams(errors);
+			List<List<Double>> errors = GWANNUtils.getErrors_CV(xTrain_list, yTrain_list, W, innerCvList, kernel, bw_, adaptive, eta, (int)batch_size, opt, new int[] {(int)nr_hidden}, (int)cv_max_iterations, (int)cv_patience, (int)threads, lambda, explTrans, respTrans, seed, fast_cv );
+			double[] m = NNetUtils.getErrorParameters(errors,true);
 			
 			bestValError = m[0];
 			bestValBw = bw_;
 			best_its = (int)m[1]+1;
 		} else if( ( bwSearch.equalsIgnoreCase("goldenSection") || bwSearch.equalsIgnoreCase("golden_section") ) && iterations < 0 ) { // determine best bw using golden section search 
 			System.out.println("Golden section search...");
-			double[] m = GWANNUtils.getParamsWithGoldenSection(min, max, xTrain_list, yTrain_list, W, innerCvList, kernel, adaptive, eta, (int)batchSize, opt, new int[] {(int)nr_hidden}, (int)cv_max_iterations, (int)cv_patience, (int)threads, lambda, explTrans, respTrans, seed);
+			double[] m = GWANNUtils.getParamsWithGoldenSection(min, max, xTrain_list, yTrain_list, W, innerCvList, kernel, adaptive, eta, (int)batch_size, opt, new int[] {(int)nr_hidden}, (int)cv_max_iterations, (int)cv_patience, (int)threads, lambda, explTrans, respTrans, seed);
 						
 			bestValError = m[0];
 			bestValBw = m[1];
@@ -150,13 +145,13 @@ public class GWANN_RInterface {
 			Collections.sort(ll);
 			System.out.println("To test: "+ll);
 			for (double bw : ll) {				
-				List<List<Double>> errors = GWANNUtils.getErrors_CV(xTrain_list, yTrain_list, W, innerCvList, kernel, bw, adaptive, eta, (int)batchSize, opt, new int[] {(int)nr_hidden}, (int)cv_max_iterations, (int)cv_patience, (int)threads, lambda, explTrans, respTrans, seed, fast_cv);
+				List<List<Double>> errors = GWANNUtils.getErrors_CV(xTrain_list, yTrain_list, W, innerCvList, kernel, bw, adaptive, eta, (int)batch_size, opt, new int[] {(int)nr_hidden}, (int)cv_max_iterations, (int)cv_patience, (int)threads, lambda, explTrans, respTrans, seed, fast_cv);
 				
 				int max_it = 0;
 				for( List<Double> e : errors)
 					max_it = Math.max(e.size(),max_it);
 				
-				double[] mm = NNetUtils.getBestErrorParams(errors);
+				double[] mm = NNetUtils.getErrorParameters(errors,true);
 				if (mm[0] < bestValError) {
 					bestValError = mm[0];
 					best_its = (int)mm[1]+1;
@@ -181,7 +176,7 @@ public class GWANN_RInterface {
 			ReturnObject bg = GWANNUtils.buildGWANN(
 					xTrain_list, yTrain_list,
 					xTrain_list, yTrain_list, W, 
-					new int[] { (int)nr_hidden }, eta, opt, (int)batchSize, best_its, Integer.MAX_VALUE, kernel, adaptive && bw_ < 0 ?  Math.round(bestValBw*100/90) : bestValBw, adaptive, lambda, explTrans, respTrans,seed);
+					new int[] { (int)nr_hidden }, eta, opt, (int)batch_size, best_its, Integer.MAX_VALUE, kernel, adaptive && bw_ < 0 ?  Math.round(bestValBw*100/90) : bestValBw, adaptive, lambda, explTrans, respTrans,seed);
 						
 			double[][] preds = bg.prediction.toArray(new double[][] {});
 			
@@ -233,7 +228,7 @@ public class GWANN_RInterface {
 		ReturnObject tg = GWANNUtils.buildGWANN(
 				xTrain_list, yTrain_list,
 				xPred_list, yPred_list, new DoubleMatrix(W_train_pred), 
-				new int[] { (int)nr_hidden }, eta, opt, (int)batchSize, best_its, Integer.MAX_VALUE, kernel, bestValBw, adaptive, lambda, explTrans, respTrans,seed);
+				new int[] { (int)nr_hidden }, eta, opt, (int)batch_size, best_its, Integer.MAX_VALUE, kernel, bestValBw, adaptive, lambda, explTrans, respTrans,seed);
 		double secs = (System.currentTimeMillis()-time)/1000;			
 		Return_R ro = new Return_R();
 		
@@ -255,5 +250,38 @@ public class GWANN_RInterface {
 		for( int i = 0; i < l.size(); i++ )
 			d[i] = l.get(i);
 		return d;
+	}
+	
+	public static void main(String[] args ) {
+		Random r = new Random();
+		double[][] xArray = new double[1000][];
+		double[] yArray = new double[xArray.length];
+		double[][] xArray_pred = xArray;
+		
+		for( int i = 0; i < xArray.length; i++ ) {
+			double x1 = r.nextGaussian();
+			double x2 = r.nextGaussian();
+			double y = 2*x1 + Math.pow(x2,2) + r.nextGaussian();
+			xArray[i] = new double[] {x1,x2};
+			yArray[i] = y;
+		}
+		
+		double[][] w = new double[xArray.length][xArray.length];
+		for( int i = 0; i < xArray.length; i++ )
+			for( int j = 0; j < xArray.length; j++ )
+				w[i][j] = r.nextDouble();
+				
+		Return_R rr = GWANN_RInterface.run(
+				xArray, yArray, w, 
+				xArray_pred, w,
+				true, 4, 10, "nesterov", 0.01, true, 
+				"gaussian", 
+				-1, // bw 
+				true, "golden", 
+				5, 50, 
+				5, // steps
+				-1, // iterations 
+				Integer.MAX_VALUE, 100, 10, 1, -1, 1, 0); 
+		
 	}
 }
