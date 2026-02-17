@@ -9,6 +9,7 @@ import java.util.Random;
 
 import supervised.SupervisedUtils;
 import supervised.nnet.NNet.Optimizer;
+import supervised.nnet.NNetUtils.error_param;
 import utils.ListNormalizer;
 import utils.Normalizer.Transform;
 
@@ -37,9 +38,9 @@ public class NNet_RInterface {
 		else if( optim.equalsIgnoreCase("sgd"))
 			opt = Optimizer.SGD;
 		else if( optim.equalsIgnoreCase("adam_exp"))
-			opt = Optimizer.Adam;
+			opt = Optimizer.AdamW;
 		else if( optim.equalsIgnoreCase("adam"))
-			opt = Optimizer.Adam_ruder;
+			opt = Optimizer.Adam;
 		else
 			throw new RuntimeException("Unknown optimizer");
 
@@ -70,13 +71,13 @@ public class NNet_RInterface {
 		if( iterations > 0 ) { // iterations given
 			System.out.println("Iterations given. cv_max_iterations and cv_patience are ignored.");
 			List<List<Double>> errors = NNetUtils.getErrors_CV(xTrain_list, yTrain_list, innerCvList, eta, (int)batch_size, opt, lambda, new int[] {(int)nr_hidden}, (int)iterations, Integer.MAX_VALUE, (int)threads, explTrans, respTrans);
-			double[] m = NNetUtils.getErrorParameters(errors,false);
+			double[] m = NNetUtils.getErrorParameters(errors,error_param.last);
 			bestValError = m[0];
 			best_its = (int)m[1]+1;
 		} else {
 			System.out.println("Estimate iterations...");
 			List<List<Double>> errors = NNetUtils.getErrors_CV(xTrain_list, yTrain_list, innerCvList, eta, (int)batch_size, opt, lambda, new int[] {(int)nr_hidden}, (int)cv_max_iterations, (int)cv_patience, (int)threads, explTrans, respTrans);
-			double[] m = NNetUtils.getErrorParameters(errors,true);
+			double[] m = NNetUtils.getErrorParameters(errors,error_param.argmin_mean);
 			bestValError = m[0];
 			best_its = (int)m[1]+1;
 		} 

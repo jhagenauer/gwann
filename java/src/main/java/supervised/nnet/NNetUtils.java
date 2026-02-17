@@ -11,6 +11,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -113,6 +114,8 @@ public class NNetUtils {
 		layerList.add(input.toArray(new Function[] {}));
 	
 		for (int nh : nr_hidden) {
+			if( nh == 0 )
+				continue;
 			List<Function> hidden0 = new ArrayList<>();
 			while (hidden0.size() < nh) {
 				switch(hidden_neuron_type) {
@@ -236,53 +239,131 @@ public class NNetUtils {
 		return weights;
 	}
 	
-	// min = min or last?
-	public static double[] getErrorParameters(List<List<Double>> errors, boolean min ) {
-	    int smalles_common_length = Integer.MAX_VALUE;
-	    for (List<Double> foldErrors : errors)
-	        smalles_common_length = Math.min(foldErrors.size(), smalles_common_length);
-	    assert smalles_common_length > 0;
-	    
-	    for( List<Double> foldErrors : errors )
-	    	if( !min && foldErrors.size() != smalles_common_length )
-	    		throw new RuntimeException("Error lists have different length! "+smalles_common_length+" != "+foldErrors.size());
-
-	    double[] errors_mean = new double[smalles_common_length];
-	    double[] errors_sd = new double[smalles_common_length];
-
-	    // Compute mean errors
-	    for (int paramIdx = 0; paramIdx < smalles_common_length; paramIdx++) {
-	        double sum = 0;
-	        for (List<Double> foldErrors : errors)
-	            sum += foldErrors.get(paramIdx);
-	        errors_mean[paramIdx] = sum / errors.size();
+	public static enum error_param {last,argmin_mean,ose_rule,argmin_median,median_argmin};
+	public static double[] getErrorParameters(List<List<Double>> errors, error_param mode) {
+	   
+	    final int k = errors.size();
+	    int smallest_common_length = Integer.MAX_VALUE;
+	    assert !errors.isEmpty();
+	    for (List<Double> foldErrors : errors) {
+	        if (foldErrors == null || foldErrors.isEmpty()) {
+	            throw new IllegalArgumentException("One of the fold error lists is null or empty");
+	        }
+	        smallest_common_length = Math.min(smallest_common_length, foldErrors.size());
+	    }
+	    if (smallest_common_length <= 0) {
+	        throw new IllegalStateException("No common length across folds.");
 	    }
 
-	    // Compute standard deviations
-	    for (int paramIdx = 0; paramIdx < smalles_common_length; paramIdx++) {
-	        double sumSq = 0;
-	        for (List<Double> foldErrors : errors)
-	            sumSq += Math.pow(foldErrors.get(paramIdx) - errors_mean[paramIdx], 2);
-	        errors_sd[paramIdx] = Math.sqrt(sumSq / errors.size());
+	    // For "last" mode we require equal lengths to avoid ambiguity.
+	    if (mode == error_param.last) {
+	        for (List<Double> foldErrors : errors) {
+	            if (foldErrors.size() != smallest_common_length) {
+	                throw new RuntimeException("Error lists have different length! " +
+	                                           smallest_common_length + " != " + foldErrors.size());
+	            }
+	        }
 	    }
 
-	    int idx = -1;
-	    if( !min ) 
-	    	idx = smalles_common_length - 1;
-	    else {
-	    	double min_mean = Double.POSITIVE_INFINITY;
-	    	 for (int i = 0; i < smalles_common_length; i++) {
-	 	        if ( errors_mean[i] < min_mean) {
-	 	            min_mean = errors_mean[i];
-	 	            idx = i;
-	 	        }
-	 	    }
+	    double[] mean = new double[smallest_common_length];
+	    double[] median = new double[smallest_common_length];
+	    double[] sd   = new double[smallest_common_length];
+	    double[] se   = new double[smallest_common_length];
+	    	   
+	    // Mean across folds for each epoch index
+	    for (int t = 0; t < smallest_common_length; t++) {
+	        	        
+	        DescriptiveStatistics ds = new DescriptiveStatistics();
+	        for (List<Double> foldErrors : errors) 
+	            ds.addValue( foldErrors.get(t) );
+	        	       	        
+	        mean[t] = ds.getMean();
+	        median[t] = ds.getPercentile(50);
 	    }
-	    
+
+	    // Sample standard deviation and standard error
+	    for (int t = 0; t < smallest_common_length; t++) {
+	        double sumsq = 0.0;
+	        for (List<Double> foldErrors : errors) {
+	            double diff = foldErrors.get(t) - mean[t];
+	            sumsq += diff * diff;
+	        }
+	        if (k > 1) {
+	            sd[t] = Math.sqrt(sumsq / (k - 1));   // sample SD
+	        } else {
+	            sd[t] = 0.0;
+	        }
+	        se[t] = (k > 0) ? sd[t] / Math.sqrt(k) : Double.NaN;
+	    }
+
+	    int idx;
+	    if (mode == error_param.last) {
+	        // last valid epoch index
+	        idx = smallest_common_length - 1;
+
+	    } else if (mode == error_param.argmin_mean || mode == error_param.argmin_median ) {
+	        // argmin of mean
+	        idx = 0;
+	        double min = Double.POSITIVE_INFINITY;
+	        for (int t = 1; t < smallest_common_length; t++) {	        	
+	        	double v = mode == error_param.argmin_median ? mean[t] : median[t];	        	
+	            if (v < min ) {
+	                min = v;
+	                idx = t;
+	            }
+	        }
+
+	    } else if (mode == error_param.ose_rule) {
+	        // one-standard-error rule
+	        int idxMin = 0;
+	        double minMean = mean[0];
+	        for (int t = 1; t < smallest_common_length; t++) {
+	            if (mean[t] < minMean) {
+	                minMean = mean[t];
+	                idxMin = t;
+	            }
+	        }
+	        double threshold = minMean + se[idxMin];
+
+	        // Choose the earliest epoch within the threshold
+	        idx = 0;
+	        while (idx < smallest_common_length && mean[idx] > threshold) {
+	            idx++;
+	        }
+	        if (idx >= smallest_common_length) {
+	            // Fallback (should be rare due to numerical precision)
+	            idx = idxMin;
+	        }
+
+	    } else if(mode == error_param.median_argmin) {
+	    	 DescriptiveStatistics ds = new DescriptiveStatistics();
+	    	 for (List<Double> foldErrors : errors) {
+	    		 
+	    		 double best_e = Double.POSITIVE_INFINITY;
+	    		 int best_idx = -1;
+	    		 for( int i = 0; i < smallest_common_length; i++ ) {
+	    			 double e = foldErrors.get(i);
+	    			 if( e < best_e ) {
+	    				 best_e = e;
+	    				 best_idx = i;
+	    			 }
+	    		 }
+	    		 ds.addValue(best_idx);		            
+	    	 }
+	    	 idx = (int)ds.getPercentile(50);
+	    	 
+	    	 if( idx > mean.length ) {
+	    		 log.debug( Arrays.toString(ds.getSortedValues())+":::"+mean.length);
+	    	 }
+	    	 
+	    } else {
+	        throw new IllegalArgumentException("Unknown mode: " + mode + " (expected 0=last, 1=min, 2=one-SE)");
+	    }
+
 	    return new double[] {
-	        errors_mean[idx],
-	        idx,
-	        errors_sd[idx]
+	        mean[idx],
+	        (double) idx,
+	        sd[idx]    // returning SD at the chosen epoch; SE = sd[idx] / sqrt(k) if you need it
 	    };
 	}
 

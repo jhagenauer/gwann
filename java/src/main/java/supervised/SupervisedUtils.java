@@ -3,7 +3,6 @@ package supervised;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -78,8 +77,7 @@ public class SupervisedUtils {
 	}
 
 	@Deprecated
-	public static List<Entry<List<Integer>, List<Integer>>> getCVList(int numTrainSamples, int numRepeats,
-			int numSamples, Random r) {
+	public static List<Entry<List<Integer>, List<Integer>>> getCVList(int numTrainSamples, int numRepeats, int numSamples, Random r) {
 		List<Integer> samplesIdx = new ArrayList<>();
 		for (int i = 0; i < numSamples; i++)
 			samplesIdx.add(i);
@@ -100,8 +98,7 @@ public class SupervisedUtils {
 		return cvList;
 	}
 
-	public static List<Entry<List<Integer>, List<Integer>>> getSplitCVList_sep(List<Integer> samples,
-			List<Integer> subsamples_test, int size_test, int num_repeats, int seed) {
+	public static List<Entry<List<Integer>, List<Integer>>> getSplitCVList_sep(List<Integer> samples, List<Integer> subsamples_test, int size_test, int num_repeats, int seed) {
 		Random r = new Random(seed);
 		List<Entry<List<Integer>, List<Integer>>> cvList = new ArrayList<Entry<List<Integer>, List<Integer>>>();
 		for (int repeat = 0; repeat < num_repeats; repeat++) {
@@ -287,11 +284,8 @@ public class SupervisedUtils {
 	// dp.n*log(lm_RSS/dp.n)+dp.n*log(2*pi)+dp.n+2*dp.n*(var.n+1)/(dp.n-var.n-2)
 	public static double getAICc_GWMODEL(double mse, double nrParams, int nrSamples) {
 		if (nrSamples - nrParams - 2 <= 0)
-			throw new RuntimeException("too few samples! " + nrSamples + " " + nrParams);
-		// return nrSamples * ( Math.log(mse) + Math.log(2*Math.PI) + 1 ) + (2.0 *
-		// nrSamples * ( nrParams + 1 ) ) / (nrSamples - nrParams - 2);
-		return nrSamples
-				* (Math.log(mse) + Math.log(2 * Math.PI) + (nrSamples + nrParams) / (nrSamples - 2 - nrParams));
+			throw new RuntimeException("too few samples?! " + nrSamples + " " + nrParams);
+		return nrSamples * (Math.log(mse) + Math.log(2 * Math.PI) + (nrSamples + nrParams) / (nrSamples - 2 - nrParams));
 	}
 
 	public static double getBIC(double mse, double nrParams, int nrSamples) {
@@ -343,6 +337,16 @@ public class SupervisedUtils {
 			rss += Math.pow(response.get(i) - samples.get(i)[ta], 2);
 		return rss;
 	}
+	
+	public static double getRSS(double[] response, double[] desired) {
+		if (response.length != desired.length)
+			throw new RuntimeException("response.length != samples.length " + response.length + "," + desired.length);
+
+		double rss = 0;
+		for (int i = 0; i < response.length; i++)
+			rss += Math.pow(response[i] - desired[i], 2);
+		return rss;
+	}
 
 	public static double getCost_CV(DoubleMatrix X, DoubleMatrix Y, List<Entry<List<Integer>, List<Integer>>> cv_list, double lambda) throws LapackException {
 		DescriptiveStatistics ds = new DescriptiveStatistics();
@@ -379,11 +383,15 @@ public class SupervisedUtils {
 			DoubleMatrix XtX = Xt.mmul(XTrain);
 			DoubleMatrix beta;
 
-			if (lambda > 0) { // ridge regression
-				DoubleMatrix id = DoubleMatrix.eye(XtX.rows);
-				beta = Solve.solve(XtX.add(id.mul(lambda)), Xt.mmul(YTrain));
-			} else
-				beta = Solve.solve(XtX, Xt.mmul(YTrain));
+			try {
+				if (lambda > 0) { // ridge regression
+					DoubleMatrix id = DoubleMatrix.eye(XtX.rows);
+					beta = Solve.solve(XtX.add(id.mul(lambda)), Xt.mmul(YTrain));
+				} else
+					beta = Solve.solve(XtX, Xt.mmul(YTrain));
+			} catch( LapackException e ) {
+				return Double.POSITIVE_INFINITY;
+			}
 
 			DoubleMatrix P = XTest.mmul(beta);
 			if (mny != null)

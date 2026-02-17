@@ -4,4 +4,8 @@ public interface Function {
 	public double f(double x);
 	public double fDevFOut(double x);
 	public double fDev(double d);
+	
+	public default boolean isConstant() {
+		return false;
+	}
 }

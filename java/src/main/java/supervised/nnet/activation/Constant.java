@@ -20,4 +20,9 @@ public class Constant implements Function {
 	public double fDev(double f) {
 		return 0;
 	}
+	
+	@Override
+	public boolean isConstant() {
+		return true;
+	}
 }

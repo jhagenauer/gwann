@@ -13,6 +13,7 @@ import org.jblas.DoubleMatrix;
 import supervised.SupervisedUtils;
 import supervised.nnet.NNet.Optimizer;
 import supervised.nnet.NNetUtils;
+import supervised.nnet.NNetUtils.error_param;
 import supervised.nnet.ReturnObject;
 import supervised.nnet.Return_R;
 import utils.GWUtils.GWKernel;
@@ -64,9 +65,9 @@ public class GWANN_RInterface {
 		else if( optim.equalsIgnoreCase("sgd"))
 			opt = Optimizer.SGD;
 		else if( optim.equalsIgnoreCase("adam_exp"))
-			opt = Optimizer.Adam;
+			opt = Optimizer.AdamW;
 		else if( optim.equalsIgnoreCase("adam"))
-			opt = Optimizer.Adam_ruder;
+			opt = Optimizer.Adam;
 		else
 			throw new RuntimeException("Unknown optimizer");
 
@@ -109,8 +110,8 @@ public class GWANN_RInterface {
 						
 		if( bw_ > 0 && iterations > 0 ) { // bw and its are given
 			System.out.println("Iterations and bandwidth given. cv_max_iterations and cv_patience are ignored.");
-			List<List<Double>> errors = GWANNUtils.getErrors_CV(xTrain_list, yTrain_list, W, innerCvList, kernel, bw_, adaptive, eta, (int)batch_size, opt, new int[] {(int)nr_hidden}, (int)iterations, Integer.MAX_VALUE, (int)threads, lambda, explTrans, respTrans, seed, fast_cv );
-			double[] m = NNetUtils.getErrorParameters(errors,false);
+			List<List<Double>> errors = GWANNUtils.getErrors_CV(xTrain_list, yTrain_list, W, innerCvList, kernel, new double[] {bw_}, adaptive, eta, (int)batch_size, opt, new int[] {(int)nr_hidden}, (int)iterations, Integer.MAX_VALUE, (int)threads, lambda, explTrans, respTrans, seed, fast_cv );
+			double[] m = NNetUtils.getErrorParameters(errors,error_param.last);
 			
 			bestValError = m[0];
 			bestValBw = bw_;
@@ -118,8 +119,8 @@ public class GWANN_RInterface {
 		
 		} else if( bw_ > 0 && iterations < 0 ) {
 			System.out.println("Pre-specified bandwidth...");
-			List<List<Double>> errors = GWANNUtils.getErrors_CV(xTrain_list, yTrain_list, W, innerCvList, kernel, bw_, adaptive, eta, (int)batch_size, opt, new int[] {(int)nr_hidden}, (int)cv_max_iterations, (int)cv_patience, (int)threads, lambda, explTrans, respTrans, seed, fast_cv );
-			double[] m = NNetUtils.getErrorParameters(errors,true);
+			List<List<Double>> errors = GWANNUtils.getErrors_CV(xTrain_list, yTrain_list, W, innerCvList, kernel, new double[] {bw_}, adaptive, eta, (int)batch_size, opt, new int[] {(int)nr_hidden}, (int)cv_max_iterations, (int)cv_patience, (int)threads, lambda, explTrans, respTrans, seed, fast_cv );
+			double[] m = NNetUtils.getErrorParameters(errors,error_param.argmin_mean);
 			
 			bestValError = m[0];
 			bestValBw = bw_;
@@ -145,13 +146,13 @@ public class GWANN_RInterface {
 			Collections.sort(ll);
 			System.out.println("To test: "+ll);
 			for (double bw : ll) {				
-				List<List<Double>> errors = GWANNUtils.getErrors_CV(xTrain_list, yTrain_list, W, innerCvList, kernel, bw, adaptive, eta, (int)batch_size, opt, new int[] {(int)nr_hidden}, (int)cv_max_iterations, (int)cv_patience, (int)threads, lambda, explTrans, respTrans, seed, fast_cv);
+				List<List<Double>> errors = GWANNUtils.getErrors_CV(xTrain_list, yTrain_list, W, innerCvList, kernel, new double[] {bw}, adaptive, eta, (int)batch_size, opt, new int[] {(int)nr_hidden}, (int)cv_max_iterations, (int)cv_patience, (int)threads, lambda, explTrans, respTrans, seed, fast_cv);
 				
 				int max_it = 0;
 				for( List<Double> e : errors)
 					max_it = Math.max(e.size(),max_it);
 				
-				double[] mm = NNetUtils.getErrorParameters(errors,true);
+				double[] mm = NNetUtils.getErrorParameters(errors,error_param.argmin_mean);
 				if (mm[0] < bestValError) {
 					bestValError = mm[0];
 					best_its = (int)mm[1]+1;
@@ -176,7 +177,7 @@ public class GWANN_RInterface {
 			ReturnObject bg = GWANNUtils.buildGWANN(
 					xTrain_list, yTrain_list,
 					xTrain_list, yTrain_list, W, 
-					new int[] { (int)nr_hidden }, eta, opt, (int)batch_size, best_its, Integer.MAX_VALUE, kernel, adaptive && bw_ < 0 ?  Math.round(bestValBw*100/90) : bestValBw, adaptive, lambda, explTrans, respTrans,seed);
+					new int[] { (int)nr_hidden }, eta, opt, (int)batch_size, best_its, Integer.MAX_VALUE, kernel, adaptive && bw_ < 0 ? new double[] {Math.round(bestValBw*100/90)} : new double[] {bestValBw}, adaptive, lambda, explTrans, respTrans,seed);
 						
 			double[][] preds = bg.prediction.toArray(new double[][] {});
 			
@@ -228,7 +229,7 @@ public class GWANN_RInterface {
 		ReturnObject tg = GWANNUtils.buildGWANN(
 				xTrain_list, yTrain_list,
 				xPred_list, yPred_list, new DoubleMatrix(W_train_pred), 
-				new int[] { (int)nr_hidden }, eta, opt, (int)batch_size, best_its, Integer.MAX_VALUE, kernel, bestValBw, adaptive, lambda, explTrans, respTrans,seed);
+				new int[] { (int)nr_hidden }, eta, opt, (int)batch_size, best_its, Integer.MAX_VALUE, kernel, new double[] {bestValBw}, adaptive, lambda, explTrans, respTrans,seed);
 		double secs = (System.currentTimeMillis()-time)/1000;			
 		Return_R ro = new Return_R();
 		
@@ -253,7 +254,8 @@ public class GWANN_RInterface {
 	}
 	
 	public static void main(String[] args ) {
-		Random r = new Random();
+		Random r = new Random(111);
+		
 		double[][] xArray = new double[1000][];
 		double[] yArray = new double[xArray.length];
 		double[][] xArray_pred = xArray;
@@ -271,17 +273,34 @@ public class GWANN_RInterface {
 			for( int j = 0; j < xArray.length; j++ )
 				w[i][j] = r.nextDouble();
 				
-		Return_R rr = GWANN_RInterface.run(
-				xArray, yArray, w, 
-				xArray_pred, w,
-				true, 4, 10, "nesterov", 0.01, true, 
-				"gaussian", 
-				-1, // bw 
-				true, "golden", 
-				5, 50, 
-				5, // steps
-				-1, // iterations 
-				Integer.MAX_VALUE, 100, 10, 1, -1, 1, 0); 
+		{
+			
+			Return_R rr = GWANN_RInterface.run(
+					xArray, yArray, w, 
+					xArray_pred, w,
+					true, // norm
+					4, // hidden
+					50, // batch size
+					"nesterov", 
+					0.1, // learning rate 
+					true, // lin out
+					"gaussian", 
+					20, // bw 
+					true, // adaptive
+					"golden", 
+					5, // bw_min
+					50, // bw_max
+					5, // steps
+					-1, // iterations 
+					Integer.MAX_VALUE, // cv_max_iterations
+					100, // patience
+					10, // folds
+					1, // repeats
+					-1, // permutations
+					1, // threads
+					0 // seed
+					); 
+		}
 		
 	}
 }

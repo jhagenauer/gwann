@@ -4,12 +4,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-
-import javax.management.RuntimeErrorException;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -63,6 +59,40 @@ public class GWUtils {
 		if (Double.isNaN(w)) 
 			throw new RuntimeException("NaN kernel value! Kernel: "+k+", dist: " + dist + ", bw: " + bw + ", w: " + w);					
 		return w;
+	}
+	
+	public static double getKernelDerivateValue(GWKernel k, double dist, double bw) {
+	    double dw_dbw;
+        double w = getKernelValue(k, dist, bw);
+        
+	    if (k == GWKernel.gaussian) {
+	        dw_dbw = w * (Math.pow(dist, 2) / Math.pow(bw, 3));
+	    } else if (k == GWKernel.bisquare) {
+	        if (dist <= bw) {
+	            double ratioSq = Math.pow(dist / bw, 2);
+	            dw_dbw = (4.0 * Math.pow(dist, 2) / Math.pow(bw, 3)) * (1.0 - ratioSq);
+	        } else {
+	            dw_dbw = 0;
+	        }
+	    } else if (k == GWKernel.boxcar) {
+	        dw_dbw = 0;
+	    } else if (k == GWKernel.tricube) {
+	        if (dist <= bw) {
+	            double ratioCub = Math.pow(dist / bw, 3);
+	            dw_dbw = (9.0 * Math.pow(dist, 3) / Math.pow(bw, 4)) * Math.pow(1.0 - ratioCub, 2);
+	        } else {
+	            dw_dbw = 0;
+	        }
+	    } else if (k == GWKernel.exponential) {
+	        dw_dbw = w * (dist / Math.pow(bw, 2));
+	    } else {
+	        throw new RuntimeException("No valid kernel given");
+	    }
+
+	    if (Double.isNaN(dw_dbw)) 
+	        throw new RuntimeException("NaN kernel derivative! Kernel: " + k + ", dist: " + dist + ", bw: " + bw);
+	    	    
+	    return dw_dbw;
 	}
 	
 	public static DoubleMatrix getGWMean(DoubleMatrix X, DoubleMatrix W, GWKernel k, double bw) {						
