@@ -32,14 +32,13 @@ public class NNet implements SupervisedNet {
 	
 	public Function[][] layer;
 	public double[][][] weights;
-	protected double[] eta;
 
 	double[][][] v = null, v_prev = null;
 
 	public double lambda = Double.NaN;
 	
 	public static enum Optimizer {
-		SGD, Momentum, Nesterov, RMSProp, AdamW, Adam, LM, LM_ANA, LBFGS
+		SGD, Momentum, NAG, RMSProp, AdamW, Adam, LM, LM_ANA, LBFGS, Nesterov_test, Adam_test
 	};
 	
 	protected Optimizer opt;
@@ -47,20 +46,30 @@ public class NNet implements SupervisedNet {
 	@Deprecated
 	public NNet(Function[][] layer, double[][][] weights, double eta, Optimizer opt) {
 		this(layer, weights, null, opt, 0.0);
-
-		this.eta = new double[layer.length];
-		for (int i = 0; i < this.eta.length; i++)
-			this.eta[i] = eta;
 	}
 
-	public NNet(Function[][] layer, double[][][] weights, double[] eta, Optimizer opt, double lambda) {
+	public NNet(Function[][] layer, double[][][] weights, double[] eta_0, Optimizer opt, double lambda) {
 
 		this.lambda = lambda;
 		this.layer = layer;
-		this.eta = eta;
 		this.weights = weights;
 		this.opt = opt;
 
+		this.v = new double[weights.length][][];
+		this.v_prev = new double[weights.length][][];
+		for (int i = 0; i < weights.length; i++) {
+			this.v[i] = new double[weights[i].length][];
+			this.v_prev[i] = new double[weights[i].length][];
+
+			for (int j = 0; j < weights[i].length; j++) {
+				this.v[i][j] = new double[weights[i][j].length];
+				this.v_prev[i][j] = new double[weights[i][j].length];
+			}
+		}
+	}
+	
+	public void resetVs() {
+		this.t = 1;
 		this.v = new double[weights.length][][];
 		this.v_prev = new double[weights.length][][];
 		for (int i = 0; i < weights.length; i++) {
@@ -117,21 +126,15 @@ public class NNet implements SupervisedNet {
 	}
 	
 	@Override
-	public void train(double t, double[] x, double[] desired) {
-		List<double[]> xl = new ArrayList<>();
-		List<double[]> yl = new ArrayList<>();
-		xl.add(x);
-		yl.add(desired);
-		train(xl, yl);
-		
+	public void train(double t, double[] x, double[] desired) {		
 		throw new RuntimeException("Dont use!");
 	}
 		
 	protected double[][][] getErrorGradient( double[] x, double[] y ) {
 		int ll = layer.length - 1; // index of last layer
 		
-		double[][][] error_grad = new double[layer.length - 1][][];
-		double[][] delta = new double[layer.length - 1][];		
+		double[][][] error_grad = new double[ll][][];
+		double[][] delta = new double[ll][];		
 		for( int l = ll; l > 0; l-- ) {
 			delta[l-1] = new double[layer[l].length];
 			error_grad[l-1] = new double[layer[l - 1].length][layer[l].length];
@@ -143,15 +146,15 @@ public class NNet implements SupervisedNet {
 				
 			for (int i = 0; i < layer[l].length; i++) { // for each neuron i of layer l
 		
+				double error_signal = 0;
 				if( l == ll )
-					delta[l-1][i] = layer[l][i].fDevFOut(out[l][i]) * (out[l][i] - y[i]);
+					error_signal = out[l][i] - y[i];
 				else {
-					double error_signal = 0;
 					for (int j = 0; j < weights[l][i].length; j++)
 						if (!layer[l + 1][j].isConstant() ) // ignore useless weight to constant neurons
 							error_signal += delta[l][j] * weights[l][i][j];
-					delta[l-1][i] = layer[l][i].fDevFOut(out[l][i]) * error_signal;
-				}				 
+				}			
+				delta[l-1][i] = layer[l][i].fDevFOut(out[l][i]) * error_signal;
 				
 				for (int h = 0; h < layer[l - 1].length; h++)
 					error_grad[l - 1][h][i] = out[l - 1][h] * delta[l-1][i];
@@ -160,25 +163,26 @@ public class NNet implements SupervisedNet {
 		return error_grad;
 	}
 	
-	public static double mu = 0.9;
+	public static double mu = 0.90;
 	public static double fac = 1.5;
-	public static boolean center = false; 
-		
-	protected void update( Optimizer opt, double[][][] errorGrad, double[] eta ) {
-		t++;
-		
+	public static boolean center = false;
+
+	public static double decay_rate = 0.0; 
+			
+	public void update( Optimizer opt, double[][][] errorGrad, double[] eta ) {
+								
 		if( opt == Optimizer.SGD ) {
 			for (int l = 0; l < weights.length; l++)
 				for (int i = 0; i < weights[l].length; i++)
 					for (int j = 0; j < weights[l][i].length; j++) {
 						if( lambda > 0 )
-							weights[l][i][j] -= eta[l] * errorGrad[l][i][j] - lambda * weights[l][i][j];
+							weights[l][i][j] -= eta[l] * (errorGrad[l][i][j] + lambda * weights[l][i][j]);
 						else
 							weights[l][i][j] -= eta[l] * errorGrad[l][i][j]; 
 					}
 						
 		} else if( opt == Optimizer.Momentum ) {
-			//double mu = 0.9;
+			//double mu = 0.95;
 			for (int l = 0; l < weights.length; l++)
 				for (int i = 0; i < weights[l].length; i++)
 					for (int j = 0; j < weights[l][i].length; j++) {
@@ -190,8 +194,8 @@ public class NNet implements SupervisedNet {
 							weights[l][i][j] += v[l][i][j];
 						
 					}
-		} else if( opt == Optimizer.Nesterov ) {
-			//double mu = 0.9;
+		} else if( opt == Optimizer.NAG ) {
+			//double mu = 0.2;
 			for (int l = 0; l < weights.length; l++)
 				for (int i = 0; i < weights[l].length; i++)
 					for (int j = 0; j < weights[l][i].length; j++) {
@@ -247,7 +251,7 @@ public class NNet implements SupervisedNet {
 		} else if( opt == Optimizer.Adam ) {
 			double b1 = 0.9; //  exponential decay rate 
 			double b2 = 0.999; // decay rate for the second moment estimates
-			double eps = Math.pow(10, -8);
+			double eps = 1e-4;
 
 			double p1 = (1 - Math.pow(b1, t));
 			double p2 = (1 - Math.pow(b2, t));
@@ -269,6 +273,8 @@ public class NNet implements SupervisedNet {
 							weights[l][i][j] -= eta[l] * lambda * weights[l][i][j];
 					}
 		}
+		
+		t++;
 	}
 
 	protected int t = 1;
@@ -291,85 +297,16 @@ public class NNet implements SupervisedNet {
 					weights[a][b][c] = w[k++];
 	}
 	
-	public void train(List<double[]> x, List<double[]> y) {
+	public void train(List<double[]> x, List<double[]> y, double[] eta ) {
 						
-		if( opt == Optimizer.LM ) {
-									
-			double[] residuals = getResiduals(x, y);
-			
-			RealMatrix jacobian = new Array2DRowRealMatrix( computeJacobian_chatgpt(x, 10e-5, center).toArray2() );
-			
-			RealMatrix jacobianT = jacobian.transpose();           
-			RealMatrix hessianApprox = jacobianT.multiply(jacobian);
-			RealVector gradient = jacobianT.operate(new ArrayRealVector(residuals));
+		List<double[][][]> l = new ArrayList<>();
+		for( int i = 0; i < x.size(); i++ ) 
+			l.add( getErrorGradient( x.get(i), y.get(i) ) );			
+		double[][][] errorGrad = NNetUtils.calculateMeanOf3DList(l);							
+		update( opt, errorGrad, eta );
 
-			// Apply damping (Levenberg–Marquardt adjustment)
-			RealMatrix identity = MatrixUtils.createRealIdentityMatrix(hessianApprox.getRowDimension());
-			//hessianApprox = hessianApprox.add(identity.scalarMultiply(lambda));
-			hessianApprox = hessianApprox.add(identity.scalarMultiply(lambda * hessianApprox.getNorm()));
-			
-			// Solve for weight updates
-			RealVector deltaWeights;
-			try {
-				DecompositionSolver solver = new CholeskyDecomposition(hessianApprox).getSolver();
-				deltaWeights = solver.solve(gradient.mapMultiply(-1));
-			} catch(NonPositiveDefiniteMatrixException e) {
-				try {
-					DecompositionSolver solver = new QRDecomposition(hessianApprox).getSolver();
-					deltaWeights = solver.solve(gradient.mapMultiply(-1));
-				} catch (Exception e2) {
-					DecompositionSolver solver = new SingularValueDecomposition(hessianApprox).getSolver();
-					deltaWeights = solver.solve(gradient.mapMultiply(-1));
-				}
-			}							
-			
-			// Update weights			
-			double alpha = eta[0];
-			//double alpha = Math.max(eta[0], Math.min(1.0, 1.0 / (1.0 + lambda))); // not that useful
-			int k = 0;
-			for( int a = 0; a < weights.length; a++ )
-				for( int b = 0; b < weights[a].length; b++ )
-					for( int c = 0; c < weights[a][b].length; c++ ) 
-						weights[a][b][c] += alpha * deltaWeights.getEntry(k++);
-			
-			double error = 0;
-			for( double r : getResiduals(x, y) )
-				error += Math.pow(r,2);     
-            
-			lambda = (error > error_prev) ? lambda * fac : lambda / fac;       
-			//lambda = Math.min(Math.max(lambda, 1e-6), 1e6);     
-            error_prev = error;
-                        				            
-		} else {						
-			List<double[][][]> l = new ArrayList<>();
-			for( int i = 0; i < x.size(); i++ ) 
-				l.add( getErrorGradient( x.get(i), y.get(i) ) );			
-			double[][][] errorGrad = calculateMeanOf3DList(l);							
-			update( opt, errorGrad, eta );
-		}
 	}
 	
-	protected static double[][][] calculateMeanOf3DList(List<double[][][]> arrays) {
-		
-		double[][][] first = arrays.get(0);
-		
-		double[][][] mean = new double[first.length][][];		
-		for( int i = 0; i < first.length; i++ ) {
-			mean[i] = new double[first[i].length][];
-			for( int j = 0; j < first[i].length; j++ )
-				mean[i][j] = new double[first[i][j].length];
-		}
-		
-		for( double[][][] array : arrays ) 
-			for( int i = 0; i < first.length; i++ ) 
-				for( int j = 0; j < first[i].length; j++ )
-					for( int k = 0; k < first[i][j].length; k++ )
-						mean[i][j][k] += array[i][j][k]/arrays.size();	
-		    
-	    return mean;
-	}
-
-
 	@Override
 	public double[] getResponse(double[] x, double[] weight) {
 		return null;

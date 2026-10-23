@@ -10,6 +10,7 @@ public class ReturnObject {
 	public List<Double> errors;
 	public NNet nnet;
 	public double rmse;
+	public double mse;
 	public double r2;
 	public List<double[]> prediction;
 	public ListNormalizer ln_x, ln_y;

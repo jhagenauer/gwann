@@ -1,15 +1,22 @@
 package utils;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jblas.DoubleMatrix;
 
 import dist.Dist;
 import dist.EuclideanDist;
 
 public class DataUtils {
+	
+	private static Logger log = LogManager.getLogger(DataUtils.class);
 
 	public static double[] strip(double[] d, int[] fa) {
 		double[] nd = new double[fa.length];
@@ -83,5 +90,55 @@ public class DataUtils {
 		for( double[] d : x )
 			r.add( DataUtils.strip(d, fa) );
 		return r;
+	}
+
+	public static void rowNormalizeMatrix(DoubleMatrix kW) {
+	    for (int i = 0; i < kW.rows; i++) {
+	        DoubleMatrix row = kW.getRow(i);
+	        double sum = row.sum();
+	
+	        if( sum != 0.0 )
+	        	kW.putRow(i, row.divi(sum)); 
+	        else
+	        	kW.putRow(i, row );
+	    }
+	}
+	
+	public static boolean warn_once = true;
+	
+	public static void columnNormalizeMatrix(DoubleMatrix kW) {
+	    for (int i = 0; i < kW.columns; i++) {
+	        DoubleMatrix column = kW.getColumn(i);
+	        double sum = column.sum();
+	
+	        if (sum == 0.0 ) {
+	        	if( warn_once ) {
+	        		log.warn("Collumn " + i + " sums to zero; cannot normalize. Not further warnings!");
+	        		warn_once = false;
+	        	}
+	        } else
+	        	kW.putColumn(i, column.divi(sum)); // divi = in-place divide, avoids extra allocation
+	    }
+	}
+	
+	public static void saveToCSV(DoubleMatrix matrix, String filePath) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
+            for (int i = 0; i < matrix.rows; i++) {
+                StringBuilder rowString = new StringBuilder();
+                for (int j = 0; j < matrix.columns; j++) {
+                    rowString.append(matrix.get(i, j));
+                    
+                    // Add comma if it's not the last element in the row
+                    if (j < matrix.columns - 1) {
+                        rowString.append(",");
+                    }
+                }
+                writer.write(rowString.toString());
+                writer.newLine();
+            }
+            System.out.println("Matrix successfully saved to: " + filePath);
+        } catch (IOException e) {
+            System.err.println("Error writing matrix to CSV: " + e.getMessage());
+        }
 	}
 }

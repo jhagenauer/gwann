@@ -32,7 +32,7 @@ public class NNet_RInterface {
 				
 		Optimizer opt;
 		if( optim.equalsIgnoreCase("nesterov") )
-			opt = Optimizer.Nesterov;
+			opt = Optimizer.NAG;
 		else if( optim.equalsIgnoreCase("momentum"))
 			opt = Optimizer.Momentum;
 		else if( optim.equalsIgnoreCase("sgd"))

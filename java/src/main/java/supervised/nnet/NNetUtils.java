@@ -166,9 +166,22 @@ public class NNetUtils {
 					x.add(x_train.get(idx));
 					y.add(y_train.get(idx));
 				}
-				nnet.train(x, y);
-			} else 
-				nnet.train(x_train, y_train);
+				
+				// train
+				List<double[][][]> l = new ArrayList<>();
+				for( int i = 0; i < x.size(); i++ ) 
+					l.add( nnet.getErrorGradient( x.get(i), y.get(i) ) );			
+				double[][][] errorGrad = NNetUtils.calculateMeanOf3DList(l);							
+				nnet.update( opt, errorGrad, eta );
+				
+			} else {
+				// train
+				List<double[][][]> l = new ArrayList<>();
+				for( int i = 0; i < x_train.size(); i++ ) 
+					l.add( nnet.getErrorGradient( x_train.get(i), y_train.get(i) ) );			
+				double[][][] errorGrad = NNetUtils.calculateMeanOf3DList(l);							
+				nnet.update( opt, errorGrad, eta );
+			}
 						
 			// get denormalized response
 			double[] test_response= new double[x_test.size()];
@@ -201,7 +214,8 @@ public class NNetUtils {
 												
 		ReturnObject ro = new ReturnObject();
 		ro.errors = errors;
-		ro.rmse = SupervisedUtils.getRMSE(response, test_desired_not_normalized);
+		ro.mse = SupervisedUtils.getMSE(response, test_desired_not_normalized);
+		ro.rmse = Math.sqrt(ro.mse);
 		ro.r2 = SupervisedUtils.getR2(response, test_desired_not_normalized );
 		ro.nnet = nnet;
 		ro.prediction = test_response;	
@@ -247,6 +261,10 @@ public class NNetUtils {
 	    assert !errors.isEmpty();
 	    for (List<Double> foldErrors : errors) {
 	        if (foldErrors == null || foldErrors.isEmpty()) {
+	        	
+	        	for (List<Double> f : errors)
+	        		log.error(errors.indexOf(f)+","+f.size());
+	        	
 	            throw new IllegalArgumentException("One of the fold error lists is null or empty");
 	        }
 	        smallest_common_length = Math.min(smallest_common_length, foldErrors.size());
@@ -306,7 +324,7 @@ public class NNetUtils {
 	        idx = 0;
 	        double min = Double.POSITIVE_INFINITY;
 	        for (int t = 1; t < smallest_common_length; t++) {	        	
-	        	double v = mode == error_param.argmin_median ? mean[t] : median[t];	        	
+	        	double v = mode == error_param.argmin_mean ? mean[t] : median[t];	        	
 	            if (v < min ) {
 	                min = v;
 	                idx = t;
@@ -341,7 +359,7 @@ public class NNetUtils {
 	    		 
 	    		 double best_e = Double.POSITIVE_INFINITY;
 	    		 int best_idx = -1;
-	    		 for( int i = 0; i < smallest_common_length; i++ ) {
+	    		 for( int i = 0; i < foldErrors.size(); i++ ) {
 	    			 double e = foldErrors.get(i);
 	    			 if( e < best_e ) {
 	    				 best_e = e;
@@ -351,7 +369,7 @@ public class NNetUtils {
 	    		 ds.addValue(best_idx);		            
 	    	 }
 	    	 idx = (int)ds.getPercentile(50);
-	    	 
+	    	 	    	 
 	    	 if( idx > mean.length ) {
 	    		 log.debug( Arrays.toString(ds.getSortedValues())+":::"+mean.length);
 	    	 }
@@ -361,9 +379,9 @@ public class NNetUtils {
 	    }
 
 	    return new double[] {
-	        mean[idx],
+	        idx < mean.length ? mean[idx] : Double.NaN,
 	        (double) idx,
-	        sd[idx]    // returning SD at the chosen epoch; SE = sd[idx] / sqrt(k) if you need it
+	        idx < sd.length ? sd[idx] : Double.NaN,    // returning SD at the chosen epoch; SE = sd[idx] / sqrt(k) if you need it
 	    };
 	}
 
@@ -373,5 +391,25 @@ public class NNetUtils {
 		for( int i = 0; i < r.length; i++ )
 			r[i] = value;
 		return r;
+	}
+
+	public static double[][][] calculateMeanOf3DList(List<double[][][]> arrays) {
+		
+		double[][][] first = arrays.get(0);
+		
+		double[][][] mean = new double[first.length][][];		
+		for( int i = 0; i < first.length; i++ ) {
+			mean[i] = new double[first[i].length][];
+			for( int j = 0; j < first[i].length; j++ )
+				mean[i][j] = new double[first[i][j].length];
+		}
+		
+		for( double[][][] array : arrays ) 
+			for( int i = 0; i < first.length; i++ ) 
+				for( int j = 0; j < first[i].length; j++ )
+					for( int k = 0; k < first[i][j].length; k++ )
+						mean[i][j][k] += array[i][j][k]/arrays.size();	
+		    
+	    return mean;
 	}
 }

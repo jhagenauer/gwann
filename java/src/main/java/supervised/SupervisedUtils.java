@@ -49,8 +49,7 @@ public class SupervisedUtils {
 		return getKFoldCVList(numFolds, numRepeats, samplesIdx, new Random());
 	}
 
-	public static <T> List<Entry<List<T>, List<T>>> getKFoldCVList(int numFolds, int numRepeats, List<T> samples,
-			Random r) {
+	public static <T> List<Entry<List<T>, List<T>>> getKFoldCVList(int numFolds, int numRepeats, List<T> samples, Random r) {
 		List<Entry<List<T>, List<T>>> cvList = new ArrayList<Entry<List<T>, List<T>>>();
 		for (int repeat = 0; repeat < numRepeats; repeat++) {
 
@@ -74,6 +73,17 @@ public class SupervisedUtils {
 			}
 		}
 		return cvList;
+	}
+	
+	public static <T> List<Entry<List<T>, List<T>>> getLOOCVList(List<T> samples) {
+	    List<Entry<List<T>, List<T>>> cvList = new ArrayList<>();
+	    for (int i = 0; i < samples.size(); i++) {
+	        List<T> val = Collections.singletonList(samples.get(i));
+	        List<T> train = new ArrayList<>(samples.subList(0, i));
+	        train.addAll(samples.subList(i + 1, samples.size()));
+	        cvList.add(new AbstractMap.SimpleEntry<>(train, val));
+	    }
+	    return cvList;
 	}
 
 	@Deprecated
@@ -259,36 +269,20 @@ public class SupervisedUtils {
 		return ll * -1.0 / desired.size();
 	}
 
-	public static double getAIC(double mse, double nrParams, int nrSamples) {
-		return nrSamples * Math.log(mse) + 2 * nrParams;
-	}
-
 	public static double getAICc(double mse, double nrParams, int nrSamples) {
-		if (nrSamples - nrParams - 1 <= 0) {
-			log.error(nrSamples + "," + nrParams);
-			System.exit(1);
-		}
-		return getAIC(mse, nrParams, nrSamples) + (2.0 * nrParams * (nrParams + 1)) / (nrSamples - nrParams - 1);
+		int n = nrSamples;
+		double p = nrParams;
+		double fit = n * (Math.log(mse) + Math.log(2 * Math.PI));
+		double penalty = n * ((n + p) / (n - 2.0 - p));
+		return fit + penalty;
 	}
 
-	// I don't know why, but that's how it is done in the GWMODEL package
-	// dp.n*log(sigma.hat2) + dp.n*log(2*pi) +dp.n+tr.S
-	public static double getAIC_GWMODEL(double mse, double nrParams, int nrSamples) {
+	public static double getAIC(double mse, double nrParams, int nrSamples) {
 		return nrSamples * Math.log(mse) + nrSamples * Math.log(2 * Math.PI) + nrSamples + nrParams;
 	}
 
-	// I don't know why, but that's how it is done in the GWMODEL package
-	// ##AICc = dev + 2.0 * (double)N * ( (double)MGlobal + 1.0) / ((double)N -
-	// (double)MGlobal - 2.0);
-	// lm_AICc=
-	// dp.n*log(lm_RSS/dp.n)+dp.n*log(2*pi)+dp.n+2*dp.n*(var.n+1)/(dp.n-var.n-2)
-	public static double getAICc_GWMODEL(double mse, double nrParams, int nrSamples) {
-		if (nrSamples - nrParams - 2 <= 0)
-			throw new RuntimeException("too few samples?! " + nrSamples + " " + nrParams);
-		return nrSamples * (Math.log(mse) + Math.log(2 * Math.PI) + (nrSamples + nrParams) / (nrSamples - 2 - nrParams));
-	}
-
 	public static double getBIC(double mse, double nrParams, int nrSamples) {
+		//return nrSamples * Math.log(mse)+nrSamples * (1+Math.log(2*Math.PI)) + nrParams * Math.log(nrSamples);
 		return nrSamples * Math.log(mse) + nrParams * Math.log(nrSamples);
 	}
 

@@ -59,7 +59,7 @@ public class GWANN_RInterface {
 		
 		Optimizer opt;
 		if( optim.equalsIgnoreCase("nesterov") )
-			opt = Optimizer.Nesterov;
+			opt = Optimizer.NAG;
 		else if( optim.equalsIgnoreCase("momentum"))
 			opt = Optimizer.Momentum;
 		else if( optim.equalsIgnoreCase("sgd"))
@@ -177,7 +177,7 @@ public class GWANN_RInterface {
 			ReturnObject bg = GWANNUtils.buildGWANN(
 					xTrain_list, yTrain_list,
 					xTrain_list, yTrain_list, W, 
-					new int[] { (int)nr_hidden }, eta, opt, (int)batch_size, best_its, Integer.MAX_VALUE, kernel, adaptive && bw_ < 0 ? new double[] {Math.round(bestValBw*100/90)} : new double[] {bestValBw}, adaptive, lambda, explTrans, respTrans,seed);
+					new int[] { (int)nr_hidden }, eta, opt, (int)batch_size, best_its, Integer.MAX_VALUE, kernel, adaptive && bw_ < 0 ? new double[] {Math.round(bestValBw*100/90)} : new double[] {bestValBw}, adaptive, lambda, explTrans, respTrans,null,seed);
 						
 			double[][] preds = bg.prediction.toArray(new double[][] {});
 			
@@ -229,7 +229,7 @@ public class GWANN_RInterface {
 		ReturnObject tg = GWANNUtils.buildGWANN(
 				xTrain_list, yTrain_list,
 				xPred_list, yPred_list, new DoubleMatrix(W_train_pred), 
-				new int[] { (int)nr_hidden }, eta, opt, (int)batch_size, best_its, Integer.MAX_VALUE, kernel, new double[] {bestValBw}, adaptive, lambda, explTrans, respTrans,seed);
+				new int[] { (int)nr_hidden }, eta, opt, (int)batch_size, best_its, Integer.MAX_VALUE, kernel, new double[] {bestValBw}, adaptive, lambda, explTrans, respTrans,null,seed);
 		double secs = (System.currentTimeMillis()-time)/1000;			
 		Return_R ro = new Return_R();
 		

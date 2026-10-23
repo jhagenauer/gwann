@@ -1,7 +1,6 @@
 package supervised.nnet.gwann;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import org.apache.logging.log4j.LogManager;
@@ -9,19 +8,21 @@ import org.apache.logging.log4j.Logger;
 import org.jblas.DoubleMatrix;
 
 import supervised.nnet.NNet;
+import supervised.nnet.NNetUtils;
 import supervised.nnet.activation.Function;
-import utils.GWUtils;
 import utils.GWUtils.GWKernel;
 
 public class GWANN extends NNet {
 	
 	private static Logger log = LogManager.getLogger(GWANN.class);
+
+	public static boolean f = true;
 		
 	public GWANN(Function[][] l, double[][][] weights, double[] eta, Optimizer m, double lambda ) {
 		super(l,weights,eta,m,lambda); 
 	}
 	
-	int bw_min, bw_max;
+	double bw_min, bw_max;
 	
 	double[][][] vWeights = null, mWeights = null;
 	double[] vBW = null, mBW = null;
@@ -30,7 +31,7 @@ public class GWANN extends NNet {
 	GWKernel kernel;
 	public double bw[];
 		
-	public GWANN(Function[][] ll, double[][][] weights, double[] eta, Optimizer m, double lambda, DoubleMatrix w, GWKernel kernel, int bw_min, int bw_max ) {
+	public GWANN(Function[][] ll, double[][][] weights, double[] eta, Optimizer m, double lambda, DoubleMatrix w, GWKernel kernel, double bw_min, double bw_max ) {
 		super(ll,weights,eta,m,lambda);
 		this.W = w;
 		this.kernel = kernel;
@@ -40,8 +41,8 @@ public class GWANN extends NNet {
 		
 		bw = new double[ll[ll.length-2].length];
 		for( int i = 0; i < bw.length; i++ ) 
-			bw[i] =  i*3+w.max()/3;	
-		//bw = new double[] {5.791623676580325, 2.462568817211476, 321.9918945534378};
+			bw[i] =  bw_max;	
+		//bw = new double[] {5.156213328754902, 2.7602200556014242, 21.602274079470504};
 			
 		this.vWeights = new double[weights.length][][];
 		this.mWeights = new double[weights.length][][];
@@ -58,8 +59,47 @@ public class GWANN extends NNet {
         mBW = new double[bw.length];
         vBW = new double[bw.length];
 	}
+	
+
+	private double[][][] getErrorGradient_no_hidden( double[] x, double[] desired, double[][] sw, int h ) {
+	    double[][] out = presentInt( x, weights )[0];
+	    double[][][] error_grad = new double[1][layer[0].length][layer[1].length];
+	     
+	    for (int i = 0; i < layer[1].length; i++) 
+	           error_grad[0][h][i] = out[0][h] * (out[1][i] - desired[i]) * sw[h][i];
+
+	    return error_grad;
+	}
 		
-	private double[][][] getErrorGradient( double[] x, double[] desired, double[] sw ) {
+	private double[][][] getErrorGradient_bf(double[] x, double[] desired, double[][] sw, int targetFeature) {
+	    double[][] out = presentInt(x, weights)[0];
+	    int numLocations = layer[1].length;
+	    int numFeatures = layer[0].length;
+
+	    double[][][] error_grad = new double[1][numFeatures][numLocations];
+
+	    for (int i = 0; i < numLocations; i++) {
+	        // 1. Calculate the 'Partial Residual' for this specific feature
+	        // Start with the ground truth for that location
+	        double partialResidual = desired[i]; 
+	        
+	        // Subtract the influence of all OTHER features
+	        for (int h = 0; h < numFeatures; h++) 
+	            if (h != targetFeature) 
+	            	partialResidual -= weights[0][h][i] * out[0][h];
+	            
+	        // 2. Compute gradient: (Predicted_Component - Partial_Residual) * Input * Spatial_Weight
+	        // This isolates how much feature 'targetFeature' needs to move to close the gap
+	        double currentComponent = weights[0][targetFeature][i] * out[0][targetFeature];
+	        double error = currentComponent - partialResidual;
+
+	        error_grad[0][targetFeature][i] = out[0][targetFeature] * error * sw[targetFeature][i];
+	    }
+
+	    return error_grad;
+	}
+			
+	double[][][] getErrorGradient( double[] x, double[] desired, double[] sw ) {
 		int ll = layer.length - 1; // index of last layer (neuron)
 		double[][] delta = new double[layer.length][];
 		double[][][] error_grad = new double[layer.length-1][][];		
@@ -68,7 +108,7 @@ public class GWANN extends NNet {
 			error_grad[l-1] = new double[layer[l - 1].length][layer[l].length];
 		}
 		
-		double[][] out = presentInt( x, weights )[0];											
+		double[][] out = presentInt( x, weights )[0];
 		for (int l = ll; l > 0; l--) {	
 			
 			for (int i = 0; i < layer[l].length; i++) { 	
@@ -89,17 +129,17 @@ public class GWANN extends NNet {
 		}				
 		return error_grad;
 	}
-		
-	private double[][][] getErrorGradient( double[] x, double[] desired, double[][] sw ) {
+			
+	double[][][] getErrorGradient( double[] x, double[] desired, double[][] sw ) {
 		int ll = layer.length - 1; // index of last layer
-		double[][] delta = new double[layer.length][];
-		double[][][] error_grad = new double[layer.length-1][][];		
+		double[][] delta = new double[ll][];
+		double[][][] error_grad = new double[ll][][];		
 		for( int l = ll; l > 0; l-- ) {
 			delta[l-1] = new double[layer[l].length];
 			error_grad[l-1] = new double[layer[l - 1].length][layer[l].length];
 		}
 				
-		double[][] out = presentInt( x, weights )[0];							
+		double[][] out = presentInt( x, weights )[0]; 	
 		for (int l = ll; l > 0; l--) {
 			for (int i = 0; i < layer[l].length; i++) {
 
@@ -108,222 +148,125 @@ public class GWANN extends NNet {
 					error_signal = (out[l][i] - desired[i]);
 				} else {
 					for (int j = 0; j < weights[l][i].length; j++) {
-						if( !layer[l+1][j].isConstant() ) {
-							if (l == ll - 1) {
-								error_signal += delta[l][j] * weights[l][i][j] * sw[i][j]; // i hidden neuron, j output neuron
-							} else
-								error_signal += delta[l][j] * weights[l][i][j];
-						}
+						if( !layer[l+1][j].isConstant() )
+							error_signal += delta[l][j] * weights[l][i][j];
 					}
 				}
 				delta[l - 1][i] = layer[l][i].fDevFOut(out[l][i]) * error_signal;
 
-				// keep gradients identical: for edges into the output layer, scale the gradient by sw
-				for (int h = 0; h < layer[l - 1].length; h++) {
-					if (l == ll) {
-						error_grad[l - 1][h][i] = out[l - 1][h] * delta[l - 1][i] * sw[h][i];
-					} else
-						error_grad[l - 1][h][i] = out[l - 1][h] * delta[l - 1][i];
-				}
+				for (int h = 0; h < layer[l - 1].length; h++)
+					error_grad[l-1][h][i] = out[l-1][h] * delta[l-1][i] * ( l==ll ? sw[h][i] : 1.0);	
 			}
 		}
 		return error_grad;
 	}
 	
-	private Object[] getErrorGradient_( double[] x, double[] desired, double[] w ) {
+	double[][][] getErrorGradient_new( double[] x, double[] desired, double[][] sw ) {
 		int ll = layer.length - 1; // index of last layer
-		double[][] delta = new double[layer.length][];
-		double[][][] error_grad = new double[layer.length-1][][];		
+		double[][] delta = new double[ll][];
+		double[][][] error_grad = new double[ll][][];		
+		
+		// 1. Initialize delta and error_grad arrays
 		for( int l = ll; l > 0; l-- ) {
 			delta[l-1] = new double[layer[l].length];
 			error_grad[l-1] = new double[layer[l - 1].length][layer[l].length];
 		}
-		
-	    double[] bw_grad = new double[layer[ll - 1].length];
 				
-		double[][] out = presentInt( x, weights )[0];							
+		// 2. Forward pass
+		double[][] out = presentInt( x, weights )[0]; 	
+		
+		// 3. Backward pass
 		for (int l = ll; l > 0; l--) {
 			for (int i = 0; i < layer[l].length; i++) {
 
 				double error_signal = 0.0;
+				
+				// Calculate error signal coming into the current node
 				if (l == ll) {
+					// Output layer error
 					error_signal = (out[l][i] - desired[i]);
 				} else {
+					// Hidden layer error: pull delta from the next layer
 					for (int j = 0; j < weights[l][i].length; j++) {
 						if( !layer[l+1][j].isConstant() ) {
+							
+							double effective_weight = weights[l][i][j];
+							
+							// CHAIN RULE FIX: If propagating error from the final layer, 
+							// the connection's spatial weight must be factored in.
 							if (l == ll - 1) {
-								double kVal = GWUtils.getKernelValue(kernel, W.get(i, j), bw[i]);
-								error_signal += delta[l][j] * weights[l][i][j] * kVal;
-							} else
-								error_signal += delta[l][j] * weights[l][i][j];
+								effective_weight *= sw[i][j]; 
+							}							
+							error_signal += delta[l][j] * effective_weight;
 						}
 					}
 				}
+				
+				// Compute delta for current node
 				delta[l - 1][i] = layer[l][i].fDevFOut(out[l][i]) * error_signal;
 
+				// Compute gradient for weights feeding into current node
 				for (int h = 0; h < layer[l - 1].length; h++) {
-					if (l == ll) {
-						
-	                    double kVal = GWUtils.getKernelValue(kernel, w[i], bw[h]);	                    
-	                    error_grad[l - 1][h][i] = out[l - 1][h] * delta[l - 1][i] * kVal;
-	                    	                    
-	                    double dK_dbw = GWUtils.getKernelDerivateValue(kernel, w[i], bw[h]); 
-	                    if( use_log )
-	                    	bw_grad[h] += delta[l - 1][i] * out[l - 1][h] * weights[l - 1][h][i] * dK_dbw * bw[h]; // log space
-	                    else
-	                    	bw_grad[h] += delta[l - 1][i] * out[l - 1][h] * weights[l - 1][h][i] * dK_dbw;
-	                    
-					} else
-						error_grad[l - 1][h][i] = out[l - 1][h] * delta[l - 1][i];
-				}
-			}
-		}
-		return new Object[] {
-				error_grad,
-				bw_grad
-		};
-	}
-	
-	public static boolean use_log = false;
-	
-	public void train( List<double[]> x, List<double[]> y) {
-		List<double[][][]> l = new ArrayList<>();
-		List<double[]> l2 = new ArrayList<>();
-		for( int i = 0; i < x.size(); i++ ) {
-			Object[] o = getErrorGradient_( x.get(i), y.get(i), W.getRow(i).data );
-			l.add( ((double[][][])(o[0])) );
-			l2.add( ((double[])(o[1])) );
-		}
-		double[][][] errorGrad = calculateMeanOf3DList(l);		
-		
-		double[] bwGrad = new double[l2.get(0).length];
-		for( double[] d : l2 )
-			for( int i = 0; i < d.length; i++ )
-				bwGrad[i] += d[i]/l2.size();
-				
-		update(opt, errorGrad, bwGrad, eta);
-	}
-		
-	protected void update( Optimizer opt, double[][][] errorGrad, double[] bwGrad, double[] eta ) {
-		t++;
-		
-		if( opt == Optimizer.SGD ) {
-						
-				// update weights
-				for (int l = 0; l < weights.length; l++)
-					for (int i = 0; i < weights[l].length; i++)
-						for (int j = 0; j < weights[l][i].length; j++) 
-							weights[l][i][j] -= eta[l] * errorGrad[l][i][j];
-			
-				// update bandwidth
-				for( int i = 0; i < bw.length; i++ ) {
 					
-					// log space
-					if( use_log ) {
-						double phi = Math.log(bw[i]) - eta[0] * bwGrad[i];
-						bw[i] = Math.exp(phi);
-					} else {
-						bw[i] -= eta[0] * bwGrad[i];
-					}				
+					// Apply spatial weight only to the final layer's connections
+					double spatial_modifier = (l == ll) ? sw[h][i] : 1.0;					
+					error_grad[l-1][h][i] = out[l-1][h] * delta[l-1][i] * spatial_modifier;
 				}
-						
-		} else if( opt == Optimizer.Nesterov ) {
-				
-			for (int l = 0; l < weights.length; l++)
-				for (int i = 0; i < weights[l].length; i++)
-					for (int j = 0; j < weights[l][i].length; j++) {
-						vWeights[l][i][j] = mWeights[l][i][j];
-											
-				        double grad_weights = errorGrad[l][i][j] + lambda * weights[l][i][j];    
-				        mWeights[l][i][j] = mu * mWeights[l][i][j] - eta[l] * grad_weights;
-				        weights[l][i][j] += -mu * vWeights[l][i][j] + (1 + mu) * mWeights[l][i][j];
-					}
-						
-			for (int i = 0; i < bw.length; i++) {
-				vBW[i] = mBW[i];
-				double g = bwGrad[i]; 					
-			    mBW[i] = mu * mBW[i] - fac*eta[0] * g;
-			    
-			    if( use_log) {
-			        double phi = Math.log(bw[i]) -mu * vBW[i] + (1 + mu) * mBW[i];
-				    bw[i] = Math.exp(phi);
-			    } else {
-			    	bw[i] += -mu * vBW[i] + (1 + mu) * mBW[i];
-			    }
 			}
-			
-		} else if( opt == Optimizer.Adam ) {
-			double b1 = 0.9; //  exponential decay rate 
-			double b2 = 0.999; // decay rate for the second moment estimates
-			double eps = Math.pow(10, -8);
-
-			double p1 = (1 - Math.pow(b1, t));
-			double p2 = (1 - Math.pow(b2, t));
-
-			// --- GEWICHTE UPDATE ---
-		    for (int l = 0; l < weights.length; l++) {
-		        for (int i = 0; i < weights[l].length; i++) {
-		            for (int j = 0; j < weights[l][i].length; j++) {
-		                double g = errorGrad[l][i][j];
-
-		                // Momente aktualisieren
-		                mWeights[l][i][j] = b1 * mWeights[l][i][j] + (1.0 - b1) * g;
-		                vWeights[l][i][j] = b2 * vWeights[l][i][j] + (1.0 - b2) * (g * g);
-
-		                // Bias-Korrektur
-		                double mHat = mWeights[l][i][j] / p1;
-		                double vHat = vWeights[l][i][j] / p2;
-
-		                weights[l][i][j] -= eta[l] * mHat / (Math.sqrt(vHat) + eps);
-		            }
-		        }
-		    }
-
-		    // --- BANDBREITE (BW) UPDATE ---
-		    for (int i = 0; i < bw.length; i++) {
-		        double g = bwGrad[i];
-		        
-		        // Momente aktualisieren
-		        mBW[i] = b1 * mBW[i] + (1.0 - b1) * g;
-		        vBW[i] = b2 * vBW[i] + (1.0 - b2) * (g * g);
-
-		        // Bias-Korrektur
-		        double mHat = mBW[i] / p1;
-		        double vHat = vBW[i] / p2;
-		        		        
-		        if( use_log) {
-		        	double phi = Math.log(bw[i]) - fac*eta[0] * mHat / (Math.sqrt(vHat) + eps);
-			        bw[i] = Math.exp(phi);
-		        } else {
-		        	bw[i] -= fac*eta[0] * mHat / (Math.sqrt(vHat) + eps);
-		        }
-		    }
-			
-		} else
-			throw new RuntimeException(opt+" not supported yet!");
-		
-		for( int i = 0; i < bw.length; i++ ) {
-			bw[i] = Math.min( bw[i], bw_max);
-			bw[i] = Math.max( bw[i], bw_min);
 		}
+		
+		return error_grad;
+	}
+
+	private double[][][] getErrorGradient_( double[] x, double[] desired, double[][] sw ) {
+	    double[][] out = presentInt( x, weights )[0];
+	    double[][][] error_grad = new double[1][layer[0].length][layer[1].length];
+	     
+	    for (int i = 0; i < layer[1].length; i++) 
+	    	 for (int h = 0; h < layer[0].length; h++)
+	            error_grad[0][h][i] = out[0][h] * (out[1][i] - desired[i]) * sw[h][i];
+
+	    return error_grad;
 	}
 		
-	void train( List<double[]> x, List<double[]> y, List<double[]>  gwWeights) {
-		List<double[][][]> l = new ArrayList<>();
-		for( int i = 0; i < x.size(); i++ )
-			l.add( getErrorGradient( x.get(i), y.get(i), gwWeights.get(i) ) );
-		double[][][] errorGrad = calculateMeanOf3DList(l);		
-		update(opt, errorGrad, eta);
-	}
+	public static boolean norm_grad = false;
+				
+	int kk = 1;
 	
-	void train_2d( List<double[]> x, List<double[]> y, List<double[][]>  gwWeights) {
+	public static double calculateMagnitude(double[][][] errorGrad) {
+        if (errorGrad == null || errorGrad.length == 0) {
+            return 0.0;
+        }
+
+        double sumOfSquares = 0.0;
+
+        for (int i = 0; i < errorGrad.length; i++) {
+            // Check for null or empty second dimension
+            if (errorGrad[i] == null) continue;
+
+            for (int j = 0; j < errorGrad[i].length; j++) {
+                // Check for null or empty third dimension
+                if (errorGrad[i][j] == null) continue;
+
+                for (int k = 0; k < errorGrad[i][j].length; k++) {
+                    double value = errorGrad[i][j][k];
+                    sumOfSquares += value * value;
+                }
+            }
+        }
+
+        return Math.sqrt(sumOfSquares);
+    }
+	
+	@Deprecated
+	void train_( List<double[]> x, List<double[]> y, List<double[][]>  gwWeights, int feature, double[] eta ) {
 		List<double[][][]> l = new ArrayList<>();
 		for( int i = 0; i < x.size(); i++ ) 
-			l.add( getErrorGradient(x.get(i), y.get(i), gwWeights.get(i) ) );	
-		double[][][] errorGrad = calculateMeanOf3DList(l);
-		update(opt, errorGrad, eta);
+			l.add( getErrorGradient_bf( x.get(i), y.get(i), gwWeights.get(i), feature ) );
+		double[][][] errorGrad = !norm_grad ? NNetUtils.calculateMeanOf3DList(l) : GWANNUtils.calculateSpatiallyNormalizedGradient(l);
+		update(opt, errorGrad, eta);		
 	}
-	
+		
 	@Override
 	public double[] getResiduals(List<double[]> inputs, List<double[]> targets) {
 	    int output_size = targets.get(0).length;
