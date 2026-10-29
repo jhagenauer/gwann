@@ -130,7 +130,19 @@ public class GWANNUtils {
 						
 		Function[][] layers = layerList.toArray( new Function[][] {} );
 		
-		double[][][] weights = init_weights == null ? NNetUtils.getFullyConnectedWeights(layers, NNetUtils.initMode.gorot_unif, seed) : NNet.deepCopy3DArray(init_weights);
+		double[][][] weights = NNetUtils.getFullyConnectedWeights(layers, NNetUtils.initMode.gorot_unif, seed);
+		if( init_weights != null ) {
+		    double[][][] d = NNet.deepCopy3DArray(init_weights);
+		    int last = d.length - 1;         
+
+		    // sanity: everything before the output layer must have identical shape
+		    for( int l = 0; l < last; l++ )
+		        assert d[l].length == weights[l].length && d[l][0].length == weights[l][0].length;
+
+		    d[last] = weights[last]; // fresh output layer, correct width
+		    weights = d;
+		}	
+		
 		GWANN gwann = new GWANN(layers, weights, eta, opt, lambda);
 		List<Double> errors = new ArrayList<>();	
 													
