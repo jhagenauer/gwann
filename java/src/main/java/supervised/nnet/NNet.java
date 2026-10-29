@@ -89,7 +89,7 @@ public class NNet implements SupervisedNet {
 		return out[out.length - 1]; // output of last layer
 	}	
 
-	protected double[][][] presentInt(double[] x, double[][][] w) {
+	public double[][][] presentInt(double[] x, double[][][] w) {
 	    double[][] out = new double[layer.length][];
 	    double[][] net = new double[layer.length][];
 
