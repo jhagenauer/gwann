@@ -549,7 +549,7 @@ public class GWANNUtils {
 		return errors;
 	}
 	
-	public static List<List<Double>> getErrors_CV(
+	public static List<List<Double>> getErrors_CV_foldsNet(
 			List<double[]> xArray, List<double[]> yArray, 
 			DoubleMatrix W, 
 			List<Entry<List<Integer>, List<Integer>>> innerCvList, 
@@ -565,9 +565,10 @@ public class GWANNUtils {
 		
 		assert innerCvList.size() == init_weights.size();
 		
-		for ( Entry<List<Integer>, List<Integer>> innerCvEntry : innerCvList ) {
-			int k = innerCvList.indexOf(innerCvEntry);
-						
+		for( int k = 0; k < innerCvList.size(); k++ ) {
+			Entry<List<Integer>, List<Integer>> innerCvEntry = innerCvList.get(k);
+			double[][][] init_weight = init_weights.get(k);
+								
 			futures.add(innerEs.submit(new Callable<List<Double>>() {
 				@Override
 				public List<Double> call() throws Exception {
@@ -584,12 +585,12 @@ public class GWANNUtils {
 					
 					if( fast_cv ) { 
 						//assert false;
-						List<Double> errors = buildGWANN(xTrain, yTrain, xTest, yTest, W_train_test, nrHidden, eta, opt, batchSize, max_its.get(), patience, kernel, bw, adaptive, lambda, explTrans, respTrans, init_weights.get(k), seed).errors;
+						List<Double> errors = buildGWANN(xTrain, yTrain, xTest, yTest, W_train_test, nrHidden, eta, opt, batchSize, max_its.get(), patience, kernel, bw, adaptive, lambda, explTrans, respTrans, init_weight, seed).errors;
 						max_its.accumulateAndGet(errors.size(), Math::min);
 						return errors;	
 					} else {
 						
-						List<Double> errors = buildGWANN(xTrain, yTrain, xTest, yTest, W_train_test, nrHidden, eta, opt, batchSize, iterations, patience, kernel, bw, adaptive, lambda, explTrans, respTrans, init_weights.get(k), seed).errors;
+						List<Double> errors = buildGWANN(xTrain, yTrain, xTest, yTest, W_train_test, nrHidden, eta, opt, batchSize, iterations, patience, kernel, bw, adaptive, lambda, explTrans, respTrans, init_weight, seed).errors;
 						return errors;	
 					}
 				
