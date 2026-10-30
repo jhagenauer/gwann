@@ -548,6 +548,65 @@ public class GWANNUtils {
 		} 
 		return errors;
 	}
+	
+	public static List<List<Double>> getErrors_CV(
+			List<double[]> xArray, List<double[]> yArray, 
+			DoubleMatrix W, 
+			List<Entry<List<Integer>, List<Integer>>> innerCvList, 
+			GWKernel kernel, double[] bw, boolean adaptive, 
+			double[] eta, int batchSize, Optimizer opt, int[] nrHidden, 
+			int iterations, int patience, 
+			int threads, double lambda, Transform[] explTrans, Transform[] respTrans, List<double[][][]> init_weights, int seed, boolean fast_cv ) {
+				
+		ExecutorService innerEs = Executors.newFixedThreadPool((int) threads);
+		List<Future<List<Double>>> futures = new ArrayList<Future<List<Double>>>();		
+			
+		final AtomicInteger max_its = new AtomicInteger(iterations);
+		
+		assert innerCvList.size() == init_weights.size();
+		
+		for ( Entry<List<Integer>, List<Integer>> innerCvEntry : innerCvList ) {
+			int k = innerCvList.indexOf(innerCvEntry);
+						
+			futures.add(innerEs.submit(new Callable<List<Double>>() {
+				@Override
+				public List<Double> call() throws Exception {
+					List<Integer> trainIdx = innerCvEntry.getKey();
+					List<Integer> testIdx = innerCvEntry.getValue();
+					
+					List<double[]> xTrain = DataUtils.subset_rows(xArray,trainIdx);
+					List<double[]> yTrain = DataUtils.subset_rows(yArray,trainIdx);
+										
+					List<double[]> xTest = DataUtils.subset_rows(xArray,testIdx);
+					List<double[]> yTest = DataUtils.subset_rows(yArray,testIdx);
+													
+					DoubleMatrix W_train_test = W.get( DataUtils.toIntArray(trainIdx), DataUtils.toIntArray(testIdx)); // train to test
+					
+					if( fast_cv ) { 
+						//assert false;
+						List<Double> errors = buildGWANN(xTrain, yTrain, xTest, yTest, W_train_test, nrHidden, eta, opt, batchSize, max_its.get(), patience, kernel, bw, adaptive, lambda, explTrans, respTrans, init_weights.get(k), seed).errors;
+						max_its.accumulateAndGet(errors.size(), Math::min);
+						return errors;	
+					} else {
+						
+						List<Double> errors = buildGWANN(xTrain, yTrain, xTest, yTest, W_train_test, nrHidden, eta, opt, batchSize, iterations, patience, kernel, bw, adaptive, lambda, explTrans, respTrans, init_weights.get(k), seed).errors;
+						return errors;	
+					}
+				
+				}
+			}));
+		}
+		innerEs.shutdown();
+		
+		List<List<Double>> errors = new ArrayList<>();
+		try {
+			for( Future<List<Double>> f : futures ) 
+				errors.add( f.get() );
+		} catch (InterruptedException | ExecutionException e) {
+			e.printStackTrace();
+		} 
+		return errors;
+	}
 								
 	public static double[] getParamsWithGridSearch(int minRadius, int maxRadius, int steps,
 			List<double[]> xArray, List<double[]> yArray, DoubleMatrix W, List<Entry<List<Integer>, List<Integer>>> innerCvList, GWKernel kernel, 
