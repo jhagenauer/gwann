@@ -485,49 +485,7 @@ public class GWANNUtils {
 		}
 		return r;
 	}
-		
-	public static double[] getParamsWithGoldenSection(double minRadius, double maxRadius, 
-			List<double[]> xArray, List<double[]> yArray, DoubleMatrix W, List<Entry<List<Integer>, List<Integer>>> cv_list, 
-			GWKernel kernel, boolean adaptive, double[] eta, int batchSize, Optimizer opt, int[] nrHidden, int iterations, int patience, int threads, double lambda, Transform[] explTrans, Transform[] respTrans, double[][][] init_weights, int seed ) {
-		double xU = maxRadius;
-		double xL = minRadius;
-		double eps = 1e-04;
-		double R = (Math.sqrt(5) - 1) / 2.0;
-		double d = R * (xU - xL);
-		
-		double x1 = xL + d;
-		double x2 = xU - d;
-		
-		boolean fast_cv = false;
-						
-		double[] f1 = NNetUtils.getErrorParameters( getErrors_CV(xArray, yArray, W, cv_list, kernel, new double[] {x1}, adaptive, eta, batchSize, opt, nrHidden, iterations, patience, threads, lambda, explTrans, respTrans, init_weights, seed, fast_cv), error_param.argmin_mean );
-		double[] f2 = NNetUtils.getErrorParameters( getErrors_CV(xArray, yArray, W, cv_list, kernel, new double[] {x2}, adaptive, eta, batchSize, opt, nrHidden, iterations, patience, threads, lambda, explTrans, respTrans, init_weights, seed, fast_cv), error_param.argmin_mean );
-		
-		double d1 = f2[0] - f1[0];
-		while ((Math.abs(d) > eps) && (Math.abs(d1) > eps)) {
-			d = R * d;
-			if (f1[0] < f2[0]) {
-				xL = x2;
-				x2 = x1;
-				x1 = xL + d;
-				f2 = f1;
-				f1 = NNetUtils.getErrorParameters( getErrors_CV(xArray, yArray, W, cv_list, kernel, new double[] {x1}, adaptive, eta, batchSize, opt, nrHidden, iterations, patience, threads, lambda, explTrans, respTrans, init_weights, seed, fast_cv ), error_param.argmin_mean );
-			} else {
-				xU = x1;
-				x1 = x2;
-				x2 = xU - d;
-				f1 = f2;
-				f2 = NNetUtils.getErrorParameters( getErrors_CV(xArray, yArray, W, cv_list, kernel, new double[] {x2}, adaptive, eta, batchSize, opt, nrHidden, iterations, patience, threads, lambda, explTrans, respTrans, init_weights, seed, fast_cv ), error_param.argmin_mean );
-			}
-			d1 = f2[0] - f1[0];
-		}
-		// returns cost, bandwidth, iterations
-		if( f1[0] < f2[0] )
-			return new double[] { f1[0], adaptive ? Math.round(x1) : x1, f1[1]};
-		else 
-			return new double[] { f2[0], adaptive ? Math.round(x2) : x2, f2[1]};
-	}
-			
+				
 	public static List<List<Double>> getErrors_CV(
 			List<double[]> xArray, List<double[]> yArray, DoubleMatrix W, List<Entry<List<Integer>, List<Integer>>> innerCvList, 
 			GWKernel kernel, double[] bw, boolean adaptive, double[] eta, int batchSize, Optimizer opt, int[] nrHidden, int iterations, int patience, 
@@ -572,17 +530,7 @@ public class GWANNUtils {
 						return errors;	
 					} else {
 						
-						/*{
-							double[] nbw = new double[9];
-							for( int j = 0; j < nbw.length; j++ )
-								nbw[j] = bw[0];
-							List<Double> errors = buildGWANN(xTrain, yTrain, xTest, yTest, W_train_test, nrHidden, eta, opt, batchSize, iterations, patience, kernel, nbw, adaptive, lambda, explTrans, respTrans, null, seed).errors;
-							log.debug("nbw: "+errors.subList(0, 20));
-						}*/
 						List<Double> errors = buildGWANN(xTrain, yTrain, xTest, yTest, W_train_test, nrHidden, eta, opt, batchSize, iterations, patience, kernel, bw, adaptive, lambda, explTrans, respTrans, init_weights, seed).errors;
-						//log.debug(" bw "+errors.subList(0, 20));
-						
-						//System.exit(1);
 						return errors;	
 					}
 				
@@ -684,5 +632,132 @@ public class GWANNUtils {
 	                row[k] *= inv;
 
 	    return sum;
+	}
+	
+	/**
+	 * Golden section search for a scalar x in [xL,xU].
+	 * cost.apply(x) has to return {cost, iterations}.
+	 * Returns {cost, x, iterations} of the better one of the last two evaluated points.
+	 * epsX: stop if the interval is smaller than this, epsF: stop if the two inner points differ less than this in cost.
+	 */
+	private static double[] goldenSection(java.util.function.DoubleFunction<double[]> cost, double xL, double xU, double epsX, double epsF) {
+		final double R = (Math.sqrt(5) - 1) / 2.0;
+		double d = R * (xU - xL);
+
+		double x1 = xL + d;
+		double x2 = xU - d;
+		double[] f1 = cost.apply(x1);
+		double[] f2 = cost.apply(x2);
+
+		double d1 = f2[0] - f1[0];
+		while ((Math.abs(d) > epsX) && (Math.abs(d1) > epsF)) {
+			d = R * d;
+			if (f1[0] < f2[0]) {
+				xL = x2;
+				x2 = x1;
+				x1 = xL + d;
+				f2 = f1;
+				f1 = cost.apply(x1);
+			} else {
+				xU = x1;
+				x1 = x2;
+				x2 = xU - d;
+				f1 = f2;
+				f2 = cost.apply(x2);
+			}
+			d1 = f2[0] - f1[0];
+		}
+		if (f1[0] < f2[0])
+			return new double[] { f1[0], x1, f1[1] };
+		else
+			return new double[] { f2[0], x2, f2[1] };
+	}
+
+	/** Bandwidth vector for a GWANN: one bandwidth for all nodes of the last hidden layer, the last entry is the bias. */
+	public static double[] expandBw(int nrLastHidden, double bwHidden, double bwBias) {
+		double[] bw = new double[nrLastHidden + 1];
+		Arrays.fill(bw, bwHidden);
+		bw[bw.length - 1] = bwBias;
+		return bw;
+	}
+	
+	// same behaviour as before, just built on goldenSection()
+	public static double[] getParamsWithGoldenSection(double minRadius, double maxRadius,
+			List<double[]> xArray, List<double[]> yArray, DoubleMatrix W, List<Entry<List<Integer>, List<Integer>>> cv_list,
+			GWKernel kernel, boolean adaptive, double[] eta, int batchSize, Optimizer opt, int[] nrHidden, int iterations, int patience, int threads, double lambda, Transform[] explTrans, Transform[] respTrans, double[][][] init_weights, int seed ) {
+
+		double[] r = goldenSection( x -> NNetUtils.getErrorParameters(
+				getErrors_CV(xArray, yArray, W, cv_list, kernel, new double[] {x}, adaptive, eta, batchSize, opt, nrHidden, iterations, patience, threads, lambda, explTrans, respTrans, init_weights, seed, false),
+				error_param.argmin_mean ), minRadius, maxRadius, 1e-04, 1e-04 );
+
+		// returns cost, bandwidth, iterations
+		return new double[] { r[0], adaptive ? Math.round(r[1]) : r[1], r[2] };
+	}
+
+	/**
+	 * Golden section search for two bandwidths: one shared by all hidden nodes of the last hidden layer and one for the bias.
+	 * 1. golden section on the diagonal (bwHidden == bwBias), i.e. the usual single-bandwidth solution as start,
+	 * 2. alternate: golden section on bwBias (bwHidden fixed), then on bwHidden (bwBias fixed), until nothing changes.
+	 * The cost never gets worse than the single-bandwidth solution. Assumes the cost is roughly unimodal along each axis.
+	 * Returns cost, bandwidth hidden nodes, bandwidth bias, iterations; build the bw vector with expandBw().
+	 */
+	public static double[] getParamsWithGoldenSection2(double minRadius, double maxRadius,
+			List<double[]> xArray, List<double[]> yArray, DoubleMatrix W, List<Entry<List<Integer>, List<Integer>>> cv_list,
+			GWKernel kernel, boolean adaptive, double[] eta, int batchSize, Optimizer opt, int[] nrHidden, int iterations, int patience, int threads, double lambda, Transform[] explTrans, Transform[] respTrans, double[][][] init_weights, int seed ) {
+
+		final int nrLast = nrHidden[nrHidden.length - 1];
+		final double epsX = adaptive ? 1.0 : 1e-04; // adaptive bandwidths are integers, no need to go below 1
+		final double epsF = 1e-04;
+		final int maxRounds = 5;
+
+		// the same point is visited several times when alternating
+		final java.util.Map<String, double[]> cache = new java.util.HashMap<>();
+		final java.util.function.BiFunction<Double, Double, double[]> eval = (bwH, bwB) -> {
+			final double h = adaptive ? Math.round(bwH) : bwH;
+			final double b = adaptive ? Math.round(bwB) : bwB;
+			return cache.computeIfAbsent(h + "|" + b, key -> NNetUtils.getErrorParameters(
+					getErrors_CV(xArray, yArray, W, cv_list, kernel, expandBw(nrLast, h, b), adaptive, eta, batchSize, opt, nrHidden, iterations, patience, threads, lambda, explTrans, respTrans, init_weights, seed, false),
+					error_param.argmin_mean));
+		};
+
+		// start: same bandwidth for hidden nodes and bias
+		double[] r = goldenSection( x -> eval.apply(x, x), minRadius, maxRadius, epsX, epsF );
+		double bwHidden = adaptive ? Math.round(r[1]) : r[1];
+		double bwBias = bwHidden;
+		double cost = r[0];
+		double its = r[2];
+		log.debug("golden section 2, start: cost " + cost + ", bw " + bwHidden);
+
+		for (int round = 0; round < maxRounds; round++) {
+			final double costStart = cost;
+			final double hiddenStart = bwHidden;
+			final double biasStart = bwBias;
+
+			// bias, hidden fixed
+			final double hiddenFixed = bwHidden;
+			r = goldenSection( x -> eval.apply(hiddenFixed, x), minRadius, maxRadius, epsX, epsF );
+			if (r[0] < cost) {
+				cost = r[0];
+				bwBias = adaptive ? Math.round(r[1]) : r[1];
+				its = r[2];
+			}
+
+			// hidden, bias fixed
+			final double biasFixed = bwBias;
+			r = goldenSection( x -> eval.apply(x, biasFixed), minRadius, maxRadius, epsX, epsF );
+			if (r[0] < cost) {
+				cost = r[0];
+				bwHidden = adaptive ? Math.round(r[1]) : r[1];
+				its = r[2];
+			}
+
+			log.debug("golden section 2, round " + round + ": cost " + cost + ", bw hidden " + bwHidden + ", bw bias " + bwBias + ", evals " + cache.size());
+
+			if ((bwHidden == hiddenStart && bwBias == biasStart) || costStart - cost < epsF)
+				break;
+		}
+
+		// returns cost, bandwidth hidden nodes, bandwidth bias, iterations
+		return new double[] { cost, bwHidden, bwBias, its };
 	}
 }
