@@ -70,13 +70,13 @@ public class NNet_RInterface {
 						
 		if( iterations > 0 ) { // iterations given
 			System.out.println("Iterations given. cv_max_iterations and cv_patience are ignored.");
-			List<List<Double>> errors = NNetUtils.getErrors_CV(xTrain_list, yTrain_list, innerCvList, eta, (int)batch_size, opt, lambda, new int[] {(int)nr_hidden}, (int)iterations, Integer.MAX_VALUE, (int)threads, explTrans, respTrans);
+			List<List<Double>> errors = NNetUtils.getErrors_CV(xTrain_list, yTrain_list, innerCvList, eta, (int)batch_size, opt, lambda, new int[] {(int)nr_hidden}, (int)iterations, Integer.MAX_VALUE, (int)threads, explTrans, respTrans, seed);
 			double[] m = NNetUtils.getErrorParameters(errors,error_param.last);
 			bestValError = m[0];
 			best_its = (int)m[1]+1;
 		} else {
 			System.out.println("Estimate iterations...");
-			List<List<Double>> errors = NNetUtils.getErrors_CV(xTrain_list, yTrain_list, innerCvList, eta, (int)batch_size, opt, lambda, new int[] {(int)nr_hidden}, (int)cv_max_iterations, (int)cv_patience, (int)threads, explTrans, respTrans);
+			List<List<Double>> errors = NNetUtils.getErrors_CV(xTrain_list, yTrain_list, innerCvList, eta, (int)batch_size, opt, lambda, new int[] {(int)nr_hidden}, (int)cv_max_iterations, (int)cv_patience, (int)threads, explTrans, respTrans, seed);
 			double[] m = NNetUtils.getErrorParameters(errors,error_param.argmin_mean);
 			bestValError = m[0];
 			best_its = (int)m[1]+1;
@@ -95,7 +95,7 @@ public class NNet_RInterface {
 					xTrain_list, yTrain_list,  
 					new int[] { (int)nr_hidden }, eta, opt, 
 					lambda, (int)batch_size, best_its, Integer.MAX_VALUE, 
-					explTrans, respTrans);
+					explTrans, respTrans, seed);
 						
 			double[][] preds = bg.prediction.toArray(new double[][] {});
 			
@@ -149,7 +149,7 @@ public class NNet_RInterface {
 				xPred_list, yPred_list,
 				new int[] { (int)nr_hidden }, eta, opt, 
 				lambda, (int)batch_size, best_its, Integer.MAX_VALUE, 
-				explTrans, respTrans);
+				explTrans, respTrans, seed);
 		
 		double secs = (System.currentTimeMillis()-time)/1000;			
 		Return_R rr = new Return_R();

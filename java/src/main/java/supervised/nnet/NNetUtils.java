@@ -40,7 +40,7 @@ public class NNetUtils {
 	
 	public static Neuron_type hidden_neuron_type = Neuron_type.TanH;
 	
-	public static List<List<Double>> getErrors_CV(List<double[]> xArray, List<double[]> yArray, List<Entry<List<Integer>, List<Integer>>> innerCvList, double[] eta, int batchSize, NNet.Optimizer opt, double lambda, int[] nrHidden, int maxIt, int patience, int threads, Transform[] expTrans, Transform[] respTrans ) {
+	public static List<List<Double>> getErrors_CV(List<double[]> xArray, List<double[]> yArray, List<Entry<List<Integer>, List<Integer>>> innerCvList, double[] eta, int batchSize, NNet.Optimizer opt, double lambda, int[] nrHidden, int maxIt, int patience, int threads, Transform[] expTrans, Transform[] respTrans, int seed ) {
 		ExecutorService innerEs = Executors.newFixedThreadPool(threads);
 		List<Future<List<Double>>> futures = new ArrayList<Future<List<Double>>>();
 		
@@ -59,7 +59,7 @@ public class NNetUtils {
 					List<double[]> xVal = DataUtils.subset_rows(xArray, testIdx);
 					List<double[]> yVal = DataUtils.subset_rows(yArray, testIdx);
 									
-					ReturnObject ro = NNetUtils.buildNNet(xTrain, yTrain, xVal, yVal, nrHidden, eta, opt, lambda, batchSize, maxIt, patience, expTrans, respTrans );
+					ReturnObject ro = NNetUtils.buildNNet(xTrain, yTrain, xVal, yVal, nrHidden, eta, opt, lambda, batchSize, maxIt, patience, expTrans, respTrans, seed );
 					return ro.errors;
 				}
 			}));
@@ -82,9 +82,9 @@ public class NNetUtils {
 			int[] nr_hidden, double[] eta, NNet.Optimizer opt, 
 			double lambda, int batchSize, 
 			int max_its, int patience, 
-			Transform[] expTrans, Transform[] respTrans
+			Transform[] expTrans, Transform[] respTrans, int seed
 			) {
-		Random r = new Random(0);
+		Random r = new Random(seed);
 		
 		assert nr_hidden.length+1 == eta.length :nr_hidden.length+"<->"+eta.length;
 			
