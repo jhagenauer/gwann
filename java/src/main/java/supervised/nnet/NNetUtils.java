@@ -146,8 +146,15 @@ public class NNetUtils {
 	
 		Function[][] layers = layerList.toArray(new Function[][] {});
 		double[][][] weights = NNetUtils.getFullyConnectedWeights(layers, NNetUtils.initMode.gorot_unif, 0);
+		
+		boolean[][] act = new boolean[layers.length][];
+		for (int l = 0; l < layers.length; l++) {
+			act[l] = new boolean[layers[l].length];
+			for( int i = 0; i < layers[l].length; i++ )
+				act[l][i] = layers[l][i].isConstant();
+		}
 	
-		NNet nnet = new NNet(layers, weights, eta, opt, lambda);
+		NNet nnet = new NNet(layers, weights, act, eta, opt, lambda);
 	
 		List<Integer> batchReservoir = new ArrayList<>();
 		List<Double> errors = new ArrayList<>();
@@ -168,18 +175,12 @@ public class NNetUtils {
 				}
 				
 				// train
-				List<double[][][]> l = new ArrayList<>();
-				for( int i = 0; i < x.size(); i++ ) 
-					l.add( nnet.getErrorGradient( x.get(i), y.get(i) ) );			
-				double[][][] errorGrad = NNetUtils.calculateMeanOf3DList(l);							
+				double[][][] errorGrad = nnet.getErrorGradient( x, y );				
 				nnet.update( opt, errorGrad, eta );
 				
 			} else {
 				// train
-				List<double[][][]> l = new ArrayList<>();
-				for( int i = 0; i < x_train.size(); i++ ) 
-					l.add( nnet.getErrorGradient( x_train.get(i), y_train.get(i) ) );			
-				double[][][] errorGrad = NNetUtils.calculateMeanOf3DList(l);							
+				double[][][] errorGrad = nnet.getErrorGradient( x_train, y_train );			
 				nnet.update( opt, errorGrad, eta );
 			}
 						

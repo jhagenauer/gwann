@@ -35,10 +35,8 @@ import utils.Normalizer.Transform;
 public class GWANNUtils {
 	
 	public static boolean norm = false;
-	
 	private static Logger log = LogManager.getLogger(GWANNUtils.class);
 	public static double eta_decay = 1.0;	
-	public static boolean new_grad = false;
 							
 	// cleaner interface
 	public static ReturnObject buildGWANN( 
@@ -143,7 +141,14 @@ public class GWANNUtils {
 		    weights = d;
 		}	
 		
-		GWANN gwann = new GWANN(layers, weights, eta, opt, lambda);
+		boolean[][] act = new boolean[layers.length][];
+		for (int l = 0; l < layers.length; l++) {
+			act[l] = new boolean[layers[l].length];
+			for( int i = 0; i < layers[l].length; i++ )
+				act[l][i] = layers[l][i].isConstant();
+		}
+		
+		GWANN gwann = new GWANN(layers, weights, act, eta, opt, lambda);
 		List<Double> errors = new ArrayList<>();	
 													
 		List<Integer> batchReservoir = new ArrayList<>();			
@@ -176,11 +181,7 @@ public class GWANNUtils {
 				}
 				
 				// train 
-				List<double[][][]> l = new ArrayList<>();
-				for( int i = 0; i < x.size(); i++ )
-					l.add( gwann.getErrorGradient( x.get(i), y.get(i), gwWeights.get(i) ) );
-				//double[][][] errorGrad = NNetUtils.calculateMeanOf3DList(l);	
-				double[][][] errorGrad = GWANN.norm_grad ? GWANNUtils.calculateSpatiallyNormalizedGradient(l) : NNetUtils.calculateMeanOf3DList(l);
+				double[][][] errorGrad = gwann.getErrorGradient_orig( x, y, gwWeights );
 				gwann.update(opt, errorGrad, eta_current);
 	
 			} else {
@@ -214,13 +215,8 @@ public class GWANNUtils {
 					}
 				}
 								
-				// train				
-				List<double[][][]> l = new ArrayList<>();
-				for( int i = 0; i < x.size(); i++ ) {
-					double[][][] eg = new_grad ? gwann.getErrorGradient_new(x.get(i), y.get(i), gwWeights.get(i) ) : gwann.getErrorGradient(x.get(i), y.get(i), gwWeights.get(i) ); 
-					l.add( eg );
-				}	
-				double[][][] errorGrad = GWANN.norm_grad ? GWANNUtils.calculateSpatiallyNormalizedGradient(l) : NNetUtils.calculateMeanOf3DList(l);
+				// train					
+				double[][][] errorGrad = gwann.getErrorGradient(x, y, gwWeights);
 				gwann.update(opt, errorGrad, eta_current);				
 			}
 																	
@@ -269,210 +265,7 @@ public class GWANNUtils {
 	}
 	
 	public static boolean debug = false;
-	
-	public static ReturnObject buildGWANN_backfitting( 
-			List<double[]> x_train_, List<double[]> y_train_, 
-			List<double[]> x_val_, List<double[]> y_val_, DoubleMatrix W_train_val, 
-			List<double[]> x_test_, List<double[]> y_test_, DoubleMatrix W_train_test, 
-			int[] hidden_layers, double[] eta, Optimizer opt, 
-			int batch_size, int max_it, int patience,  
-			GWKernel kernel, 
-			double[] bw, 
-			boolean adaptive, double lambda,
-			Transform[] expTrans, Transform[] respTrans, int seed ) {
-		
-		assert y_train_.get(0).length == 1;
-		assert y_test_.get(0).length == 1;
-		assert hidden_layers.length + 1 == eta.length;
-		
-		Random r = new Random(seed);	
-		
-		DoubleMatrix W = DoubleMatrix.concatHorizontally(W_train_val, W_train_test);
-		
-		double[][][] kW_2d = null; // [bw][train][test]
-		kW_2d = new double[bw.length][][];
-		for( int k = 0; k < bw.length; k++ ) {
-			DoubleMatrix mat = adaptive ? GWUtils.getKernelWeightsAdaptive(W, kernel, (int) bw[k] ) : GWUtils.getKernelWeights(W, kernel, bw[k]);
-			if( norm )
-				DataUtils.columnNormalizeMatrix(mat);	
-			kW_2d[k] = mat.toArray2();
-		}	
 			
-		List<double[]> x_train = x_train_.stream().map(arr -> arr.clone()).toList();	
-		List<double[]> y_train = y_train_.stream().map(arr -> arr.clone()).toList();
-		
-		List<double[]> x_val = x_val_.stream().map(arr -> arr.clone()).toList();	
-		List<double[]> y_val = y_val_.stream().map(arr -> arr.clone()).toList();	
-						
-		List<double[]> x_test = x_test_.stream().map(arr -> arr.clone()).toList();	
-		List<double[]> y_test = y_test_.stream().map(arr -> arr.clone()).toList();	
-						
-		double[] desired_test_orig = new double[y_test_.size()];
-		for( int i = 0; i < y_test.size(); i++ )
-			desired_test_orig[i] = y_test.get(i)[0];
-		
-		int os = y_val.size() + y_test.size();
-						
-		y_train = broadcast1D(y_train,os);
-		y_val = broadcast1D(y_val,os);
-		y_test = broadcast1D(y_test,os);
-		
-		ListNormalizer ln_x = new ListNormalizer( expTrans, x_train);
-		ln_x.normalize(x_val);
-		ln_x.normalize(x_test);
-		
-		ListNormalizer ln_y = new ListNormalizer( respTrans, y_train);		
-		ln_y.normalize(y_val);
-		ln_y.normalize(y_test);
-		
-		assert y_train.get(0).length==y_val.get(0).length && y_val.get(0).length == y_test.get(0).length;
-		
-		double[] desired_val = new double[y_val_.size()];
-		for( int i = 0; i < y_val.size(); i++ )
-			desired_val[i] = y_val.get(i)[i];
-					
-		List<Function[]> layerList = new ArrayList<>();
-		List<Function> input = new ArrayList<>();
-		while (input.size() < x_train.get(0).length )
-			input.add(new Linear());
-		input.add(new Constant(1.0));
-		layerList.add(input.toArray(new Function[] {} ) );
-		
-		for( int nh : hidden_layers ) {
-			if( nh == 0 )
-				continue;
-			List<Function> hidden0 = new ArrayList<>();
-			while (hidden0.size() < nh) 
-					hidden0.add(new TanH());				
-			hidden0.add(new Constant(1.0));
-			layerList.add(hidden0.toArray(new Function[] {} ) );
-		}
-				
-		List<Function> output = new ArrayList<>();
-		while (output.size() < os)
-			output.add(new Linear());
-		layerList.add(output.toArray(new Function[] {} ) );	
-		
-		if( bw.length > 1 && layerList.get(layerList.size()-2).length != bw.length ) 
-			throw new RuntimeException(bw.length+" != "+layerList.get(layerList.size()-2).length+"|"+input.size()+" -> "+Arrays.toString(hidden_layers)+" -> "+output.size() );
-								
-		Function[][] layers = layerList.toArray( new Function[][] {} );
-		double[][][] weights = NNetUtils.getFullyConnectedWeights(layers, NNetUtils.initMode.gorot_unif, seed);						
-		GWANN gwann = new GWANN(layers, weights, eta, opt, lambda);
-		
-		double error_last = Double.POSITIVE_INFINITY;
-		
-		for( int n = 0; n < 500; n++ ) {
-			
-			for( int f = 0; f < layers[0].length; f++ )	{
-								
-				gwann.resetVs();
-					
-				// train feature f
-				List<Integer> batchReservoir = new ArrayList<>();
-				int no_imp = 0;
-				double error_val_best = Double.POSITIVE_INFINITY;
-				double[][][] weights_best = null;
-				for (int it = 0; it < max_it && no_imp < patience; it++) {
-							
-					List<double[]> x = new ArrayList<>();
-					List<double[]> y = new ArrayList<>();									
-					List<double[][]> gwWeights = new ArrayList<>();			
-					if( batch_size < 0 ) {
-						for( int k = 0; k < x_train.size(); k++ ) {
-							x.add(x_train.get(k));
-							y.add(y_train.get(k));	
-							
-							double[][] w = new double[bw.length][];
-							for( int i = 0; i < bw.length; i++ )
-								w[i] = kW_2d[i][k];
-							gwWeights.add(w); 
-						}
-					} else {						
-						while (x.size() < batch_size) {
-							if (batchReservoir.isEmpty())
-								for (int j = 0; j < x_train.size(); j++)
-									batchReservoir.add(j);
-							int k = batchReservoir.remove(r.nextInt(batchReservoir.size()));
-							x.add(x_train.get(k));
-							y.add(y_train.get(k));	
-								
-							double[][] w = new double[bw.length][]; // [bw][test]
-							for( int i = 0; i < bw.length; i++ )
-								w[i] = kW_2d[i][k];
-							gwWeights.add(w); 
-						}
-					}				
-					gwann.train_(x,y,gwWeights, f, null);				
-																									
-					// get response-diag val
-					double[] response_val= new double[x_val.size()];
-					for (int i = 0; i < x_val.size(); i++) {
-						double[] d = gwann.present(x_val.get(i));
-						response_val[i] = d[i]; 
-					}	
-					
-					double error_val = SupervisedUtils.getRSS(response_val, desired_val);						
-					if (error_val < error_val_best) {
-						error_val_best = error_val;
-						weights_best = gwann.getCopyOfWeights();
-						no_imp = 0;
-					} else
-						no_imp++;			
-				}
-				gwann.setWeights(weights_best); // ... and next feature
-			}
-			
-			double[] response_val= new double[x_val.size()];
-			for (int i = 0; i < x_val.size(); i++) {
-				double[] d = gwann.present(x_val.get(i));
-				response_val[i] = d[i]; 
-			}		
-			double error_val = SupervisedUtils.getRSS(response_val, desired_val);
-					
-			{
-				// get response and denormalize
-				List<double[]> response_test_denorm= new ArrayList<>();
-				for (int i = 0; i < x_test.size(); i++)
-					response_test_denorm.add(gwann.present(x_test.get(i)));
-				ln_y.denormalize(response_test_denorm);
-							
-				// response_diag
-				double[] response_denorm_diag = new double[response_test_denorm.size()];
-				for (int i = 0; i < x_test.size(); i++)
-					response_denorm_diag[i] = response_test_denorm.get(i)[x_val.size()+i];
-				
-				log.debug(n+" --> rmse val: "+error_val+", r2 test: "+SupervisedUtils.getR2(response_denorm_diag, desired_test_orig ));
-			}
-			
-			double rel_tol = 0.001;
-			if ((error_last - error_val) / error_last < rel_tol) // no significant relative improvement
-			    break;
-			error_last = error_val;				
-		} 
-								
-		// get response and denormalize
-		List<double[]> response_test_denorm= new ArrayList<>();
-		for (int i = 0; i < x_test.size(); i++)
-			response_test_denorm.add(gwann.present(x_test.get(i)));
-		ln_y.denormalize(response_test_denorm);
-				
-		// response_diag
-		double[] response_denorm_diag = new double[response_test_denorm.size()];
-		for (int i = 0; i < x_test.size(); i++)
-			response_denorm_diag[i] = response_test_denorm.get(i)[x_val.size()+i];
-														
-		ReturnObject ro = new ReturnObject();
-		ro.mse = SupervisedUtils.getMSE(response_denorm_diag, desired_test_orig);
-		ro.rmse = Math.sqrt(ro.mse);
-		ro.r2 = SupervisedUtils.getR2(response_denorm_diag, desired_test_orig );
-		ro.nnet = gwann;
-		ro.prediction = response_test_denorm;
-		ro.ln_x = ln_x;
-		ro.ln_y = ln_y;
-		return ro;
-	}
-		
 	public static List<double[]> broadcast1D( List<double[]> y, int i ) {
 		List<double[]> r = new ArrayList<>();
 		for(  double[] d : y ) {			
