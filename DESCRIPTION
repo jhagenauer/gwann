@@ -1,12 +1,12 @@
 Package: gwann
 Title: Geographically Weighted Artificial Neural Network
-Version: 0.7
+Version: 0.8
 Authors@R: 
     person(given = "Julian",
            family = "Hagenauer",
            role = c("aut", "cre"),
            email = "julian.hagenauer@gmx.de",
-           comment = c(ORCID = "YOUR-ORCID-ID"))
+           comment = c(ORCID = "0000-0001-5780-2504"))
 Description: Builds a geographically weighted neural network.
 URL: https://github.com/jhagenauer/gwann/
 License: GNU GPLv3
@@ -14,6 +14,3 @@ Encoding: UTF-8
 LazyData: true
 Depends: R (>= 3.5.0), rJava (>= 0.9-1)
 RoxygenNote: 7.3.2
-Suggests: 
-    testthat (>= 3.0.0)
-Config/testthat/edition: 3
