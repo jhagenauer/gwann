@@ -85,7 +85,7 @@ public class GWANN extends NNet {
 						error_signal = (out[l][i] - y[i]) * sw[i];
 					} else {
 						for (int j = 0; j < weights[l][i].length; j++)
-							if( !layer[l+1][j].isConstant() ) 
+							if( !n_act[l+1][j] ) 
 								error_signal += delta[l][j] * weights[l][i][j];		
 					}
 					delta[l-1][i] = layer[l][i].fDevFOut(out[l][i]) * error_signal;

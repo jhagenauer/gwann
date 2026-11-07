@@ -110,27 +110,26 @@ public class NNet implements SupervisedNet {
 	    throw new IllegalStateException("Unexpected execution flow in presentInt");
 	}
 	
-	protected double[][] outBuf, netBuf;   // training-only scratch, one set per NNet instance
+	protected double[][] outBuf;   // training-only scratch, one set per NNet instance
 	protected void forwardInto(double[] x) {
 	    if (outBuf == null) {
-	        outBuf = new double[layer.length][]; 
-	        netBuf = new double[layer.length][];
-	        for (int l = 0; l < layer.length; l++) { 
-	        	outBuf[l] = new double[layer[l].length]; 
-	        	netBuf[l] = new double[layer[l].length]; 
-	        }
+	        outBuf = new double[layer.length][];
+	        for (int l = 0; l < layer.length; l++)
+	            outBuf[l] = new double[layer[l].length];
 	    }
 	    for (int i = 0; i < layer[0].length; i++)
 	        outBuf[0][i] = n_act[0][i] ? layer[0][i].f(Double.NaN) : layer[0][i].f(x[i]);
 	    for (int l = 0; l < layer.length - 1; l++) {
-	        double[] nx = netBuf[l + 1];
+	        double[] nx = outBuf[l + 1];   // net input is accumulated here, activation is applied in place
 	        java.util.Arrays.fill(nx, 0.0);
 	        for (int i = 0; i < layer[l].length; i++) {
 	            double o = outBuf[l][i];
 	            double[] w = weights[l][i];
-	            for (int j = 0; j < nx.length; j++) nx[j] += w[j] * o;
+	            for (int j = 0; j < nx.length; j++)
+	                nx[j] += w[j] * o;
 	        }
-	        for (int j = 0; j < nx.length; j++) outBuf[l + 1][j] = layer[l + 1][j].f(nx[j]);
+	        for (int j = 0; j < nx.length; j++)
+	            nx[j] = layer[l + 1][j].f(nx[j]);
 	    }
 	}
 	
@@ -179,10 +178,6 @@ public class NNet implements SupervisedNet {
 	}
 	
 	public static double mu = 0.90;
-	public static double fac = 1.5;
-	public static boolean center = false;
-
-	public static double decay_rate = 0.0; 
 			
 	public void update( Optimizer opt, double[][][] errorGrad, double[] eta ) {
 								
