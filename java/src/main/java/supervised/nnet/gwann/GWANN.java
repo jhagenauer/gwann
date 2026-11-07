@@ -60,6 +60,7 @@ public class GWANN extends NNet {
 	
 	double[][][] getErrorGradient_orig( List<double[]> lx, List<double[]> ly, List<double[]> lsw ) {
 		int ll = layer.length - 1; // index of last layer (neuron)
+		
 		double[][] delta = new double[layer.length][];
 		double[][][] error_grad = new double[layer.length-1][][];		
 		for( int l = ll; l > 0; l-- ) {
@@ -71,7 +72,9 @@ public class GWANN extends NNet {
 			double[] x = lx.get(k);
 			double[] y = ly.get(k);
 			double[] sw = lsw.get(k);
-			double[][] out = presentInt( x )[0];
+			
+			forwardInto(x);
+			double[][] out = outBuf;
 			
 			for (int l = ll; l > 0; l--) {	
 				
@@ -109,7 +112,8 @@ public class GWANN extends NNet {
 			double[] y = ly.get(k);
 			double[][] sw = lsw.get(k);
 			
-			double[][] out = presentInt( x )[0]; 	
+			forwardInto(x);
+			double[][] out = outBuf;	
 		
 			for (int l = ll; l > 0; l--) {
 				for (int i = 0; i < layer[l].length; i++) {
@@ -140,32 +144,7 @@ public class GWANN extends NNet {
 		
 	public static boolean norm_grad = false;				
 	int kk = 1;
-	
-	public static double calculateMagnitude(double[][][] errorGrad) {
-        if (errorGrad == null || errorGrad.length == 0) {
-            return 0.0;
-        }
-
-        double sumOfSquares = 0.0;
-
-        for (int i = 0; i < errorGrad.length; i++) {
-            // Check for null or empty second dimension
-            if (errorGrad[i] == null) continue;
-
-            for (int j = 0; j < errorGrad[i].length; j++) {
-                // Check for null or empty third dimension
-                if (errorGrad[i][j] == null) continue;
-
-                for (int k = 0; k < errorGrad[i][j].length; k++) {
-                    double value = errorGrad[i][j][k];
-                    sumOfSquares += value * value;
-                }
-            }
-        }
-
-        return Math.sqrt(sumOfSquares);
-    }
-	
+		
 	@Deprecated
 	void train_( List<double[]> x, List<double[]> y, List<double[][]>  gwWeights, int feature, double[] eta ) {
 		throw new RuntimeException();
