@@ -25,19 +25,19 @@ Java JDK 1.2 or higher (for JRI/REngine JDK 1.4 or higher). If it is not already
     idx_pred<-sample(nrow(x),0.3*nrow(x)) # indices of prediction samples
     
     r<-gwann(x_train=x[-idx_pred,],y_train=y[-idx_pred],w_train=dm[-idx_pred,-idx_pred],
-         x_pred=x[idx_pred,],w_pred=dm[-idx_pred,idx_pred],
-         nrHidden=4,batchSize=50,lr=0.1,optimizer="adam",cv_patience=9999,
-         adaptive=F,
-         bwSearch="goldenSection",bwMin=min(dm)/4, bwMax=max(dm)/4,
-         threads=8
+             x_pred=x[idx_pred,],w_pred=dm[-idx_pred,idx_pred],
+             nrHidden=4,batchSize=100,lr=0.01,optimizer="adam",cv_patience=99,
+             adaptive=F,
+             bwSearch="goldenSection",bwMin=min(dm)/4, bwMax=max(dm)/4,
+             threads=8
     )
     p<-diag(r$predictions)
-    print(paste("RMSE: ",sqrt(mean((p-y[s_test])^2))))
+    print(paste("RMSE: ",sqrt(mean((p-y[idx_pred])^2))))
     print(paste("Iterations: ",r$iterations))
     print(paste("Bandwidth: ",r$bandwidth))
     
     # plot predictions
-    s<-cbind( Prediction=p, toy4[s_test,c("lon","lat")] )
+    s<-cbind( Prediction=p, toy4[idx_pred,c("lon","lat")] )
     ggplot(s,aes(lon,lat,fill=Prediction)) + geom_raster() + scale_fill_viridis() + coord_fixed()
 
 ### Note
