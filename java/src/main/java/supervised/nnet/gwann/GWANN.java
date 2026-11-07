@@ -71,7 +71,7 @@ public class GWANN extends NNet {
 			double[] x = lx.get(k);
 			double[] y = ly.get(k);
 			double[] sw = lsw.get(k);
-			double[][] out = presentInt( x, weights )[0];
+			double[][] out = presentInt( x )[0];
 			
 			for (int l = ll; l > 0; l--) {	
 				
@@ -88,7 +88,7 @@ public class GWANN extends NNet {
 					delta[l-1][i] = layer[l][i].fDevFOut(out[l][i]) * error_signal;
 					
 					for( int h = 0; h < layer[l-1].length; h++ ) 
-						error_grad[l-1][h][i] = out[l-1][h] * delta[l-1][i]/lx.size();				
+						error_grad[l-1][h][i] += out[l-1][h] * delta[l-1][i]/lx.size();				
 				}				
 			}
 		}
@@ -109,7 +109,7 @@ public class GWANN extends NNet {
 			double[] y = ly.get(k);
 			double[][] sw = lsw.get(k);
 			
-			double[][] out = presentInt( x, weights )[0]; 	
+			double[][] out = presentInt( x )[0]; 	
 		
 			for (int l = ll; l > 0; l--) {
 				for (int i = 0; i < layer[l].length; i++) {

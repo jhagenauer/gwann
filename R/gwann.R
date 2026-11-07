@@ -51,7 +51,8 @@ gwann<-function(x_train,y_train,w_train,x_pred,w_pred,norm=T,
                 iterations=NA,
                 cv_max_iterations=Inf,cv_patience=999,cv_folds=10,cv_repeats=1,
                 permutations=0,
-                threads=4) {
+                threads=4
+                ) {
 
   # TODO Why not pass NA-values to java?
   if( is.na(bandwidth) )

@@ -546,7 +546,7 @@ public class GWANNUtils {
 		// returns cost, bandwidth, iterations
 		return new double[] { r[0], adaptive ? Math.round(r[1]) : r[1], r[2] };
 	}
-
+	
 	/**
 	 * Golden section search for two bandwidths: one shared by all hidden nodes of the last hidden layer and one for the bias.
 	 * 1. golden section on the diagonal (bwHidden == bwBias), i.e. the usual single-bandwidth solution as start,

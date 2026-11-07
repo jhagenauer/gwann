@@ -72,11 +72,11 @@ public class NNet implements SupervisedNet {
 
 	@Override
 	public double[] present(double[] x) {		
-		double[][] out = presentInt(x, weights)[0];
+		double[][] out = presentInt(x)[0];
 		return out[out.length - 1]; // output of last layer
 	}	
 
-	public double[][][] presentInt(double[] x, double[][][] w) {
+	public double[][][] presentInt(double[] x) {
 	    double[][] out = new double[layer.length][];
 	    double[][] net = new double[layer.length][];
 
@@ -105,7 +105,7 @@ public class NNet implements SupervisedNet {
 
 	        for (int j = 0; j < ll_lp1; j++) 
 	            for (int i = 0; i < ll_l; i++) 
-	                nextIn[j] += w[l][i][j] * out[l][i];	            
+	                nextIn[j] += weights[l][i][j] * out[l][i];	            
 	        
 	        in = nextIn; // Move to the next layer
 	    }
@@ -131,7 +131,7 @@ public class NNet implements SupervisedNet {
 			double[] x = lx.get(k);
 			double[] y = ly.get(k);
 		
-			double[][] out = presentInt(x,weights)[0];
+			double[][] out = presentInt(x)[0];
 	
 			for (int l = ll; l > 0; l--) {
 					
@@ -529,7 +529,7 @@ public class NNet implements SupervisedNet {
             delta[l - 1] = new double[layer[l].length];
         }
 
-        double[][][] forwardPass = presentInt(x, weights);
+        double[][][] forwardPass = presentInt(x);
         double[][] out = forwardPass[0]; // out[l][i] is output of neuron i in layer l
 
         // Backpropagate error
