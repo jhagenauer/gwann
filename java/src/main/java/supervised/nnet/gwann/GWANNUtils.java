@@ -156,7 +156,6 @@ public class GWANNUtils {
 		double test_error_best = Double.POSITIVE_INFINITY;
 		double[] eta_current = eta.clone();
 		
-		if( opt != Optimizer.None )
 		for (int it = 0; it < max_it && no_imp < patience; it++) {
 						
 			if( bw.length == 1 ) {	
@@ -183,8 +182,10 @@ public class GWANNUtils {
 				}
 				
 				// train 
-				double[][][] errorGrad = gwann.getErrorGradient_orig( x, y, gwWeights );
-				gwann.update(opt, errorGrad, eta_current);
+				if( opt != Optimizer.None ) {
+					double[][][] errorGrad = gwann.getErrorGradient_orig( x, y, gwWeights );
+					gwann.update(opt, errorGrad, eta_current);
+				}
 	
 			} else {
 											
@@ -217,9 +218,11 @@ public class GWANNUtils {
 					}
 				}
 								
-				// train					
-				double[][][] errorGrad = gwann.getErrorGradient(x, y, gwWeights);
-				gwann.update(opt, errorGrad, eta_current);				
+				// train	
+				if( opt != Optimizer.None ) {
+					double[][][] errorGrad = gwann.getErrorGradient(x, y, gwWeights);
+					gwann.update(opt, errorGrad, eta_current);
+				}
 			}
 																	
 			// get denormalized response-diag 

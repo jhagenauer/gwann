@@ -161,7 +161,6 @@ public class NNetUtils {
 		int no_imp = 0;		
 		double test_error_best = Double.POSITIVE_INFINITY;
 		
-		if( opt != Optimizer.None )
 		for (int it = 0; it < max_its && no_imp < patience; it++) {
 	
 			if( batchSize > 0 ) {
@@ -177,13 +176,17 @@ public class NNetUtils {
 				}
 				
 				// train
-				double[][][] errorGrad = nnet.getErrorGradient( x, y );				
-				nnet.update( opt, errorGrad, eta );
+				if( opt != Optimizer.None ) {
+					double[][][] errorGrad = nnet.getErrorGradient( x, y );				
+					nnet.update( opt, errorGrad, eta );
+				}
 				
 			} else {
 				// train
-				double[][][] errorGrad = nnet.getErrorGradient( x_train, y_train );			
-				nnet.update( opt, errorGrad, eta );
+				if( opt != Optimizer.None ) {
+					double[][][] errorGrad = nnet.getErrorGradient( x_train, y_train );			
+					nnet.update( opt, errorGrad, eta );
+				}
 			}
 						
 			// get denormalized response
