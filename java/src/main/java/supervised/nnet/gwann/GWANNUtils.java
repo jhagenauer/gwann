@@ -155,6 +155,8 @@ public class GWANNUtils {
 		int no_imp = 0;
 		double test_error_best = Double.POSITIVE_INFINITY;
 		double[] eta_current = eta.clone();
+		
+		if( opt != Optimizer.None )
 		for (int it = 0; it < max_it && no_imp < patience; it++) {
 						
 			if( bw.length == 1 ) {	

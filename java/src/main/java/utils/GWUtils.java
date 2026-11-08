@@ -125,7 +125,7 @@ public class GWUtils {
 		return a;
 	}
 	
-	public static DoubleMatrix getKernelWeightsAdaptive(DoubleMatrix W_train_test, GWKernel kernel, int nb ) {			
+	public static DoubleMatrix getKernelWeightsAdaptive_old(DoubleMatrix W_train_test, GWKernel kernel, int nb ) {			
 		DoubleMatrix kW = new DoubleMatrix(W_train_test.rows,W_train_test.columns);
 				
 		/*if( nb > W_train_test.rows ) 
@@ -136,7 +136,7 @@ public class GWUtils {
 		for (int i = 0; i < W_train_test.columns; i++) {
 			
 			double bw = Double.POSITIVE_INFINITY;
-			if( nb <= W_train_test.rows )
+			if( nb < W_train_test.rows )
 				bw = W_train_test.getColumn(i).sort().get(nb);
 							
 			double[] w = new double[W_train_test.rows];
@@ -148,6 +148,47 @@ public class GWUtils {
 		}		
 		return kW;
 	}
+	
+	///////////////////// faster. uses quick select instead of sort /////////////
+	
+	public static DoubleMatrix getKernelWeightsAdaptive(DoubleMatrix W_train_test, GWKernel kernel, int nb) {
+	    final int n = W_train_test.rows;
+	    DoubleMatrix kW = new DoubleMatrix(n, W_train_test.columns);
+	    final double[] wd = W_train_test.data, kd = kW.data;
+	    final double[] buf = new double[n];
+
+	    for (int i = 0; i < W_train_test.columns; i++) {
+	        final int o = i * n;                          // column-major: element (j,i) is at i*n + j
+	        double bw = Double.POSITIVE_INFINITY;
+	        if (nb < n) {
+	            System.arraycopy(wd, o, buf, 0, n);
+	            bw = select(buf, nb);                     // nb-th smallest value, no full sort
+	        }
+	        for (int j = 0; j < n; j++)
+	            kd[o + j] = getKernelValue(kernel, wd[o + j], bw);
+	    }
+	    return kW;
+	}
+
+	// k-th smallest value (0-based) of a; permutes a
+	private static double select(double[] a, int k) {
+	    int lo = 0, hi = a.length - 1;
+	    while (lo < hi) {
+	        final double pivot = a[(lo + hi) >>> 1];
+	        int i = lo, j = hi;
+	        while (i <= j) {
+	            while (a[i] < pivot) i++;
+	            while (a[j] > pivot) j--;
+	            if (i <= j) { double t = a[i]; a[i] = a[j]; a[j] = t; i++; j--; }
+	        }
+	        if (k <= j) hi = j;
+	        else if (k >= i) lo = i;
+	        else return a[k];
+	    }
+	    return a[k];
+	}
+	
+	//////////////
 				
 	public static DoubleMatrix getKernelWeights( DoubleMatrix W, GWKernel kernel, double bw ) {
 		DoubleMatrix kW = new DoubleMatrix(W.rows,W.columns);

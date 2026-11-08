@@ -40,7 +40,6 @@ public class GWANN extends NNet {
 		bw = new double[ll[ll.length-2].length];
 		for( int i = 0; i < bw.length; i++ ) 
 			bw[i] =  bw_max;	
-		//bw = new double[] {5.156213328754902, 2.7602200556014242, 21.602274079470504};
 			
 		this.vWeights = new double[weights.length][][];
 		this.mWeights = new double[weights.length][][];
@@ -141,10 +140,7 @@ public class GWANN extends NNet {
 		}
 		return error_grad;
 	}
-		
-	public static boolean norm_grad = false;				
-	int kk = 1;
-		
+						
 	@Deprecated
 	void train_( List<double[]> x, List<double[]> y, List<double[][]>  gwWeights, int feature, double[] eta ) {
 		throw new RuntimeException();

@@ -16,6 +16,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import supervised.SupervisedUtils;
+import supervised.nnet.NNet.Optimizer;
 import supervised.nnet.activation.Constant;
 import supervised.nnet.activation.Function;
 import supervised.nnet.activation.Linear;
@@ -75,7 +76,6 @@ public class NNetUtils {
 		return errors;
 	}
 
-	// cleaner interface
 	public static ReturnObject buildNNet(
 			List<double[]> xTrain_, List<double[]> yTrain_, 
 			List<double[]> xTest_, List<double[]> yTest_, 
@@ -160,6 +160,8 @@ public class NNetUtils {
 		List<Double> errors = new ArrayList<>();
 		int no_imp = 0;		
 		double test_error_best = Double.POSITIVE_INFINITY;
+		
+		if( opt != Optimizer.None )
 		for (int it = 0; it < max_its && no_imp < patience; it++) {
 	
 			if( batchSize > 0 ) {

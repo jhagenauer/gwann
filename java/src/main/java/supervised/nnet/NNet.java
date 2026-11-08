@@ -27,7 +27,7 @@ public class NNet implements SupervisedNet {
 	public double lambda = Double.NaN;
 	
 	public static enum Optimizer {
-		SGD, Momentum, NAG, RMSProp, AdamW, Adam, LM, LM_ANA, LBFGS, Nesterov_test, Adam_test
+		SGD, Momentum, NAG, RMSProp, AdamW, Adam, LM, LM_ANA, LBFGS, Nesterov_test, Adam_test, None
 	};
 	
 	protected Optimizer opt;
