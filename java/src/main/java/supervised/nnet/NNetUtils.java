@@ -162,33 +162,31 @@ public class NNetUtils {
 		double test_error_best = Double.POSITIVE_INFINITY;
 		
 		for (int it = 0; it < max_its && no_imp < patience; it++) {
-	
-			if( batchSize > 0 ) {
-				List<double[]> x = new ArrayList<>();
-				List<double[]> y = new ArrayList<>();
+			
+			List<double[]> x = new ArrayList<>();
+			List<double[]> y = new ArrayList<>();		
+			if( batchSize < 0 ) {
+				for( int k = 0; k < x_train.size(); k++ ) {
+					x.add(x_train.get(k));
+					y.add(y_train.get(k));	
+				}
+			} else {						
 				while (x.size() < batchSize) {
 					if (batchReservoir.isEmpty())
 						for (int j = 0; j < x_train.size(); j++)
 							batchReservoir.add(j);
-					int idx = batchReservoir.remove(r.nextInt(batchReservoir.size()));
-					x.add(x_train.get(idx));
-					y.add(y_train.get(idx));
-				}
-				
-				// train
-				if( opt != Optimizer.None ) {
-					double[][][] errorGrad = nnet.getErrorGradient( x, y );				
-					nnet.update( opt, errorGrad, eta );
-				}
-				
-			} else {
-				// train
-				if( opt != Optimizer.None ) {
-					double[][][] errorGrad = nnet.getErrorGradient( x_train, y_train );			
-					nnet.update( opt, errorGrad, eta );
+					int k = batchReservoir.remove(r.nextInt(batchReservoir.size()));
+					x.add(x_train.get(k));
+					y.add(y_train.get(k));	
 				}
 			}
-						
+				
+			// train
+			if( opt != Optimizer.None ) {
+				double[][][] errorGrad = nnet.getErrorGradient( x, y );				
+				nnet.update( opt, errorGrad, eta );
+			}
+									
 			// get denormalized response
 			double[] test_response= new double[x_test.size()];
 			for (int i = 0; i < x_test.size(); i++) {
