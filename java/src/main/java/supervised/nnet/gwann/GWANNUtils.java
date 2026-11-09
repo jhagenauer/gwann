@@ -561,7 +561,7 @@ public class GWANNUtils {
 	 */
 	public static double[] getParamsWithGoldenSection2(double minRadius, double maxRadius,
 			List<double[]> xArray, List<double[]> yArray, DoubleMatrix W, List<Entry<List<Integer>, List<Integer>>> cv_list,
-			GWKernel kernel, boolean adaptive, double[] eta, int batchSize, Optimizer opt, int[] nrHidden, int iterations, int patience, int threads, double lambda, Transform[] explTrans, Transform[] respTrans, double[][][] init_weights, int seed ) {
+			GWKernel kernel, boolean adaptive, double[] eta, int batchSize, Optimizer opt, int[] nrHidden, int iterations, int patience, int threads, double lambda, Transform[] explTrans, Transform[] respTrans, double[][][] init_weights, int seed, int min_bias ) {
 
 		final int nrLast = nrHidden[nrHidden.length - 1];
 		final double epsX = adaptive ? 1.0 : 1e-04; // adaptive bandwidths are integers, no need to go below 1
@@ -593,7 +593,7 @@ public class GWANNUtils {
 
 			// bias, hidden fixed
 			final double hiddenFixed = bwHidden;
-			r = goldenSection( x -> eval.apply(hiddenFixed, x), minRadius, maxRadius, epsX, epsF );
+			r = goldenSection( x -> eval.apply(hiddenFixed, x), min_bias, maxRadius, epsX, epsF );
 			if (r[0] < cost) {
 				cost = r[0];
 				bwBias = adaptive ? Math.round(r[1]) : r[1];
