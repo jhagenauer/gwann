@@ -552,6 +552,26 @@ public class GWANNUtils {
 		return new double[] { r[0], adaptive ? Math.round(r[1]) : r[1], r[2] };
 	}
 	
+	/** Golden section over the hidden-node bandwidth, bias bandwidth fixed. Returns cost, bandwidth hidden, bandwidth bias, iterations. */
+	public static double[] getParamsWithGoldenSection_bias_fixed(double minRadius, double maxRadius, double bias,
+			List<double[]> xArray, List<double[]> yArray, DoubleMatrix W, List<Entry<List<Integer>, List<Integer>>> cv_list,
+			GWKernel kernel, boolean adaptive, double[] eta, int batchSize, Optimizer opt, int[] nrHidden, int iterations, int patience, int threads, double lambda, Transform[] explTrans, Transform[] respTrans, double[][][] init_weights, int seed ) {
+
+		final int nrLast = nrHidden[nrHidden.length - 1];
+		final double epsX = adaptive ? 1.0 : 1e-04;
+		final double epsF = 1e-04;
+		final double b = adaptive ? Math.round(bias) : bias;
+
+		double[] r = goldenSection( x -> {
+			final double h = adaptive ? Math.round(x) : x;
+			return NNetUtils.getErrorParameters( getErrors_CV(xArray, yArray, W, cv_list, kernel,
+					expandBw(nrLast, h, b), adaptive, eta, batchSize, opt, nrHidden, iterations, patience, threads, lambda, explTrans, respTrans, init_weights, seed, false),
+					error_param.argmin_mean );
+		}, minRadius, maxRadius, epsX, epsF );
+
+		return new double[] { r[0], adaptive ? Math.round(r[1]) : r[1], b, r[2] };
+	}
+	
 	/**
 	 * Golden section search for two bandwidths: one shared by all hidden nodes of the last hidden layer and one for the bias.
 	 * 1. golden section on the diagonal (bwHidden == bwBias), i.e. the usual single-bandwidth solution as start,
@@ -561,7 +581,7 @@ public class GWANNUtils {
 	 */
 	public static double[] getParamsWithGoldenSection2(double minRadius, double maxRadius,
 			List<double[]> xArray, List<double[]> yArray, DoubleMatrix W, List<Entry<List<Integer>, List<Integer>>> cv_list,
-			GWKernel kernel, boolean adaptive, double[] eta, int batchSize, Optimizer opt, int[] nrHidden, int iterations, int patience, int threads, double lambda, Transform[] explTrans, Transform[] respTrans, double[][][] init_weights, int seed, int min_bias ) {
+			GWKernel kernel, boolean adaptive, double[] eta, int batchSize, Optimizer opt, int[] nrHidden, int iterations, int patience, int threads, double lambda, Transform[] explTrans, Transform[] respTrans, double[][][] init_weights, int seed ) {
 
 		final int nrLast = nrHidden[nrHidden.length - 1];
 		final double epsX = adaptive ? 1.0 : 1e-04; // adaptive bandwidths are integers, no need to go below 1
@@ -593,7 +613,7 @@ public class GWANNUtils {
 
 			// bias, hidden fixed
 			final double hiddenFixed = bwHidden;
-			r = goldenSection( x -> eval.apply(hiddenFixed, x), min_bias, maxRadius, epsX, epsF );
+			r = goldenSection( x -> eval.apply(hiddenFixed, x), minRadius, maxRadius, epsX, epsF );
 			if (r[0] < cost) {
 				cost = r[0];
 				bwBias = adaptive ? Math.round(r[1]) : r[1];
